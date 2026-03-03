@@ -193,7 +193,7 @@ export default function Knowledge() {
         )}
       </div>
 
-      <Modal open={!!selected} onClose={() => { setSelected(null); setFileContent(null); }} title={selected?.name || selected?.title || 'Document'}>
+      <Modal large open={!!selected} onClose={() => { setSelected(null); setFileContent(null); }} title={selected?.name || selected?.title || 'Document'}>
         {selected && (
           <div>
             {selected.path && <div style={{ color: 'var(--faint)', fontSize: '0.72rem', marginBottom: 16 }}>{selected.path}</div>}

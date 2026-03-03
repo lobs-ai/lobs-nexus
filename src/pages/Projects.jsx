@@ -59,11 +59,12 @@ function TaskCard({ task, onClick }) {
 }
 
 export default function Projects() {
-  const { data: projects, loading: projLoading, reload: reloadProjects } = useApi(() => api.projects());
+  const { data: projects, loading: projLoading, reload: reloadProjects } = useApi(() => showArchived ? api.archivedProjects() : api.projects(), [showArchived]);
   const { data: allTasks, loading: tasksLoading, reload: reloadTasks } = usePolling(() => api.tasks(), 15000);
   const [view, setView] = useState('projects');
   const [selectedProject, setSelectedProject] = useState(null);
   const [showAllTasks, setShowAllTasks] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
@@ -94,7 +95,7 @@ export default function Projects() {
   };
 
   const kanbanTasks = showAllTasks ? (allTasks || []) : selectedProject ? getProjectTasks(selectedProject.id) : (allTasks || []);
-  const byStatus = (status) => kanbanTasks.filter(t => t.status === status || (status === 'cancelled' && ['cancelled', 'rejected', 'archived'].includes(t.status)));
+  const byStatus = (status) => kanbanTasks.filter(t => t.status === status || (status === 'active' && ['active', 'inbox', 'pending', 'waiting'].includes(t.status)) || (status === 'cancelled' && ['cancelled', 'rejected', 'archived'].includes(t.status)));
 
   return (
     <div style={{ position: 'relative', padding: '36px 32px' }}>
@@ -123,7 +124,10 @@ export default function Projects() {
               </button>
             )}
             {view === 'kanban' && <button className="btn-primary" onClick={() => setShowCreateTask(true)}>+ New Task</button>}
-            {view === 'projects' && <button className="btn-primary" onClick={() => setShowCreate(true)}>+ New Project</button>}
+            {view === 'projects' && <>
+              <button className={showArchived ? 'btn-ghost' : 'btn-ghost'} onClick={() => setShowArchived(v => !v)} style={showArchived ? { borderColor: 'rgba(45,212,191,0.4)', color: 'var(--teal)' } : {}}>{showArchived ? '✓ Archived' : 'Archived'}</button>
+              <button className="btn-primary" onClick={() => setShowCreate(true)}>+ New Project</button>
+            </>}
           </div>
         </div>
 
@@ -157,7 +161,7 @@ export default function Projects() {
                   const done = tasks.filter(t => t.status === 'completed');
                   const progress = tasks.length > 0 ? Math.round((done.length / tasks.length) * 100) : 0;
                   return (
-                    <div key={p.id} onClick={() => { setSelectedProject(p); setShowAllTasks(false); setView('kanban'); }} className="fade-in-up glass-card p-6" style={{ cursor: 'pointer', transition: 'all 0.25s', borderColor: active.length > 0 ? color + '44' : undefined, boxShadow: active.length > 0 ? `0 0 30px ${color}15` : undefined }}
+                    <div key={p.id} onClick={() => { setSelectedProject(p); setShowAllTasks(false); setView('kanban'); }} className="fade-in-up glass-card" style={{ padding: "24px", cursor: 'pointer', transition: 'all 0.25s', borderColor: active.length > 0 ? color + '44' : undefined, boxShadow: active.length > 0 ? `0 0 30px ${color}15` : undefined }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = color + '66'; e.currentTarget.style.boxShadow = `0 0 40px ${color}20`; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = active.length > 0 ? color + '44' : 'var(--border)'; e.currentTarget.style.boxShadow = active.length > 0 ? `0 0 30px ${color}15` : 'none'; e.currentTarget.style.transform = ''; }}
                     >
@@ -191,6 +195,7 @@ export default function Projects() {
                           {done.length > 0 && <span style={{ color: 'var(--green)', fontSize: '0.72rem', fontFamily: 'var(--mono)' }}>{done.length} done</span>}
                         </div>
                         <span style={{ color: 'var(--faint)', fontSize: '0.7rem' }}>{timeAgo(p.updated_at || p.updatedAt)}</span>
+                        <button onClick={async (e) => { e.stopPropagation(); p.archived ? await api.unarchiveProject(p.id) : await api.archiveProject(p.id); reloadProjects(); }} className="btn-ghost" style={{ padding: '2px 8px', fontSize: '0.68rem', marginLeft: 8 }}>{p.archived ? 'Unarchive' : 'Archive'}</button>
                       </div>
                     </div>
                   );

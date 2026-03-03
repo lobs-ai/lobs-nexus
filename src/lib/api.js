@@ -23,11 +23,12 @@ export const api = {
   },
   task: (id) => req(`/api/tasks/${id}`),
   createTask: (body) => req('/api/tasks', { method: 'POST', body }),
-  updateTask: (id, body) => req(`/api/tasks/${id}`, { method: 'PATCH', body }),
+  updateTask: (id, body) => req(`/api/tasks/${id}/status`, { method: 'PATCH', body }),
   deleteTask: (id) => req(`/api/tasks/${id}`, { method: 'DELETE' }),
 
   // Projects
   projects: () => req('/api/projects'),
+  archivedProjects: () => req('/api/projects?archived=true'),
   project: (id) => req(`/api/projects/${id}`),
   createProject: (body) => req('/api/projects', { method: 'POST', body }),
   updateProject: (id, body) => req(`/api/projects/${id}`, { method: 'PATCH', body }),

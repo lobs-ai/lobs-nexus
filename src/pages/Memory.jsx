@@ -101,7 +101,7 @@ export default function Memory() {
         )}
       </div>
 
-      <Modal open={!!selected} onClose={() => setSelected(null)} title={selected ? `${selected.agent} / ${selected.file}` : ''}>
+      <Modal large open={!!selected} onClose={() => setSelected(null)} title={selected ? `${selected.agent} / ${selected.file}` : ''}>
         {selected && (
           <div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>

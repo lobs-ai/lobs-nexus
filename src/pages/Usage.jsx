@@ -44,6 +44,7 @@ export default function Usage() {
   const { data: dashboard } = useApi(() => api.usageDashboard(timeWindow), [timeWindow]);
   const { data: workers } = useApi(() => api.workerHistory(100));
 
+  const workerList = workers?.runs || workers || [];
   const totals = dashboard?.totals || {};
   const summary = {
     totalCost: totals.estimated_cost_usd || 0,
@@ -57,7 +58,6 @@ export default function Usage() {
   const costByModel = costByModelArr;
   const runsByAgent = runsByAgentArr;
   const successRate = workerList.length > 0 ? workerList.filter(r => r.succeeded).length / workerList.length : null;
-  const workerList = workers?.runs || workers || [];
   const maxCost = Math.max(...Object.values(costByModel), 0.001);
   const maxRuns = Math.max(...Object.values(runsByAgent), 1);
 
