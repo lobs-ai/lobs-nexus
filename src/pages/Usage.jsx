@@ -38,10 +38,10 @@ function HBar({ value, max, color, label, sublabel }) {
 }
 
 export default function Usage() {
-  const [window, setWindow] = useState('month');
+  const [timeWindow, setTimeWindow] = useState('month');
   const [sortBy, setSortBy] = useState('startedAt');
   const [sortDir, setSortDir] = useState('desc');
-  const { data: dashboard } = useApi(() => api.usageDashboard(window), [window]);
+  const { data: dashboard } = useApi(() => api.usageDashboard(timeWindow), [timeWindow]);
   const { data: workers } = useApi(() => api.workerHistory(100));
 
   const totals = dashboard?.totals || {};
@@ -81,7 +81,7 @@ export default function Usage() {
 
         <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
           {['day', 'week', 'month'].map(w => (
-            <button key={w} className={`hud-tab ${window === w ? 'active' : ''}`} onClick={() => setWindow(w)}>{w.charAt(0).toUpperCase() + w.slice(1)}</button>
+            <button key={w} className={`hud-tab ${timeWindow === w ? 'active' : ''}`} onClick={() => setTimeWindow(w)}>{w.charAt(0).toUpperCase() + w.slice(1)}</button>
           ))}
         </div>
 

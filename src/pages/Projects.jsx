@@ -205,7 +205,7 @@ export default function Projects() {
           tasksLoading ? <LoadingSkeleton lines={6} height={80} /> : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, alignItems: 'start' }}>
               {COLUMNS.map(col => (
-                <div key={col.id} className="kanban-col" style={{ padding: 16 }}>
+                <div key={col.id} className="kanban-col">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
                     <span className={col.id === 'active' ? 'pulse-dot' : ''} style={{ width: 8, height: 8, borderRadius: '50%', background: col.color, color: col.color, display: 'block' }} />
                     <span style={{ color: col.color, fontWeight: 700, fontSize: '0.75rem', letterSpacing: '2px', fontFamily: 'var(--mono)', textTransform: 'uppercase' }}>{col.label}</span>

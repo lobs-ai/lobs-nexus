@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Modal from '../components/Modal';
+import { showToast } from '../components/Toast';
 import GlassCard from '../components/GlassCard';
 import Badge from '../components/Badge';
 import { usePolling } from '../hooks/usePolling';
@@ -97,13 +99,20 @@ export default function Dashboard() {
   ];
 
   const quickActions = [
-    { label: 'New Task', icon: '+', color: 'var(--teal)', to: '/projects' },
+    { label: 'New Task', icon: '+', color: 'var(--teal)', action: () => setShowCreateTask(true) },
     { label: 'Inbox', icon: '📬', color: 'var(--blue)', to: '/inbox' },
     { label: 'Chat', icon: '💬', color: 'var(--purple)', to: '/chat' },
     { label: 'Workflows', icon: '⟳', color: 'var(--amber)', to: '/workflows' },
     { label: 'Team', icon: '👥', color: 'var(--green)', to: '/team' },
     { label: 'Usage', icon: '📊', color: 'var(--red)', to: '/usage' },
   ];
+
+  const [showCreateTask, setShowCreateTask] = useState(false);
+  const [taskForm, setTaskForm] = useState({ title: '', agent: 'programmer', model_tier: 'standard', notes: '' });
+  const createTask = async () => {
+    if (!taskForm.title.trim()) return;
+    try { await api.createTask(taskForm); showToast('Task created', 'success'); setShowCreateTask(false); setTaskForm({ title: '', agent: 'programmer', model_tier: 'standard', notes: '' }); } catch { showToast('Failed', 'error'); }
+  };
 
   return (
     <div style={{ position: 'relative', padding: '36px 32px' }}>
@@ -238,7 +247,7 @@ export default function Dashboard() {
               {quickActions.map(a => (
                 <button
                   key={a.to}
-                  onClick={() => navigate(a.to)}
+                  onClick={() => a.action ? a.action() : navigate(a.to)}
                   className="quick-action-btn"
                   style={{ '--btn-color': a.color }}
                 >
@@ -273,6 +282,18 @@ export default function Dashboard() {
         </div>
 
       </div>
+      {/* Create Task Modal */}
+      <Modal open={showCreateTask} onClose={() => setShowCreateTask(false)} title="New Task">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div><label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Title *</label><input className="nx-input" placeholder="Task title..." value={taskForm.title} onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div><label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Agent</label><select className="nx-input" value={taskForm.agent} onChange={e => setTaskForm(f => ({ ...f, agent: e.target.value }))}>{['programmer', 'writer', 'researcher', 'reviewer', 'architect'].map(a => <option key={a} value={a}>{a}</option>)}</select></div>
+            <div><label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Model Tier</label><select className="nx-input" value={taskForm.model_tier} onChange={e => setTaskForm(f => ({ ...f, model_tier: e.target.value }))}>{['micro', 'small', 'medium', 'standard', 'strong'].map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+          </div>
+          <div><label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Notes</label><textarea className="nx-input" rows={4} placeholder="Task description..." value={taskForm.notes} onChange={e => setTaskForm(f => ({ ...f, notes: e.target.value }))} style={{ resize: 'vertical' }} /></div>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}><button className="btn-ghost" onClick={() => setShowCreateTask(false)}>Cancel</button><button className="btn-primary" onClick={createTask}>Create Task</button></div>
+        </div>
+      </Modal>
     </div>
   );
 }
