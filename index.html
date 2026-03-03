@@ -1,118 +1,13 @@
-<!DOCTYPE html>
-<html lang="en" data-theme="dark">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lobs Nexus</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/base.css" />
-  <link rel="stylesheet" href="css/nav.css" />
-  <link rel="stylesheet" href="css/components.css" />
-  <link rel="stylesheet" href="css/pages.css" />
-</head>
-<body>
-  <div class="noise-overlay"></div>
-  <nav class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <div class="sidebar-logo">
-        <div class="logo-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-        <span class="logo-text gradient-text">Lobs Nexus</span>
-      </div>
-      <button class="sidebar-toggle" id="sidebarToggle">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
-      </button>
-    </div>
-    <div class="sidebar-nav">
-      <div class="nav-section-label">Main</div>
-      <a href="#/dashboard" class="nav-item" data-page="dashboard">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-        <span class="nav-label">Dashboard</span>
-      </a>
-      <a href="#/tasks" class="nav-item" data-page="tasks">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-        <span class="nav-label">Tasks</span>
-        <span class="nav-badge" id="tasksBadge" style="display:none"></span>
-      </a>
-      <a href="#/inbox" class="nav-item" data-page="inbox">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
-        <span class="nav-label">Inbox</span>
-        <span class="nav-badge" id="inboxBadge" style="display:none"></span>
-      </a>
-      <div class="nav-section-label">Agents</div>
-      <a href="#/team" class="nav-item" data-page="team">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-        <span class="nav-label">Team</span>
-      </a>
-      <a href="#/workflows" class="nav-item" data-page="workflows">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 012 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
-        <span class="nav-label">Workflows</span>
-      </a>
-      <div class="nav-section-label">Knowledge</div>
-      <a href="#/chat" class="nav-item" data-page="chat">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-        <span class="nav-label">Chat</span>
-      </a>
-      <a href="#/knowledge" class="nav-item" data-page="knowledge">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
-        <span class="nav-label">Knowledge</span>
-      </a>
-      <a href="#/memory" class="nav-item" data-page="memory">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
-        <span class="nav-label">Memory</span>
-      </a>
-      <div class="nav-section-label">System</div>
-      <a href="#/usage" class="nav-item" data-page="usage">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-        <span class="nav-label">Usage</span>
-      </a>
-      <a href="#/settings" class="nav-item" data-page="settings">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2m0 18v-2m7.07-3.93l-1.41-1.41M4.93 19.07l1.41-1.41M2 12h2m18 0h-2"/></svg>
-        <span class="nav-label">Settings</span>
-      </a>
-    </div>
-    <div class="sidebar-footer">
-      <div class="system-status" id="systemStatus">
-        <div class="status-dot" id="statusDot"></div>
-        <span class="status-text" id="statusText">Connecting...</span>
-      </div>
-      <button class="theme-toggle" id="themeToggle" title="Toggle theme">
-        <span class="theme-icon-dark">🌙</span>
-        <span class="theme-icon-light">☀️</span>
-      </button>
-    </div>
-  </nav>
-  <main class="main-content" id="mainContent">
-    <div class="page-container" id="pageContainer">
-      <div class="loading-screen"><div class="spinner"></div></div>
-    </div>
-  </main>
-  <div class="toast-container" id="toastContainer"></div>
-  <div class="modal-overlay hidden" id="modalOverlay">
-    <div class="modal" id="modal">
-      <div class="modal-header">
-        <h3 id="modalTitle">Modal</h3>
-        <button class="modal-close" id="modalClose">✕</button>
-      </div>
-      <div class="modal-body" id="modalBody"></div>
-      <div class="modal-footer" id="modalFooter"></div>
-    </div>
-  </div>
-  <script src="js/api.js"></script>
-  <script src="js/components.js"></script>
-  <script src="js/dashboard.js"></script>
-  <script src="js/tasks.js"></script>
-  <script src="js/team.js"></script>
-  <script src="js/workflows.js"></script>
-  <script src="js/chat.js"></script>
-  <script src="js/knowledge.js"></script>
-  <script src="js/memory.js"></script>
-  <script src="js/usage.js"></script>
-  <script src="js/inbox.js"></script>
-  <script src="js/settings.js"></script>
-  <script src="js/app.js"></script>
-</body>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>lobs-nexus</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
