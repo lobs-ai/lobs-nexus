@@ -51,10 +51,11 @@ const AGENT_ICON_MAP = {
 };
 
 const ACT_META = {
-  worker_completed: { icon: '✓', color: 'var(--green)', label: 'Completed' },
-  worker_failed:    { icon: '✗', color: 'var(--red)',   label: 'Failed' },
-  worker_spawned:   { icon: '⚡', color: 'var(--teal)', label: 'Spawned' },
-  task_created:     { icon: '+', color: 'var(--blue)',  label: 'Created' },
+  worker_completed: { icon: '✓', color: 'var(--green)', label: 'Completed', link: '/team' },
+  worker_failed:    { icon: '✗', color: 'var(--red)',   label: 'Failed', link: '/team' },
+  worker_spawned:   { icon: '⚡', color: 'var(--teal)', label: 'Spawned', link: '/team' },
+  task_created:     { icon: '+', color: 'var(--blue)',  label: 'Created', link: '/projects' },
+
 };
 
 export default function Dashboard() {
@@ -115,7 +116,7 @@ export default function Dashboard() {
         {/* HERO */}
         <div className="fade-in-up" style={{ marginBottom: 48, textAlign: 'center', padding: '40px 0 20px' }}>
           <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '6px', color: 'var(--teal)', fontFamily: 'var(--mono)', marginBottom: 16, opacity: 0.8 }}>
-            JARVIS INTERFACE v1.0 — LOBS PAW SYSTEM
+            LOBS NEXUS — PAW COMMAND SYSTEM
           </div>
           <h1 className="hero-greeting" style={{ marginBottom: 12 }}>
             {(status?.workers?.active || 0) > 0 ? 'Systems Active' : 'All Systems Nominal'}
@@ -212,7 +213,7 @@ export default function Dashboard() {
                 {activities.map((a, i) => {
                   const meta = ACT_META[a.type] || { icon: '·', color: 'var(--muted)' };
                   return (
-                    <div key={i} className="timeline-item" style={{ marginBottom: 14 }}>
+                    <div key={i} className="timeline-item" onClick={() => meta.link && navigate(meta.link)} style={{ marginBottom: 14, cursor: meta.link ? 'pointer' : 'default' }}>
                       <div className="timeline-dot" style={{ background: meta.color + '22', borderColor: meta.color, color: meta.color, fontSize: '0.55rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {meta.icon}
                       </div>
