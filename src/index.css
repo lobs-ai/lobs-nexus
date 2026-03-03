@@ -420,3 +420,130 @@ pre { background: rgba(8,12,24,0.9); border: 1px solid var(--border); border-rad
 }
 .wf-list-item:hover { background: rgba(45,212,191,0.05); border-color: rgba(45,212,191,0.15); }
 .wf-list-item.selected { background: rgba(45,212,191,0.08); border-color: rgba(45,212,191,0.3); }
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE — max-width: 768px
+   ═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Sidebar becomes bottom nav */
+  .sidebar {
+    position: fixed; bottom: 0; left: 0; right: 0; top: auto;
+    width: 100% !important; height: 64px; flex-direction: row;
+    border-right: none; border-top: 1px solid var(--border);
+    z-index: 200; padding: 0;
+  }
+  .sidebar.collapsed { width: 100% !important; height: 64px; }
+  .sidebar .nav-label,
+  .sidebar .logo-text,
+  .sidebar .status-label,
+  .sidebar .sidebar-logo { display: none !important; }
+
+  /* Hide sidebar header/footer on mobile */
+  .sidebar > div:first-child,
+  .sidebar > div:last-child,
+  .sidebar > div:nth-child(2) { display: none !important; }
+
+  /* Nav becomes horizontal */
+  .sidebar nav {
+    display: flex; flex-direction: row; align-items: center;
+    justify-content: space-around; width: 100%;
+    padding: 0 !important; overflow-x: auto; overflow-y: hidden;
+    gap: 0;
+  }
+  .nav-item {
+    flex-direction: column; gap: 2px; padding: 8px 6px !important;
+    font-size: 0.6rem; min-width: 48px; text-align: center;
+    justify-content: center; align-items: center; border-radius: 8px;
+  }
+  .nav-item::before { display: none !important; }
+  .nav-item svg { width: 20px; height: 20px; }
+
+  /* Main content: no margin, add bottom padding for nav */
+  .main-content,
+  .main-content.collapsed {
+    margin-left: 0 !important; padding-bottom: 72px !important;
+    overflow-x: hidden;
+  }
+
+  /* Page padding */
+  .main-content > div { padding: 20px 14px !important; }
+
+  /* Stat cards: 2-col */
+  .stat-grid { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+
+  /* Section grids: single column */
+  .mobile-stack { grid-template-columns: 1fr !important; }
+
+  /* Glass cards tighter padding */
+  .glass-card { padding: 16px !important; }
+
+  /* Modal full-width on mobile */
+  .modal-box {
+    width: 96% !important; max-width: none !important;
+    max-height: 88vh !important; margin: auto;
+  }
+
+  /* Kanban horizontal scroll */
+  .kanban-board { flex-direction: column !important; }
+  .kanban-col { min-width: auto !important; width: 100% !important; }
+
+  /* HUD stat cards */
+  .hud-stat-card { padding: 14px 12px !important; }
+
+  /* Headers smaller */
+  h1 { font-size: 1.6rem !important; }
+  h3 { font-size: 1rem !important; }
+
+  /* Hide orbs on mobile (performance) */
+  .orb { display: none !important; }
+
+  /* Collapse button hidden on mobile */
+  .sidebar-toggle-btn { display: none !important; }
+
+  /* Quick actions: 2-col */
+  .quick-actions-grid { grid-template-columns: 1fr 1fr !important; }
+
+  /* Two-col grids become stacked */
+  .mobile-2col { grid-template-columns: 1fr !important; gap: 16px !important; }
+
+  /* Table horizontal scroll */
+  .hud-table { font-size: 0.75rem; }
+  .hud-table th, .hud-table td { padding: 8px 10px; }
+
+  /* Workflow DAG: allow scroll */
+  .dag-canvas { overflow-x: auto; min-height: 300px; }
+
+  /* Section label smaller */
+  .section-label { font-size: 0.55rem !important; letter-spacing: 4px !important; }
+
+  /* Inbox items */
+  .inbox-item { padding: 14px !important; }
+
+  /* Worker cards */
+  .worker-card { padding: 14px !important; }
+
+  /* Breadcrumbs wrap */
+  .breadcrumbs { flex-wrap: wrap; }
+
+  /* HUD tabs scroll horizontally */
+  .hud-tabs-row { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+  .hud-tab { white-space: nowrap; flex-shrink: 0; padding: 6px 12px !important; font-size: 0.75rem !important; }
+
+  /* Input fields full width */
+  .nx-input { width: 100% !important; max-width: none !important; }
+
+  /* Buttons */
+  .btn-primary, .btn-ghost, .btn-danger, .btn-success { padding: 10px 16px !important; font-size: 0.82rem !important; }
+}
+
+/* Tablet: 769-1024px */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar { width: 64px; }
+  .sidebar .nav-label, .sidebar .logo-text, .sidebar .status-label { display: none; }
+  .main-content { margin-left: 64px !important; }
+
+  .stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .glass-card { padding: 18px !important; }
+  h1 { font-size: 1.8rem !important; }
+}

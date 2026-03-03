@@ -239,11 +239,11 @@ export default function Dashboard() {
         </div>
 
         {/* QUICK ACTIONS + SYSTEM STATUS */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+        <div className="mobile-2col" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
           <GlassCard className="fade-in-up-5">
             <div className="section-label" style={{ marginBottom: 4 }}>Shortcuts</div>
             <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 20 }}>Quick Actions</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            <div className="quick-actions-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
               {quickActions.map(a => (
                 <button
                   key={a.to}

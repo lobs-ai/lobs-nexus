@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import NoiseOverlay from './NoiseOverlay';
@@ -6,20 +6,29 @@ import Toast from './Toast';
 
 export default function Layout({ systemStatus, theme, onThemeToggle }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
 
   return (
-    <div data-theme={theme} style={{ display: 'flex', minHeight: '100vh', background: 'var(--navy)' }}>
+    <div data-theme={theme} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', minHeight: '100vh', background: 'var(--navy)' }}>
       <NoiseOverlay />
       <Sidebar
-        collapsed={collapsed}
+        collapsed={isMobile ? true : collapsed}
         onToggle={() => setCollapsed(c => !c)}
         systemStatus={systemStatus}
         theme={theme}
         onThemeToggle={onThemeToggle}
+        isMobile={isMobile}
       />
-      {collapsed && (
+      {!isMobile && collapsed && (
         <button
           onClick={() => setCollapsed(false)}
+          className="sidebar-toggle-btn"
           style={{
             position: 'fixed', top: 22, left: 72, zIndex: 101,
             background: 'rgba(14,20,38,0.9)', border: '1px solid var(--border)',
@@ -34,7 +43,7 @@ export default function Layout({ systemStatus, theme, onThemeToggle }) {
           </svg>
         </button>
       )}
-      <main className={`main-content ${collapsed ? 'collapsed' : ''}`} style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+      <main className={`main-content ${!isMobile && collapsed ? 'collapsed' : ''}`} style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
         <Outlet />
       </main>
       <Toast />
