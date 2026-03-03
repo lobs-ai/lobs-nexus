@@ -6,7 +6,7 @@ import { usePolling } from '../hooks/usePolling';
 import { api } from '../lib/api';
 import { timeAgo, formatDuration, formatUptime, AGENT_COLORS } from '../lib/utils';
 
-function CountUp({ value, duration = 1000 }) {
+function CountUp({ value, duration = 1200 }) {
   const [display, setDisplay] = useState(0);
   const ref = useRef(null);
   useEffect(() => {
@@ -25,175 +25,200 @@ function CountUp({ value, duration = 1000 }) {
   return <>{display}</>;
 }
 
+function ElapsedTimer({ startedAt }) {
+  const [elapsed, setElapsed] = useState('');
+  useEffect(() => {
+    const update = () => {
+      if (!startedAt) return;
+      const s = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      setElapsed(m > 0 ? `${m}m ${sec}s` : `${sec}s`);
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, [startedAt]);
+  return <span style={{ fontFamily: 'var(--mono)', color: 'var(--teal)', fontSize: '0.78rem' }}>{elapsed}</span>;
+}
+
+const AGENT_ICON_MAP = {
+  programmer: '⟨/⟩',
+  writer: '✍',
+  researcher: '🔍',
+  reviewer: '✓',
+  architect: '⬡',
+};
+
+const ACT_META = {
+  worker_completed: { icon: '✓', color: 'var(--green)', label: 'Completed' },
+  worker_failed:    { icon: '✗', color: 'var(--red)',   label: 'Failed' },
+  worker_spawned:   { icon: '⚡', color: 'var(--teal)', label: 'Spawned' },
+  task_created:     { icon: '+', color: 'var(--blue)',  label: 'Created' },
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data: status } = usePolling(() => api.status(), 10000);
   const { data: activity } = usePolling(() => api.activity(), 10000);
   const { data: workerStatus } = usePolling(() => api.workerStatus(), 5000);
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
 
   const workers = workerStatus?.workers || [];
-  const activities = (activity || []).slice(0, 10);
+  const activities = (activity || []).slice(0, 12);
 
-  const activityIcons = {
-    worker_completed: { icon: '✓', color: 'var(--green)' },
-    worker_failed: { icon: '✗', color: 'var(--red)' },
-    worker_spawned: { icon: '⚡', color: 'var(--teal)' },
-  };
+  const stats = [
+    {
+      label: 'Active Workers',
+      value: status?.workers?.active ?? 0,
+      sub: `${status?.workers?.total_completed || 0} total runs`,
+      color: 'var(--teal)',
+      dot: true,
+    },
+    {
+      label: 'Tasks Today',
+      value: status?.tasks?.completed_today ?? 0,
+      sub: `${status?.tasks?.active || 0} active now`,
+      color: 'var(--blue)',
+    },
+    {
+      label: 'System Uptime',
+      value: null,
+      display: formatUptime(status?.server?.uptime_seconds),
+      sub: status?.server?.status || 'checking',
+      color: 'var(--green)',
+    },
+    {
+      label: 'Queue Depth',
+      value: status?.tasks?.waiting ?? 0,
+      sub: 'tasks waiting',
+      color: 'var(--purple)',
+    },
+  ];
+
+  const quickActions = [
+    { label: 'New Task', icon: '+', color: 'var(--teal)', to: '/projects' },
+    { label: 'Inbox', icon: '📬', color: 'var(--blue)', to: '/inbox' },
+    { label: 'Chat', icon: '💬', color: 'var(--purple)', to: '/chat' },
+    { label: 'Workflows', icon: '⟳', color: 'var(--amber)', to: '/workflows' },
+    { label: 'Team', icon: '👥', color: 'var(--green)', to: '/team' },
+    { label: 'Usage', icon: '📊', color: 'var(--red)', to: '/usage' },
+  ];
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', padding: '36px 32px' }}>
       {/* Orbs */}
       <div className="orb orb-1" style={{ position: 'fixed', zIndex: 0 }} />
       <div className="orb orb-2" style={{ position: 'fixed', zIndex: 0 }} />
-      <div className="orb orb-3" style={{ position: 'fixed', zIndex: 0 }} />
 
       <div style={{ position: 'relative', zIndex: 1 }}>
-        {/* Hero header */}
-        <div style={{ marginBottom: 40 }}>
-          <span className="section-label">Command Center</span>
-          <h1 style={{ fontSize: '2.2rem', fontWeight: 800, letterSpacing: '-1px', marginBottom: 8 }}>
-            <span className="gradient-text">Lobs Nexus</span>
+
+        {/* HERO */}
+        <div className="fade-in-up" style={{ marginBottom: 48, textAlign: 'center', padding: '40px 0 20px' }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '6px', color: 'var(--teal)', fontFamily: 'var(--mono)', marginBottom: 16, opacity: 0.8 }}>
+            JARVIS INTERFACE v1.0 — LOBS PAW SYSTEM
+          </div>
+          <h1 className="hero-greeting" style={{ marginBottom: 12 }}>
+            {(status?.workers?.active || 0) > 0 ? 'Systems Active' : 'All Systems Nominal'}
           </h1>
-          <p style={{ color: 'var(--muted)', fontSize: '1rem' }}>
-            Real-time PAW multi-agent system dashboard
+          <p style={{ color: 'var(--muted)', fontSize: '1rem', maxWidth: 480, margin: '0 auto' }}>
+            {(status?.workers?.active || 0)} agents running · {status?.tasks?.active || 0} tasks in progress · Uptime {formatUptime(status?.server?.uptime_seconds)}
           </p>
         </div>
 
-        {/* Hero Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
-          {[
-            {
-              label: 'Tasks Completed', 
-              value: status?.tasks?.completed_today,
-              sub: 'today',
-              color: 'var(--teal)',
-            },
-            {
-              label: 'Active Workers',
-              value: status?.workers?.active,
-              sub: `${status?.workers?.total_completed || 0} total runs`,
-              color: 'var(--blue)',
-            },
-            {
-              label: 'Active Tasks',
-              value: status?.tasks?.active,
-              sub: `${status?.tasks?.waiting || 0} waiting`,
-              color: 'var(--purple)',
-            },
-            {
-              label: 'System Uptime',
-              value: null,
-              display: formatUptime(status?.server?.uptime_seconds),
-              sub: status?.server?.status || 'checking',
-              color: 'var(--green)',
-            },
-          ].map((stat, i) => (
-            <GlassCard key={i} style={{ animationDelay: `${i * 0.1}s` }}>
+        {/* STAT CARDS */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, marginBottom: 36 }}>
+          {stats.map((s, i) => (
+            <div key={i} className={`hud-stat-card fade-in-up-${i+1} float-anim`} style={{ animationDelay: `${i * 0.5}s` }}>
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${s.color}, transparent)`, opacity: 0.6, borderRadius: '14px 14px 0 0' }} />
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ color: 'var(--muted)', fontSize: '0.78rem', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8 }}>{stat.label}</div>
-                  <div style={{ fontSize: '2.4rem', fontWeight: 800, color: stat.color, lineHeight: 1 }}>
-                    {stat.display || (stat.value != null ? <CountUp value={stat.value} /> : '--')}
-                  </div>
-                  <div style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: 4 }}>{stat.sub}</div>
+                <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '3px', textTransform: 'uppercase', color: 'var(--muted)', fontFamily: 'var(--mono)', marginBottom: 12 }}>
+                  {s.label}
                 </div>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: stat.color, marginTop: 4 }} className="pulse-dot" />
+                {s.dot && (
+                  <span className="pulse-dot" style={{ width: 8, height: 8, borderRadius: '50%', background: s.color, color: s.color, display: 'block', marginTop: 2 }} />
+                )}
               </div>
-            </GlassCard>
+              <div style={{ fontSize: '2.8rem', fontWeight: 900, color: s.color, lineHeight: 1, marginBottom: 6, fontFamily: 'var(--mono)', letterSpacing: '-2px' }}>
+                {s.display || (s.value != null ? <CountUp value={s.value} /> : '--')}
+              </div>
+              <div style={{ color: 'var(--faint)', fontSize: '0.75rem', fontFamily: 'var(--mono)' }}>{s.sub}</div>
+            </div>
           ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24 }}>
-          {/* Left column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            {/* Active Workers */}
-            <GlassCard>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                <h3 style={{ color: 'var(--text)', fontWeight: 700 }}>Active Workers</h3>
-                <Badge
-                  label={`${workers.length} running`}
-                  color={workers.length > 0 ? 'var(--teal)' : 'var(--muted)'}
-                  dot
-                />
+        {/* MAIN GRID */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, marginBottom: 24 }}>
+
+          {/* Left: Active Workers */}
+          <GlassCard className="fade-in-up-3">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <div>
+                <div className="section-label" style={{ marginBottom: 4 }}>Live Processes</div>
+                <h3 style={{ fontWeight: 700, fontSize: '1.1rem' }}>Active Workers</h3>
               </div>
-              {workers.length === 0 ? (
-                <div style={{ color: 'var(--muted)', fontSize: '0.9rem', padding: '20px 0', textAlign: 'center' }}>
-                  No active workers — system idle
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {workers.map(w => (
-                    <div key={w.id || w.workerId} style={{ background: 'rgba(11,15,30,0.5)', border: '1px solid var(--border)', borderRadius: 10, padding: 14 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: AGENT_COLORS[w.agentType] || 'var(--teal)', display: 'inline-block' }} className="pulse-dot" />
-                          <span style={{ color: AGENT_COLORS[w.agentType] || 'var(--teal)', fontWeight: 600, textTransform: 'capitalize' }}>{w.agentType}</span>
+              <Badge label={workers.length > 0 ? `${workers.length} running` : 'idle'} color={workers.length > 0 ? 'var(--teal)' : 'var(--faint)'} dot={workers.length > 0} />
+            </div>
+
+            {workers.length === 0 ? (
+              <div style={{ padding: '40px 0', textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', marginBottom: 12, opacity: 0.3 }}>⬡</div>
+                <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>No active workers</div>
+                <div style={{ color: 'var(--faint)', fontSize: '0.78rem', marginTop: 4 }}>System standing by</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {workers.map(w => {
+                  const color = AGENT_COLORS[w.agentType] || 'var(--teal)';
+                  return (
+                    <div key={w.id || w.workerId} className="worker-card">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <div style={{ width: 36, height: 36, borderRadius: 8, background: color + '22', border: `1px solid ${color}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', color, fontSize: '0.85rem', fontFamily: 'var(--mono)', fontWeight: 700 }}>
+                            {AGENT_ICON_MAP[w.agentType] || w.agentType?.[0]?.toUpperCase() || '?'}
+                          </div>
+                          <div>
+                            <div style={{ color, fontWeight: 700, textTransform: 'capitalize', fontSize: '0.9rem' }}>{w.agentType || 'worker'}</div>
+                            <div style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>{w.taskId ? `Task ${w.taskId.slice(0,8)}` : 'Processing...'}</div>
+                          </div>
                         </div>
-                        <span style={{ color: 'var(--muted)', fontSize: '0.78rem', fontFamily: 'var(--mono)' }}>
-                          {formatDuration(w.startedAt, null)}
-                        </span>
-                      </div>
-                      <div style={{ color: 'var(--muted)', fontSize: '0.82rem', marginBottom: 4 }}>
-                        {w.taskId ? `Task: ${w.taskId.slice(0, 8)}...` : 'Running...'}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span className="pulse-dot" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--teal)', color: 'var(--teal)', display: 'block' }} />
+                          <ElapsedTimer startedAt={w.startedAt} />
+                        </div>
                       </div>
                       {w.model && (
-                        <span style={{ fontSize: '0.72rem', color: 'var(--blue)', fontFamily: 'var(--mono)' }}>{w.model}</span>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                          <span style={{ fontSize: '0.68rem', color: 'var(--blue)', fontFamily: 'var(--mono)', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 4, padding: '2px 8px' }}>{w.model}</span>
+                        </div>
                       )}
+                      <div className="bar-track" style={{ marginTop: 12 }}>
+                        <div className="bar-fill" style={{ width: '60%', animation: 'bar-progress 2s ease-in-out infinite alternate' }} />
+                      </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </GlassCard>
-
-            {/* Quick Actions */}
-            <GlassCard>
-              <h3 style={{ color: 'var(--text)', fontWeight: 700, marginBottom: 16 }}>Quick Actions</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                {[
-                  { label: 'New Task', color: 'var(--teal)', to: '/tasks' },
-                  { label: 'View Inbox', color: 'var(--blue)', to: '/inbox' },
-                  { label: 'Workflows', color: 'var(--purple)', to: '/workflows' },
-                  { label: 'Projects', color: 'var(--amber)', to: '/projects' },
-                  { label: 'Usage', color: 'var(--green)', to: '/usage' },
-                  { label: 'Team', color: 'var(--red)', to: '/team' },
-                ].map(a => (
-                  <button
-                    key={a.to}
-                    onClick={() => navigate(a.to)}
-                    style={{ background: a.color + '11', border: `1px solid ${a.color}33`, borderRadius: 8, padding: '12px 8px', color: a.color, fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', textAlign: 'center' }}
-                    onMouseEnter={e => { e.target.style.background = a.color + '22'; e.target.style.boxShadow = `0 0 20px ${a.color}33`; }}
-                    onMouseLeave={e => { e.target.style.background = a.color + '11'; e.target.style.boxShadow = 'none'; }}
-                  >
-                    {a.label}
-                  </button>
-                ))}
+                  );
+                })}
               </div>
-            </GlassCard>
-          </div>
+            )}
+          </GlassCard>
 
-          {/* Activity Feed */}
-          <GlassCard>
-            <h3 style={{ color: 'var(--text)', fontWeight: 700, marginBottom: 20 }}>Activity Feed</h3>
+          {/* Right: Activity Feed */}
+          <GlassCard className="fade-in-up-4">
+            <div className="section-label" style={{ marginBottom: 4 }}>Real-time</div>
+            <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 24 }}>Activity Feed</h3>
             {activities.length === 0 ? (
               <div style={{ color: 'var(--muted)', fontSize: '0.85rem', textAlign: 'center', padding: '20px 0' }}>No recent activity</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0, maxHeight: 400, overflowY: 'auto' }}>
                 {activities.map((a, i) => {
-                  const meta = activityIcons[a.type] || { icon: '·', color: 'var(--muted)' };
+                  const meta = ACT_META[a.type] || { icon: '·', color: 'var(--muted)' };
                   return (
-                    <div key={i} className="timeline-item" style={{ marginBottom: 16 }}>
-                      <div className="timeline-dot" style={{ background: meta.color + '22', borderColor: meta.color, color: meta.color, fontSize: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 16, height: 16 }}>
+                    <div key={i} className="timeline-item" style={{ marginBottom: 14 }}>
+                      <div className="timeline-dot" style={{ background: meta.color + '22', borderColor: meta.color, color: meta.color, fontSize: '0.55rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {meta.icon}
                       </div>
                       <div style={{ marginLeft: 4 }}>
-                        <div style={{ color: 'var(--text)', fontSize: '0.82rem', fontWeight: 500, lineHeight: 1.3 }}>{a.title}</div>
-                        <div style={{ color: 'var(--muted)', fontSize: '0.72rem', marginTop: 2 }}>{timeAgo(a.timestamp)}</div>
+                        <div style={{ color: 'var(--text)', fontSize: '0.8rem', fontWeight: 500, lineHeight: 1.3 }}>{a.title}</div>
+                        <div style={{ color: 'var(--faint)', fontSize: '0.7rem', marginTop: 2, fontFamily: 'var(--mono)' }}>{timeAgo(a.timestamp)}</div>
                       </div>
                     </div>
                   );
@@ -202,6 +227,50 @@ export default function Dashboard() {
             )}
           </GlassCard>
         </div>
+
+        {/* QUICK ACTIONS + SYSTEM STATUS */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+          <GlassCard className="fade-in-up-5">
+            <div className="section-label" style={{ marginBottom: 4 }}>Shortcuts</div>
+            <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 20 }}>Quick Actions</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+              {quickActions.map(a => (
+                <button
+                  key={a.to}
+                  onClick={() => navigate(a.to)}
+                  className="quick-action-btn"
+                  style={{ '--btn-color': a.color }}
+                >
+                  <div style={{ fontSize: '1.4rem' }}>{a.icon}</div>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: a.color, letterSpacing: '0.5px' }}>{a.label}</div>
+                </button>
+              ))}
+            </div>
+          </GlassCard>
+
+          <GlassCard className="fade-in-up-6">
+            <div className="section-label" style={{ marginBottom: 4 }}>Diagnostics</div>
+            <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 20 }}>System Health</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {[
+                { label: 'Orchestrator', value: status?.server?.status === 'healthy' ? 100 : 0, color: 'var(--green)' },
+                { label: 'Worker Pool', value: status?.workers?.total || 0, max: 5, color: 'var(--teal)' },
+                { label: 'Task Queue', value: Math.min((status?.tasks?.active || 0) * 20, 100), color: 'var(--blue)' },
+              ].map((m, i) => (
+                <div key={i}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ color: 'var(--muted)', fontSize: '0.78rem', fontFamily: 'var(--mono)' }}>{m.label}</span>
+                    <span style={{ color: m.color, fontSize: '0.75rem', fontFamily: 'var(--mono)', fontWeight: 700 }}>{m.value}%</span>
+                  </div>
+                  <div className="bar-track">
+                    <div className="bar-fill" style={{ width: `${m.value}%`, background: `linear-gradient(90deg, ${m.color}, ${m.color}aa)` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+        </div>
+
       </div>
     </div>
   );

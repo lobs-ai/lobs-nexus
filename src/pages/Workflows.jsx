@@ -1,197 +1,172 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import GlassCard from '../components/GlassCard';
 import Badge from '../components/Badge';
-import Modal from '../components/Modal';
 import { useApi } from '../hooks/useApi';
 import { api } from '../lib/api';
 import { timeAgo, formatDuration } from '../lib/utils';
 
 const NODE_COLORS = {
-  spawn: '#2dd4bf',
+  spawn_agent: '#2dd4bf',
+  expression: '#38bdf8',
   condition: '#fbbf24',
   notify: '#a78bfa',
+  transform: '#34d399',
+  gate: '#f87171',
   default: '#38bdf8',
 };
 
-const STATUS_COLORS = {
-  running: '#2dd4bf',
-  completed: '#34d399',
-  failed: '#f87171',
-  pending: '#fbbf24',
-};
-
-function layoutDAG(nodes) {
-  // Simple layered layout
-  const nodeMap = {};
-  nodes.forEach(n => { nodeMap[n.id] = { ...n, layer: 0, x: 0, y: 0 }; });
-
-  // Assign layers via longest path from root
-  const visited = new Set();
-  const assign = (id, depth) => {
-    if (!nodeMap[id]) return;
-    if (nodeMap[id].layer < depth) nodeMap[id].layer = depth;
-    if (visited.has(id)) return;
-    visited.add(id);
-    (nodeMap[id].next || []).forEach(nid => assign(nid, depth + 1));
-  };
-
-  const allTargets = new Set(nodes.flatMap(n => n.next || []));
-  const roots = nodes.filter(n => !allTargets.has(n.id));
-  if (roots.length === 0 && nodes.length > 0) assign(nodes[0].id, 0);
-  else roots.forEach(r => assign(r.id, 0));
-
-  // Group by layer
-  const layers = {};
-  Object.values(nodeMap).forEach(n => {
-    if (!layers[n.layer]) layers[n.layer] = [];
-    layers[n.layer].push(n.id);
-  });
-
-  const W = 150, H = 80, GAP_X = 60, GAP_Y = 40;
-  const maxPerLayer = Math.max(...Object.values(layers).map(l => l.length));
-  const totalH = maxPerLayer * (H + GAP_Y);
-
-  Object.entries(layers).forEach(([layer, ids]) => {
-    const x = Number(layer) * (W + GAP_X) + 20;
-    const groupH = ids.length * (H + GAP_Y) - GAP_Y;
-    const startY = (totalH - groupH) / 2;
-    ids.forEach((id, i) => {
-      nodeMap[id].x = x;
-      nodeMap[id].y = startY + i * (H + GAP_Y);
-    });
-  });
-
-  const maxLayer = Math.max(...Object.values(nodeMap).map(n => n.layer));
-  const svgW = (maxLayer + 1) * (W + GAP_X) + 20;
-  const svgH = totalH + 20;
-
-  return { nodeMap, svgW: Math.max(svgW, 300), svgH: Math.max(svgH, 200), W, H };
-}
-
-function DAGViewer({ workflow, onClose }) {
-  const [zoom, setZoom] = useState(1);
-  const [selectedNode, setSelectedNode] = useState(null);
-  const [popupPos, setPopupPos] = useState(null);
-  const svgRef = useRef(null);
-
-  const nodes = workflow?.steps || workflow?.nodes || [];
-  if (!nodes.length) {
-    return (
-      <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>
-        No node definitions available for this workflow.
-      </div>
-    );
-  }
-
-  const { nodeMap, svgW, svgH, W, H } = layoutDAG(nodes);
-
-  const handleNodeClick = (node, e) => {
-    e.stopPropagation();
-    setSelectedNode(node);
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (rect) {
-      setPopupPos({
-        x: node.x * zoom + W * zoom / 2,
-        y: node.y * zoom + H * zoom,
+function buildGraph(workflow) {
+  let nodes = [];
+  try { nodes = typeof workflow.nodes === 'string' ? JSON.parse(workflow.nodes) : (workflow.nodes || []); } catch { return { nodes: [], edges: [] }; }
+  
+  const edges = [];
+  nodes.forEach(n => {
+    if (n.on_success) {
+      const target = typeof n.on_success === 'string' ? n.on_success : n.on_success?.goto;
+      if (target && nodes.find(x => x.id === target)) edges.push({ from: n.id, to: target, type: 'success' });
+    }
+    if (n.on_failure) {
+      const target = typeof n.on_failure === 'string' ? n.on_failure : n.on_failure?.action === 'goto' ? n.on_failure?.goto : null;
+      if (target && nodes.find(x => x.id === target)) edges.push({ from: n.id, to: target, type: 'failure' });
+    }
+    if (n.next) {
+      const nexts = Array.isArray(n.next) ? n.next : [n.next];
+      nexts.forEach(t => { if (nodes.find(x => x.id === t)) edges.push({ from: n.id, to: t, type: 'normal' }); });
+    }
+    if (n.branches) {
+      Object.entries(n.branches).forEach(([, target]) => {
+        if (typeof target === 'string' && nodes.find(x => x.id === target)) edges.push({ from: n.id, to: target, type: 'normal' });
       });
     }
-  };
-
-  const edges = [];
-  Object.values(nodeMap).forEach(n => {
-    (n.next || []).forEach(tid => {
-      const target = nodeMap[tid];
-      if (!target) return;
-      edges.push({ from: n, to: target });
-    });
   });
+  return { nodes, edges };
+}
 
+function layoutNodes(nodes, edges) {
+  if (!nodes.length) return { positioned: {}, svgW: 300, svgH: 200 };
+  
+  const W = 170, H = 70, GAP_X = 80, GAP_Y = 50;
+  const adj = {}; const inDeg = {};
+  nodes.forEach(n => { adj[n.id] = []; inDeg[n.id] = 0; });
+  edges.forEach(e => { if (adj[e.from]) adj[e.from].push(e.to); inDeg[e.to] = (inDeg[e.to] || 0) + 1; });
+  
+  // Topological layering
+  const layers = {}; const visited = new Set(); const depth = {};
+  const assignDepth = (id, d) => {
+    if (depth[id] !== undefined && depth[id] >= d) return;
+    depth[id] = d;
+    (adj[id] || []).forEach(t => assignDepth(t, d + 1));
+  };
+  const roots = nodes.filter(n => !inDeg[n.id] || inDeg[n.id] === 0);
+  if (roots.length === 0) assignDepth(nodes[0].id, 0);
+  else roots.forEach(r => assignDepth(r.id, 0));
+  
+  nodes.forEach(n => { const l = depth[n.id] || 0; if (!layers[l]) layers[l] = []; layers[l].push(n.id); });
+  
+  const positioned = {};
+  const maxPerLayer = Math.max(...Object.values(layers).map(l => l.length), 1);
+  const totalH = maxPerLayer * (H + GAP_Y);
+  
+  Object.entries(layers).forEach(([layer, ids]) => {
+    const x = Number(layer) * (W + GAP_X) + 40;
+    const groupH = ids.length * (H + GAP_Y) - GAP_Y;
+    const startY = (totalH - groupH) / 2 + 20;
+    ids.forEach((id, i) => { positioned[id] = { x, y: startY + i * (H + GAP_Y) }; });
+  });
+  
+  const maxLayer = Math.max(...Object.keys(layers).map(Number), 0);
+  return {
+    positioned,
+    svgW: Math.max((maxLayer + 1) * (W + GAP_X) + 80, 400),
+    svgH: Math.max(totalH + 60, 250),
+    W, H,
+  };
+}
+
+const EDGE_COLORS = { success: '#34d399', failure: '#f87171', normal: 'rgba(45,212,191,0.4)' };
+
+function DAGView({ workflow }) {
+  const [zoom, setZoom] = useState(1);
+  const [selectedNode, setSelectedNode] = useState(null);
+  
+  const { nodes, edges } = buildGraph(workflow);
+  if (!nodes.length) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>No nodes defined</div>;
+  
+  const { positioned, svgW, svgH, W, H } = layoutNodes(nodes, edges);
+  
   return (
-    <div style={{ position: 'relative' }}>
-      {/* Zoom controls */}
+    <div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center' }}>
-        <button onClick={() => setZoom(z => Math.max(0.4, z - 0.2))} style={btnStyle}>−</button>
-        <span style={{ color: 'var(--muted)', fontSize: '0.8rem', fontFamily: 'var(--mono)' }}>{Math.round(zoom * 100)}%</span>
-        <button onClick={() => setZoom(z => Math.min(2, z + 0.2))} style={btnStyle}>+</button>
-        <button onClick={() => setZoom(1)} style={{ ...btnStyle, marginLeft: 4 }}>Reset</button>
+        <button className="btn-ghost" style={{ padding: '4px 12px' }} onClick={() => setZoom(z => Math.max(0.4, z - 0.2))}>−</button>
+        <span style={{ color: 'var(--muted)', fontSize: '0.78rem', fontFamily: 'var(--mono)', minWidth: 40, textAlign: 'center' }}>{Math.round(zoom * 100)}%</span>
+        <button className="btn-ghost" style={{ padding: '4px 12px' }} onClick={() => setZoom(z => Math.min(2, z + 0.2))}>+</button>
+        <button className="btn-ghost" style={{ padding: '4px 12px' }} onClick={() => setZoom(1)}>Reset</button>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
+          {[{ label: 'Success', color: EDGE_COLORS.success }, { label: 'Failure', color: EDGE_COLORS.failure }, { label: 'Flow', color: EDGE_COLORS.normal }].map(l => (
+            <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <div style={{ width: 16, height: 2, background: l.color, borderRadius: 1 }} />
+              <span style={{ color: 'var(--muted)', fontSize: '0.68rem', fontFamily: 'var(--mono)' }}>{l.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
-
-      <div style={{ overflow: 'auto', background: 'rgba(0,0,0,0.3)', borderRadius: 10, border: '1px solid var(--border)', position: 'relative' }}
+      
+      <div style={{ overflow: 'auto', background: 'rgba(6,9,20,0.8)', borderRadius: 12, border: '1px solid var(--border)', position: 'relative' }}
            onClick={() => setSelectedNode(null)}>
-        <svg
-          ref={svgRef}
-          width={svgW * zoom}
-          height={svgH * zoom}
-          style={{ display: 'block' }}
-          viewBox={`0 0 ${svgW} ${svgH}`}
-        >
+        <svg width={svgW * zoom} height={svgH * zoom} viewBox={`0 0 ${svgW} ${svgH}`} style={{ display: 'block' }}>
           <defs>
-            <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-              <path d="M0,0 L0,6 L8,3 z" fill="var(--border)" />
-            </marker>
+            {Object.entries(EDGE_COLORS).map(([type, color]) => (
+              <marker key={type} id={`arrow-${type}`} markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d={`M0,0 L0,6 L8,3 z`} fill={color} />
+              </marker>
+            ))}
           </defs>
-
-          {/* Edges */}
+          
           {edges.map((e, i) => {
-            const x1 = e.from.x + W;
-            const y1 = e.from.y + H / 2;
-            const x2 = e.to.x;
-            const y2 = e.to.y + H / 2;
+            const from = positioned[e.from]; const to = positioned[e.to];
+            if (!from || !to) return null;
+            const x1 = from.x + W; const y1 = from.y + H / 2;
+            const x2 = to.x; const y2 = to.y + H / 2;
             const mx = (x1 + x2) / 2;
+            const color = EDGE_COLORS[e.type] || EDGE_COLORS.normal;
             return (
-              <path
-                key={i}
-                d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`}
-                fill="none"
-                stroke="var(--border)"
-                strokeWidth="1.5"
-                markerEnd="url(#arrow)"
-              />
+              <g key={i}>
+                <path d={`M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`} fill="none" stroke={color} strokeWidth="2" markerEnd={`url(#arrow-${e.type})`} opacity="0.8" />
+                {e.type !== 'normal' && (
+                  <text x={mx} y={Math.min(y1, y2) - 6} textAnchor="middle" fill={color} fontSize="9" fontFamily="monospace" fontWeight="600" opacity="0.8">
+                    {e.type}
+                  </text>
+                )}
+              </g>
             );
           })}
-
-          {/* Nodes */}
-          {Object.values(nodeMap).map(n => {
+          
+          {nodes.map(n => {
+            const pos = positioned[n.id]; if (!pos) return null;
             const color = NODE_COLORS[n.type] || NODE_COLORS.default;
             const isSelected = selectedNode?.id === n.id;
             return (
-              <g key={n.id} onClick={(e) => handleNodeClick(n, e)} style={{ cursor: 'pointer' }}>
-                <rect
-                  x={n.x} y={n.y} width={W} height={H} rx="10"
-                  fill={isSelected ? color + '33' : 'rgba(11,15,30,0.8)'}
-                  stroke={isSelected ? color : color + '66'}
-                  strokeWidth={isSelected ? 2 : 1}
-                />
-                <text x={n.x + W / 2} y={n.y + 18} textAnchor="middle" fill={color} fontSize="10" fontFamily="monospace" fontWeight="600">
-                  {(n.type || 'step').toUpperCase()}
-                </text>
-                <text x={n.x + W / 2} y={n.y + H / 2 + 4} textAnchor="middle" fill="var(--text)" fontSize="12" fontFamily="monospace">
-                  {(n.id || n.name || '').slice(0, 18)}
-                </text>
+              <g key={n.id} onClick={e => { e.stopPropagation(); setSelectedNode(n); }} style={{ cursor: 'pointer' }}>
+                <rect x={pos.x} y={pos.y} width={W} height={H} rx="10" fill={isSelected ? color + '25' : 'rgba(14,20,38,0.9)'} stroke={isSelected ? color : color + '55'} strokeWidth={isSelected ? 2 : 1} />
+                <line x1={pos.x} y1={pos.y} x2={pos.x + 12} y2={pos.y} stroke={color} strokeWidth="2" />
+                <line x1={pos.x + W - 12} y1={pos.y + H} x2={pos.x + W} y2={pos.y + H} stroke={color} strokeWidth="2" />
+                <text x={pos.x + W / 2} y={pos.y + 20} textAnchor="middle" fill={color} fontSize="9" fontFamily="monospace" fontWeight="700" letterSpacing="1">{(n.type || 'step').toUpperCase()}</text>
+                <text x={pos.x + W / 2} y={pos.y + H / 2 + 8} textAnchor="middle" fill="var(--text)" fontSize="11" fontFamily="monospace">{(n.id || '').slice(0, 20)}</text>
               </g>
             );
           })}
         </svg>
-
-        {/* Node popup */}
-        {selectedNode && (
-          <div style={{
-            position: 'absolute',
-            left: Math.min((selectedNode.x * zoom) + W * zoom / 2, (svgW * zoom) - 220),
-            top: (selectedNode.y * zoom) + H * zoom + 8,
-            background: 'var(--card)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: 12,
-            minWidth: 200,
-            zIndex: 10,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-          }}>
-            <div style={{ color: 'var(--text)', fontWeight: 700, marginBottom: 6 }}>{selectedNode.id || selectedNode.name}</div>
-            <div style={{ color: 'var(--muted)', fontSize: '0.78rem', marginBottom: 4 }}>Type: {selectedNode.type || 'step'}</div>
-            {selectedNode.agent && <div style={{ color: 'var(--muted)', fontSize: '0.78rem' }}>Agent: {selectedNode.agent}</div>}
-            {selectedNode.model && <div style={{ color: 'var(--muted)', fontSize: '0.78rem' }}>Model: {selectedNode.model}</div>}
-            {selectedNode.condition && <div style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: 4 }}>Condition: {selectedNode.condition}</div>}
+        
+        {selectedNode && positioned[selectedNode.id] && (
+          <div style={{ position: 'absolute', left: Math.min(positioned[selectedNode.id].x * zoom + W * zoom / 2, svgW * zoom - 250), top: positioned[selectedNode.id].y * zoom + H * zoom + 10, background: 'rgba(9,13,26,0.98)', border: '1px solid rgba(45,212,191,0.3)', borderRadius: 10, padding: 16, minWidth: 220, zIndex: 10, boxShadow: '0 0 40px rgba(0,0,0,0.6), 0 0 20px rgba(45,212,191,0.1)' }}>
+            <div style={{ color: 'var(--text)', fontWeight: 700, marginBottom: 8, fontFamily: 'var(--mono)', fontSize: '0.9rem' }}>{selectedNode.id}</div>
+            <div style={{ color: NODE_COLORS[selectedNode.type] || 'var(--blue)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>{selectedNode.type || 'step'}</div>
+            {selectedNode.config && Object.entries(selectedNode.config).slice(0, 5).map(([k, v]) => (
+              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                <span style={{ color: 'var(--muted)', fontSize: '0.72rem', fontFamily: 'var(--mono)' }}>{k}:</span>
+                <span style={{ color: 'var(--text)', fontSize: '0.72rem', fontFamily: 'var(--mono)', textAlign: 'right', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{typeof v === 'string' ? v : JSON.stringify(v).slice(0, 30)}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -199,110 +174,100 @@ function DAGViewer({ workflow, onClose }) {
   );
 }
 
-const btnStyle = {
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid var(--border)',
-  borderRadius: 6,
-  color: 'var(--text)',
-  cursor: 'pointer',
-  padding: '4px 10px',
-  fontSize: '0.85rem',
-};
+const STATUS_COLORS = { running: '#2dd4bf', completed: '#34d399', failed: '#f87171', pending: '#fbbf24', cancelled: '#475569' };
 
 export default function Workflows() {
   const { data: workflows, loading } = useApi(() => api.workflows());
-  const { data: runs, loading: runsLoading } = useApi(() => api.workflowRuns(20));
+  const { data: runs } = useApi(() => api.workflowRuns(20));
   const [selectedWf, setSelectedWf] = useState(null);
 
-  const wfList = workflows?.workflows || workflows || [];
-  const runList = runs?.runs || runs || [];
+  const wfList = Array.isArray(workflows) ? workflows : (workflows?.workflows || []);
+  const runList = Array.isArray(runs) ? runs : (runs?.runs || []);
+  const selectedRuns = selectedWf ? runList.filter(r => (r.workflowId || r.workflow_id) === selectedWf.id) : [];
 
   return (
-    <div style={{ position: 'relative' }}>
-      <div style={{ marginBottom: 32 }}>
-        <span className="section-label">Automation</span>
-        <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-1px' }}>
-          <span className="gradient-text">Workflows</span>
-        </h1>
-        <p style={{ color: 'var(--muted)' }}>DAG-based automation definitions and run history</p>
+    <div style={{ position: 'relative', padding: '36px 32px' }}>
+      <div className="orb orb-1" style={{ position: 'fixed', zIndex: 0 }} />
+      <div className="orb orb-2" style={{ position: 'fixed', zIndex: 0 }} />
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <div className="fade-in-up" style={{ marginBottom: 36 }}>
+          <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '6px', color: 'var(--teal)', fontFamily: 'var(--mono)', marginBottom: 8, opacity: 0.8 }}>AUTOMATION</div>
+          <h1 style={{ fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-1.5px' }}><span className="gradient-text">Workflows</span></h1>
+          <p style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 4 }}>DAG-based automation pipelines</p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 24, minHeight: 500 }}>
+          {/* Workflow List */}
+          <GlassCard className="fade-in-up-1" style={{ height: 'fit-content' }}>
+            <div className="section-label" style={{ marginBottom: 16 }}>Definitions</div>
+            {loading ? (
+              <div style={{ color: 'var(--muted)', textAlign: 'center', padding: '20px 0' }}>Loading...</div>
+            ) : wfList.length === 0 ? (
+              <div style={{ color: 'var(--muted)', textAlign: 'center', padding: '20px 0' }}>No workflows</div>
+            ) : wfList.map(wf => {
+              let nodeCount = 0;
+              try { const n = typeof wf.nodes === 'string' ? JSON.parse(wf.nodes) : (wf.nodes || []); nodeCount = n.length; } catch {}
+              return (
+                <div key={wf.id} className={`wf-list-item ${selectedWf?.id === wf.id ? 'selected' : ''}`} onClick={() => setSelectedWf(wf)}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.88rem' }}>{wf.name || wf.id}</span>
+                    <span className={wf.isActive || wf.is_active ? 'pulse-dot' : ''} style={{ width: 8, height: 8, borderRadius: '50%', background: wf.isActive || wf.is_active ? 'var(--green)' : 'var(--faint)', color: wf.isActive || wf.is_active ? 'var(--green)' : 'var(--faint)', display: 'block' }} />
+                  </div>
+                  <div style={{ color: 'var(--muted)', fontSize: '0.72rem', fontFamily: 'var(--mono)' }}>{nodeCount} nodes</div>
+                </div>
+              );
+            })}
+          </GlassCard>
+
+          {/* DAG + Runs */}
+          <div>
+            {!selectedWf ? (
+              <GlassCard className="fade-in-up-2">
+                <div style={{ padding: '80px 0', textAlign: 'center' }}>
+                  <div style={{ fontSize: '2.5rem', marginBottom: 16, opacity: 0.3 }}>🔀</div>
+                  <div style={{ color: 'var(--text)', fontWeight: 600 }}>Select a workflow</div>
+                  <div style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 4 }}>Click a workflow on the left to visualize it</div>
+                </div>
+              </GlassCard>
+            ) : (
+              <>
+                <GlassCard className="fade-in-up-2" style={{ marginBottom: 24 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <div>
+                      <div className="section-label" style={{ marginBottom: 4 }}>Pipeline</div>
+                      <h3 style={{ fontWeight: 700, fontSize: '1.1rem' }}>{selectedWf.name || selectedWf.id}</h3>
+                    </div>
+                    <Badge label={selectedWf.isActive || selectedWf.is_active ? 'active' : 'inactive'} color={selectedWf.isActive || selectedWf.is_active ? 'var(--green)' : 'var(--muted)'} dot />
+                  </div>
+                  {selectedWf.description && <div style={{ color: 'var(--muted)', fontSize: '0.85rem', marginBottom: 16, lineHeight: 1.5 }}>{selectedWf.description}</div>}
+                  <DAGView workflow={selectedWf} />
+                </GlassCard>
+
+                {selectedRuns.length > 0 && (
+                  <GlassCard className="fade-in-up-3">
+                    <div className="section-label" style={{ marginBottom: 12 }}>Run History</div>
+                    <table className="hud-table">
+                      <thead><tr>
+                        {['Status', 'Duration', 'Step', 'Started'].map(h => <th key={h}>{h}</th>)}
+                      </tr></thead>
+                      <tbody>
+                        {selectedRuns.map(r => (
+                          <tr key={r.id}>
+                            <td><Badge label={r.status} color={STATUS_COLORS[r.status] || 'var(--muted)'} dot /></td>
+                            <td style={{ fontFamily: 'var(--mono)', fontSize: '0.78rem', color: 'var(--muted)' }}>{formatDuration(r.startedAt || r.started_at, r.endedAt || r.ended_at)}</td>
+                            <td style={{ fontFamily: 'var(--mono)', fontSize: '0.78rem', color: 'var(--blue)' }}>{r.currentStep || r.current_step || '--'}</td>
+                            <td style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>{timeAgo(r.startedAt || r.started_at)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </GlassCard>
+                )}
+              </>
+            )}
+          </div>
+        </div>
       </div>
-
-      {/* Workflow list */}
-      <GlassCard style={{ marginBottom: 24 }}>
-        <h3 style={{ color: 'var(--text)', fontWeight: 700, marginBottom: 16 }}>Workflow Definitions</h3>
-        {loading ? (
-          <div style={{ color: 'var(--muted)', padding: '20px 0', textAlign: 'center' }}>Loading...</div>
-        ) : wfList.length === 0 ? (
-          <div style={{ color: 'var(--muted)', padding: '20px 0', textAlign: 'center' }}>No workflows defined</div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-            {wfList.map(wf => (
-              <div
-                key={wf.id}
-                onClick={() => setSelectedWf(wf)}
-                style={{ background: 'rgba(11,15,30,0.6)', border: '1px solid var(--border)', borderRadius: 10, padding: 16, cursor: 'pointer', transition: 'all 0.2s' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--teal)'; e.currentTarget.style.boxShadow = '0 0 20px rgba(45,212,191,0.1)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                  <div style={{ color: 'var(--text)', fontWeight: 600 }}>{wf.name || wf.id}</div>
-                  <Badge
-                    label={wf.active || wf.enabled ? 'active' : 'inactive'}
-                    color={wf.active || wf.enabled ? 'var(--green)' : 'var(--muted)'}
-                    dot
-                  />
-                </div>
-                <div style={{ color: 'var(--muted)', fontSize: '0.78rem', marginBottom: 8 }}>{wf.description || 'No description'}</div>
-                <div style={{ color: 'var(--teal)', fontSize: '0.72rem', fontFamily: 'var(--mono)' }}>
-                  {(wf.steps || wf.nodes || []).length} nodes · Click to visualize
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </GlassCard>
-
-      {/* Recent runs */}
-      <GlassCard>
-        <h3 style={{ color: 'var(--text)', fontWeight: 700, marginBottom: 16 }}>Recent Runs</h3>
-        {runsLoading ? (
-          <div style={{ color: 'var(--muted)', padding: '20px 0', textAlign: 'center' }}>Loading...</div>
-        ) : runList.length === 0 ? (
-          <div style={{ color: 'var(--muted)', padding: '20px 0', textAlign: 'center' }}>No workflow runs yet</div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  {['Workflow', 'Status', 'Duration', 'Step', 'Started'].map(h => (
-                    <th key={h} style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px', padding: '0 12px 10px', textAlign: 'left' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {runList.map(r => (
-                  <tr key={r.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                    <td style={{ padding: '10px 12px', color: 'var(--text)', fontSize: '0.85rem', fontFamily: 'var(--mono)' }}>{r.workflowId || r.workflow_id || '--'}</td>
-                    <td style={{ padding: '10px 12px' }}>
-                      <Badge label={r.status} color={STATUS_COLORS[r.status] || 'var(--muted)'} dot />
-                    </td>
-                    <td style={{ padding: '10px 12px', color: 'var(--muted)', fontSize: '0.82rem', fontFamily: 'var(--mono)' }}>
-                      {formatDuration(r.startedAt || r.started_at, r.endedAt || r.ended_at)}
-                    </td>
-                    <td style={{ padding: '10px 12px', color: 'var(--blue)', fontSize: '0.78rem', fontFamily: 'var(--mono)' }}>{r.currentStep || r.current_step || '--'}</td>
-                    <td style={{ padding: '10px 12px', color: 'var(--muted)', fontSize: '0.78rem' }}>{timeAgo(r.startedAt || r.started_at)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </GlassCard>
-
-      {/* DAG Modal */}
-      <Modal open={!!selectedWf} onClose={() => setSelectedWf(null)} title={selectedWf?.name || selectedWf?.id || 'Workflow'}>
-        {selectedWf && <DAGViewer workflow={selectedWf} onClose={() => setSelectedWf(null)} />}
-      </Modal>
     </div>
   );
 }

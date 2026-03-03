@@ -1,8 +1,8 @@
-export default function GlassCard({ children, className = '', glow = false, onClick }) {
+export default function GlassCard({ children, className = '', glow = false, onClick, style = {} }) {
   return (
     <div
-      className={`glass-card p-5 ${glow ? 'glow' : ''} ${onClick ? 'cursor-pointer' : ''} ${className}`}
-      style={{ transition: 'all 0.2s' }}
+      className={`glass-card p-6 ${glow ? 'glow' : ''} ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      style={{ transition: 'all 0.25s', ...style }}
       onClick={onClick}
     >
       {children}
