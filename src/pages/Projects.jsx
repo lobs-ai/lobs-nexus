@@ -60,12 +60,12 @@ function TaskCard({ task, onClick }) {
 
 export default function Projects() {
   const { data: allProjects, loading: projLoading, reload: reloadProjects } = useApi(() => api.archivedProjects());
-  const projects = (allProjects || []).filter(p => showArchived ? p.archived : !p.archived);
   const { data: allTasks, loading: tasksLoading, reload: reloadTasks } = usePolling(() => api.tasks(), 15000);
   const [view, setView] = useState('projects');
   const [selectedProject, setSelectedProject] = useState(null);
   const [showAllTasks, setShowAllTasks] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const projects = (allProjects || []).filter(p => showArchived ? p.archived : !p.archived);
   const [showCreate, setShowCreate] = useState(false);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
