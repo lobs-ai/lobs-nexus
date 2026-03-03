@@ -119,14 +119,11 @@ export default function Projects() {
             </h1>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            {view === 'kanban' && (
-              <button onClick={() => setShowAllTasks(v => !v)} style={{ background: showAllTasks ? 'rgba(45,212,191,0.12)' : 'rgba(255,255,255,0.03)', border: `1px solid ${showAllTasks ? 'rgba(45,212,191,0.4)' : 'var(--border)'}`, borderRadius: 8, padding: '8px 16px', color: showAllTasks ? 'var(--teal)' : 'var(--muted)', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem' }}>
-                {showAllTasks ? '✓ All Tasks' : 'All Tasks'}
-              </button>
-            )}
+            
             {view === 'kanban' && <button className="btn-primary" onClick={() => setShowCreateTask(true)}>+ New Task</button>}
             {view === 'projects' && <>
-              <button className={showArchived ? 'btn-ghost' : 'btn-ghost'} onClick={() => setShowArchived(v => !v)} style={showArchived ? { borderColor: 'rgba(45,212,191,0.4)', color: 'var(--teal)' } : {}}>{showArchived ? '✓ Archived' : 'Archived'}</button>
+              <button className="btn-ghost" onClick={() => { setView('kanban'); setShowAllTasks(true); setSelectedProject(null); }}>All Tasks</button>
+              <button className="btn-ghost" onClick={() => setShowArchived(v => !v)} style={showArchived ? { borderColor: 'rgba(45,212,191,0.4)', color: 'var(--teal)' } : {}}>{showArchived ? '✓ Archived' : 'Archived'}</button>
               <button className="btn-primary" onClick={() => setShowCreate(true)}>+ New Project</button>
             </>}
           </div>

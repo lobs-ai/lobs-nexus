@@ -32,6 +32,8 @@ export const api = {
   project: (id) => req(`/api/projects/${id}`),
   createProject: (body) => req('/api/projects', { method: 'POST', body }),
   updateProject: (id, body) => req(`/api/projects/${id}`, { method: 'PATCH', body }),
+  archiveProject: (id) => req(`/api/projects/${id}/archive`, { method: 'POST' }),
+  unarchiveProject: (id) => req(`/api/projects/${id}/unarchive`, { method: 'POST' }),
 
   // Agents
   agents: () => req('/api/agents'),
