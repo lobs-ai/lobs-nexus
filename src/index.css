@@ -428,12 +428,21 @@ pre { background: rgba(8,12,24,0.9); border: 1px solid var(--border); border-rad
 @media (max-width: 768px) {
   /* Sidebar becomes bottom nav */
   .sidebar {
-    position: fixed; bottom: 0; left: 0; right: 0; top: auto;
-    width: 100% !important; height: 64px; flex-direction: row;
-    border-right: none; border-top: 1px solid var(--border);
-    z-index: 200; padding: 0;
+    position: fixed !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
+    top: auto !important;
+    width: 100% !important; height: 60px !important;
+    min-height: 60px !important; max-height: 60px !important;
+    flex-direction: row !important;
+    border-right: none !important;
+    border-top: 1px solid var(--border);
+    z-index: 200; padding: 0 !important;
+    overflow: hidden !important;
   }
-  .sidebar.collapsed { width: 100% !important; height: 64px; }
+  .sidebar.collapsed {
+    width: 100% !important; height: 60px !important;
+    min-height: 60px !important; max-height: 60px !important;
+  }
   .sidebar .nav-label,
   .sidebar .logo-text,
   .sidebar .status-label,
@@ -446,15 +455,22 @@ pre { background: rgba(8,12,24,0.9); border: 1px solid var(--border); border-rad
 
   /* Nav becomes horizontal */
   .sidebar nav {
-    display: flex; flex-direction: row; align-items: center;
-    justify-content: space-around; width: 100%;
-    padding: 0 !important; overflow-x: auto; overflow-y: hidden;
-    gap: 0;
+    display: flex !important; flex-direction: row !important;
+    align-items: center !important; justify-content: space-around !important;
+    width: 100% !important; height: 60px !important;
+    padding: 0 !important; overflow-x: auto; overflow-y: hidden !important;
+    gap: 0 !important; flex: none !important;
   }
   .nav-item {
-    flex-direction: column; gap: 2px; padding: 8px 6px !important;
-    font-size: 0.6rem; min-width: 48px; text-align: center;
-    justify-content: center; align-items: center; border-radius: 8px;
+    flex-direction: column !important; gap: 2px !important;
+    padding: 8px 6px !important; margin: 0 !important;
+    font-size: 0.6rem !important; min-width: 48px; text-align: center;
+    justify-content: center !important; align-items: center !important;
+    border-radius: 8px; border-left: none !important;
+  }
+  .nav-item.active {
+    border-left: none !important; padding-left: 6px !important;
+    background: rgba(45,212,191,0.12) !important;
   }
   .nav-item::before { display: none !important; }
   .nav-item svg { width: 20px; height: 20px; }
