@@ -44,10 +44,19 @@ export default function Usage() {
   const { data: dashboard } = useApi(() => api.usageDashboard(window), [window]);
   const { data: workers } = useApi(() => api.workerHistory(100));
 
-  const summary = dashboard?.summary || {};
-  const costByModel = dashboard?.costByModel || {};
-  const runsByAgent = dashboard?.runsByAgent || {};
-  const successRate = dashboard?.successRate;
+  const totals = dashboard?.totals || {};
+  const summary = {
+    totalCost: totals.estimated_cost_usd || 0,
+    totalTokens: totals.total_tokens || 0,
+    totalRuns: totals.task_count || totals.requests || 0,
+  };
+  const byModel = dashboard?.by_model || [];
+  const costByModelArr = byModel.reduce((acc, m) => { acc[m.model || m.name] = m.estimated_cost_usd || m.cost || 0; return acc; }, {});
+  const runsByAgentArr = {};
+  (workerList || []).forEach(r => { if (r.agentType) runsByAgentArr[r.agentType] = (runsByAgentArr[r.agentType] || 0) + 1; });
+  const costByModel = costByModelArr;
+  const runsByAgent = runsByAgentArr;
+  const successRate = workerList.length > 0 ? workerList.filter(r => r.succeeded).length / workerList.length : null;
   const workerList = workers?.runs || workers || [];
   const maxCost = Math.max(...Object.values(costByModel), 0.001);
   const maxRuns = Math.max(...Object.values(runsByAgent), 1);

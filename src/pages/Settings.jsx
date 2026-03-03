@@ -14,11 +14,11 @@ function Row({ label, value, mono, color }) {
 }
 
 const MODEL_TIERS = [
-  { tier: 'micro', desc: 'Qwen 3.5 (Local)', cost: 'Free', use: 'Simple tasks' },
-  { tier: 'small', desc: 'Claude Sonnet', cost: '$0.003/1K', use: 'Balanced' },
-  { tier: 'medium', desc: 'Claude Sonnet', cost: '$0.003/1K', use: 'Balanced' },
-  { tier: 'standard', desc: 'GPT-5.3 Codex', cost: '$0.015/1K', use: 'Default' },
-  { tier: 'strong', desc: 'Claude Opus', cost: '$0.075/1K', use: 'Complex' },
+  { tier: 'micro', desc: 'Local Model (varies by size)', cost: 'Free', use: 'Simple tasks' },
+  { tier: 'small', desc: 'Claude Sonnet', cost: '~$0.003/1K', use: 'Light work' },
+  { tier: 'medium', desc: 'Claude Haiku', cost: '~$0.001/1K', use: 'Fast + cheap' },
+  { tier: 'standard', desc: 'Claude Sonnet / Codex', cost: '~$0.003-0.015/1K', use: 'Default' },
+  { tier: 'strong', desc: 'Claude Opus', cost: '~$0.075/1K', use: 'Complex reasoning' },
 ];
 
 export default function Settings() {

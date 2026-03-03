@@ -71,6 +71,13 @@ export const api = {
   // Memories
   memories: () => req('/api/memories'),
 
+  // Knowledge (filesystem)
+  knowledgeFs: () => req('/api/knowledge-fs/list'),
+  knowledgeFsRead: (path) => req('/api/knowledge-fs/read/' + path),
+
+  // Memories (filesystem)
+  memoriesFs: (agent) => agent ? req('/api/memories-fs/' + agent) : req('/api/memories-fs'),
+
   // Orchestrator
   orchestratorStatus: () => req('/api/orchestrator/status'),
 };

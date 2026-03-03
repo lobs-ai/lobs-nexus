@@ -258,10 +258,21 @@ export default function Projects() {
                 <div style={{ color: 'var(--text)', fontSize: '0.875rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{selectedTask.notes}</div>
               </div>
             )}
-            <div style={{ fontSize: '0.78rem', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--muted)', fontFamily: 'var(--mono)', marginBottom: 16 }}>
               <div>Created: {timeAgo(selectedTask.created_at || selectedTask.createdAt)}</div>
               <div>Updated: {timeAgo(selectedTask.updated_at || selectedTask.updatedAt)}</div>
               <div style={{ color: 'var(--faint)', marginTop: 4 }}>ID: {selectedTask.id}</div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              {selectedTask.status !== 'active' && (
+                <button className="btn-success" onClick={async () => { await api.updateTask(selectedTask.id, { status: 'active' }); reloadTasks(); setSelectedTask(null); }} style={{ flex: 1 }}>↻ Reactivate</button>
+              )}
+              {selectedTask.status === 'active' && (
+                <button className="btn-primary" onClick={async () => { await api.updateTask(selectedTask.id, { status: 'completed' }); reloadTasks(); setSelectedTask(null); }} style={{ flex: 1 }}>✓ Complete</button>
+              )}
+              {selectedTask.status !== 'cancelled' && (
+                <button className="btn-danger" onClick={async () => { await api.updateTask(selectedTask.id, { status: 'cancelled' }); reloadTasks(); setSelectedTask(null); }} style={{ flex: 1 }}>✗ Cancel</button>
+              )}
             </div>
           </div>
         )}
