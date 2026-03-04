@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import GlassCard from '../components/GlassCard';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
@@ -18,6 +19,45 @@ const COLUMNS = [
   { id: 'cancelled', label: 'Cancelled', color: 'var(--muted)' },
 ];
 const PROJECT_COLORS = ['var(--teal)', 'var(--blue)', 'var(--purple)', 'var(--amber)', 'var(--green)', 'var(--red)'];
+const PROJECTS_VIEW_STATE_KEY = 'nexus.projects.viewState';
+
+function getViewStateFromUrl(searchParams) {
+  const queryView = searchParams.get('view');
+  const queryProject = searchParams.get('project');
+  const queryScope = searchParams.get('scope');
+
+  if (queryView === 'kanban' || queryProject || queryScope === 'all') {
+    return {
+      view: 'kanban',
+      selectedProjectId: queryProject,
+      showAllTasks: queryScope === 'all',
+    };
+  }
+
+  return null;
+}
+
+function getInitialViewState(searchParams) {
+  const fromUrl = getViewStateFromUrl(searchParams);
+  if (fromUrl) {
+    return fromUrl;
+  }
+
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(PROJECTS_VIEW_STATE_KEY) || 'null');
+    if (saved && (saved.view === 'projects' || saved.view === 'kanban')) {
+      return {
+        view: saved.view,
+        selectedProjectId: saved.selectedProjectId || null,
+        showAllTasks: !!saved.showAllTasks,
+      };
+    }
+  } catch {
+    // Ignore invalid saved state.
+  }
+
+  return { view: 'projects', selectedProjectId: null, showAllTasks: false };
+}
 
 function CountUp({ value, duration = 1000 }) {
   const [display, setDisplay] = useState(0);
@@ -61,9 +101,10 @@ function TaskCard({ task, onClick }) {
 export default function Projects() {
   const { data: allProjects, loading: projLoading, reload: reloadProjects } = useApi(() => api.archivedProjects());
   const { data: allTasks, loading: tasksLoading, reload: reloadTasks } = usePolling(() => api.tasks(), 15000);
-  const [view, setView] = useState('projects');
-  const [selectedProject, setSelectedProject] = useState(null);
-  const [showAllTasks, setShowAllTasks] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [view, setView] = useState(() => getInitialViewState(searchParams).view);
+  const [selectedProjectId, setSelectedProjectId] = useState(() => getInitialViewState(searchParams).selectedProjectId);
+  const [showAllTasks, setShowAllTasks] = useState(() => getInitialViewState(searchParams).showAllTasks);
   const [showArchived, setShowArchived] = useState(false);
   const projects = (allProjects || []).filter(p => showArchived ? p.archived : !p.archived);
   const [showCreate, setShowCreate] = useState(false);
@@ -73,6 +114,7 @@ export default function Projects() {
   const [taskForm, setTaskForm] = useState({ title: '', agent: 'programmer', model_tier: 'standard', project_id: '', notes: '' });
 
   const projectList = projects || [];
+  const selectedProject = projectList.find(p => String(p.id) === String(selectedProjectId)) || null;
   const getProjectTasks = (pid) => (allTasks || []).filter(t => t.project_id === pid || t.projectId === pid);
   const getProjectColor = (p, idx) => {
     const active = getProjectTasks(p.id).filter(t => t.status === 'active').length;
@@ -98,6 +140,48 @@ export default function Projects() {
   const kanbanTasks = showAllTasks ? (allTasks || []) : selectedProject ? getProjectTasks(selectedProject.id) : (allTasks || []);
   const byStatus = (status) => kanbanTasks.filter(t => t.status === status || (status === 'active' && ['active', 'inbox', 'pending', 'waiting'].includes(t.status)) || (status === 'cancelled' && ['cancelled', 'rejected', 'archived'].includes(t.status)));
 
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(PROJECTS_VIEW_STATE_KEY, JSON.stringify({
+        view,
+        selectedProjectId,
+        showAllTasks,
+      }));
+    } catch {
+      // Ignore storage write issues.
+    }
+  }, [view, selectedProjectId, showAllTasks]);
+
+  useEffect(() => {
+    const fromUrl = getViewStateFromUrl(searchParams);
+    if (!fromUrl) return;
+
+    setView(fromUrl.view);
+    setSelectedProjectId(fromUrl.selectedProjectId);
+    setShowAllTasks(fromUrl.showAllTasks);
+  }, [searchParams]);
+
+  const openProjectsView = () => {
+    setView('projects');
+    setSelectedProjectId(null);
+    setShowAllTasks(false);
+    setSearchParams({}, { replace: true });
+  };
+
+  const openAllTasksView = () => {
+    setView('kanban');
+    setSelectedProjectId(null);
+    setShowAllTasks(true);
+    setSearchParams({ view: 'kanban', scope: 'all' }, { replace: true });
+  };
+
+  const openProjectView = (project) => {
+    setView('kanban');
+    setSelectedProjectId(project.id);
+    setShowAllTasks(false);
+    setSearchParams({ view: 'kanban', project: String(project.id) }, { replace: true });
+  };
+
   return (
     <div style={{ position: 'relative', padding: '36px 32px' }}>
       <div className="orb orb-1" style={{ position: 'fixed', zIndex: 0 }} />
@@ -107,7 +191,7 @@ export default function Projects() {
         <div className="fade-in-up" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 36 }}>
           <div>
             {view === 'kanban' && (
-              <button onClick={() => { setView('projects'); setSelectedProject(null); setShowAllTasks(false); }} style={{ background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontSize: '0.82rem', fontFamily: 'var(--mono)', letterSpacing: '1px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, padding: 0 }}>
+              <button onClick={openProjectsView} style={{ background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontSize: '0.82rem', fontFamily: 'var(--mono)', letterSpacing: '1px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6, padding: 0 }}>
                 ← BACK TO PROJECTS
               </button>
             )}
@@ -122,7 +206,7 @@ export default function Projects() {
             
             {view === 'kanban' && <button className="btn-primary" onClick={() => setShowCreateTask(true)}>+ New Task</button>}
             {view === 'projects' && <>
-              <button className="btn-ghost" onClick={() => { setView('kanban'); setShowAllTasks(true); setSelectedProject(null); }}>All Tasks</button>
+              <button className="btn-ghost" onClick={openAllTasksView}>All Tasks</button>
               <button className="btn-ghost" onClick={() => setShowArchived(v => !v)} style={showArchived ? { borderColor: 'rgba(45,212,191,0.4)', color: 'var(--teal)' } : {}}>{showArchived ? '✓ Archived' : 'Archived'}</button>
               <button className="btn-primary" onClick={() => setShowCreate(true)}>+ New Project</button>
             </>}
@@ -159,7 +243,7 @@ export default function Projects() {
                   const done = tasks.filter(t => t.status === 'completed');
                   const progress = tasks.length > 0 ? Math.round((done.length / tasks.length) * 100) : 0;
                   return (
-                    <div key={p.id} onClick={() => { setSelectedProject(p); setShowAllTasks(false); setView('kanban'); }} className="fade-in-up glass-card" style={{ padding: "24px", cursor: 'pointer', transition: 'all 0.25s', borderColor: active.length > 0 ? color + '44' : undefined, boxShadow: active.length > 0 ? `0 0 30px ${color}15` : undefined }}
+                    <div key={p.id} onClick={() => openProjectView(p)} className="fade-in-up glass-card" style={{ padding: "24px", cursor: 'pointer', transition: 'all 0.25s', borderColor: active.length > 0 ? color + '44' : undefined, boxShadow: active.length > 0 ? `0 0 30px ${color}15` : undefined }}
                       onMouseEnter={e => { e.currentTarget.style.borderColor = color + '66'; e.currentTarget.style.boxShadow = `0 0 40px ${color}20`; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                       onMouseLeave={e => { e.currentTarget.style.borderColor = active.length > 0 ? color + '44' : 'var(--border)'; e.currentTarget.style.boxShadow = active.length > 0 ? `0 0 30px ${color}15` : 'none'; e.currentTarget.style.transform = ''; }}
                     >
@@ -237,7 +321,7 @@ export default function Projects() {
 
       <Modal open={showCreateTask} onClose={() => setShowCreateTask(false)} title="New Task">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div><label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Title *</label><input className="nx-input" placeholder="Task title..." value={taskForm.title} onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))} /></div>
+          <div><label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Title *</label><input autoFocus data-autofocus="true" className="nx-input" placeholder="Task title..." value={taskForm.title} onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))} /></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div><label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Agent</label><select className="nx-input" value={taskForm.agent} onChange={e => setTaskForm(f => ({ ...f, agent: e.target.value }))}>{AGENTS.map(a => <option key={a} value={a}>{a}</option>)}</select></div>
             <div><label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Model Tier</label><select className="nx-input" value={taskForm.model_tier} onChange={e => setTaskForm(f => ({ ...f, model_tier: e.target.value }))}>{TIERS.map(t => <option key={t} value={t}>{t}</option>)}</select></div>

@@ -193,13 +193,19 @@ export default function Knowledge() {
         )}
       </div>
 
-      <Modal large open={!!selected} onClose={() => { setSelected(null); setFileContent(null); }} title={selected?.name || selected?.title || 'Document'}>
+      <Modal
+        large
+        contentStyle={selected?.path ? { width: '99%', maxWidth: '1800px', maxHeight: '96vh' } : undefined}
+        open={!!selected}
+        onClose={() => { setSelected(null); setFileContent(null); }}
+        title={selected?.name || selected?.title || 'Document'}
+      >
         {selected && (
           <div>
             {selected.path && <div style={{ color: 'var(--faint)', fontSize: '0.72rem', marginBottom: 16 }}>{selected.path}</div>}
-            <div style={{ background: 'rgba(8,12,24,0.9)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, maxHeight: 500, overflowY: 'auto' }}>
+            <div style={{ background: 'rgba(8,12,24,0.9)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, maxHeight: '90vh', overflowY: 'auto' }}>
               {loadingFile ? <div style={{ color: 'var(--muted)' }}>Loading...</div> :
-                <pre style={{ color: 'var(--text)', fontSize: '0.85rem', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>{fileContent || 'No content'}</pre>
+                <pre style={{ color: 'var(--text)', fontSize: '1rem', lineHeight: 1.8, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>{fileContent || 'No content'}</pre>
               }
             </div>
           </div>

@@ -109,8 +109,8 @@ export default function Memory() {
               <Badge label={selected.file} color="var(--muted)" />
               <span style={{ color: 'var(--faint)', fontSize: '0.72rem', marginLeft: 'auto', fontFamily: 'var(--mono)' }}>{Math.round(selected.size / 1024)} KB · {timeAgo(selected.modified)}</span>
             </div>
-            <div style={{ background: 'rgba(8,12,24,0.9)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, maxHeight: 500, overflowY: 'auto' }}>
-              <pre style={{ color: 'var(--text)', fontSize: '0.82rem', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'var(--mono)', margin: 0 }}>{selected.content}</pre>
+            <div style={{ background: 'rgba(8,12,24,0.9)', border: '1px solid var(--border)', borderRadius: 10, padding: 24, maxHeight: '78vh', overflowY: 'auto' }}>
+              <pre style={{ color: 'var(--text)', fontSize: '0.9rem', lineHeight: 1.8, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'var(--mono)', margin: 0 }}>{selected.content}</pre>
             </div>
           </div>
         )}

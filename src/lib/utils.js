@@ -1,26 +1,57 @@
 export function timeAgo(dateStr) {
   if (!dateStr) return 'never';
+
   const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return 'invalid date';
+
   const now = Date.now();
-  const diff = now - date.getTime();
-  const s = Math.floor(diff / 1000);
-  if (s < 60) return `${s}s ago`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return `${d}d ago`;
+  const diffMs = now - date.getTime();
+  const isFuture = diffMs < 0;
+  const absSeconds = Math.floor(Math.abs(diffMs) / 1000);
+
+  const withDirection = (value, unit) => {
+    if (isFuture) return `in ${value}${unit}`;
+    return `${value}${unit} ago`;
+  };
+
+  if (absSeconds < 60) return withDirection(absSeconds, 's');
+
+  const minutes = Math.floor(absSeconds / 60);
+  if (minutes < 60) return withDirection(minutes, 'm');
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return withDirection(hours, 'h');
+
+  const days = Math.floor(hours / 24);
+  if (days < 7) return withDirection(days, 'd');
+
+  // For older/farther dates, use an explicit date instead of large relative values.
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 export function formatDuration(startedAt, endedAt) {
   if (!startedAt) return '--';
+
   const end = endedAt ? new Date(endedAt) : new Date();
-  const ms = end - new Date(startedAt);
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  return `${m}m ${s % 60}s`;
+  const start = new Date(startedAt);
+  const seconds = Math.max(0, Math.floor((end - start) / 1000));
+
+  if (seconds < 60) return `${seconds}s`;
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ${minutes % 60}m`;
+
+  const days = Math.floor(hours / 24);
+  return `${days}d ${hours % 24}h`;
 }
 
 export function formatCost(usd) {
@@ -38,10 +69,18 @@ export function formatTokens(n) {
 
 export function formatUptime(seconds) {
   if (!seconds) return '--';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
+
+  const totalSeconds = Math.floor(seconds);
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+
+  const minutes = Math.floor(totalSeconds / 60);
+  if (minutes < 60) return `${minutes}m`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ${minutes % 60}m`;
+
+  const days = Math.floor(hours / 24);
+  return `${days}d ${hours % 24}h`;
 }
 
 export const AGENT_COLORS = {

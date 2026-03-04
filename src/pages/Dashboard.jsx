@@ -34,8 +34,12 @@ function ElapsedTimer({ startedAt }) {
       if (!startedAt) return;
       const s = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
       const m = Math.floor(s / 60);
-      const sec = s % 60;
-      setElapsed(m > 0 ? `${m}m ${sec}s` : `${sec}s`);
+      const h = Math.floor(m / 60);
+      const d = Math.floor(h / 24);
+      if (d > 0) setElapsed(`${d}d ${h % 24}h`);
+      else if (h > 0) setElapsed(`${h}h ${m % 60}m`);
+      else if (m > 0) setElapsed(`${m}m ${s % 60}s`);
+      else setElapsed(`${s}s`);
     };
     update();
     const id = setInterval(update, 1000);
@@ -60,13 +64,44 @@ const ACT_META = {
 
 };
 
+const isLikelyTaskHash = (value) => {
+  if (typeof value !== 'string') return false;
+  const v = value.trim();
+  return /^(task[_-])?[a-f0-9]{8,}$/i.test(v) || /^tsk_[a-z0-9]{8,}$/i.test(v);
+};
+
+const getWorkerTaskTitle = (worker) => {
+  const candidates = [
+    worker?._taskTitle,
+    worker?.taskTitle,
+    worker?.task_title,
+    worker?.currentTaskTitle,
+    worker?.current_task_title,
+    worker?.task?.title,
+    worker?.task?.taskTitle,
+    worker?.task?.task_title,
+  ];
+
+  const title = candidates.find((candidate) => typeof candidate === 'string' && candidate.trim() && !isLikelyTaskHash(candidate));
+  if (title) return title;
+
+  return 'Processing...';
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data: status } = usePolling(() => api.status(), 10000);
   const { data: activity } = usePolling(() => api.activity(), 10000);
   const { data: workerStatus } = usePolling(() => api.workerStatus(), 5000);
+  const { data: tasksData } = usePolling(() => api.tasks({ limit: 100 }), 15000);
 
-  const workers = workerStatus?.workers || [];
+  const taskMap = {};
+  (tasksData?.tasks || tasksData || []).forEach(t => { if (t.id) taskMap[t.id] = t; });
+
+  const workers = (workerStatus?.workers || []).map(w => ({
+    ...w,
+    _taskTitle: (w.taskId && taskMap[w.taskId]?.title) || null,
+  }));
   const activities = (activity || []).slice(0, 12);
 
   const stats = [
@@ -188,7 +223,9 @@ export default function Dashboard() {
                           </div>
                           <div>
                             <div style={{ color, fontWeight: 700, textTransform: 'capitalize', fontSize: '0.9rem' }}>{w.agentType || 'worker'}</div>
-                            <div style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>{w.taskId ? `Task ${w.taskId.slice(0,8)}` : 'Processing...'}</div>
+                            <div style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>
+                              {getWorkerTaskTitle(w)}
+                            </div>
                           </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -285,7 +322,7 @@ export default function Dashboard() {
       {/* Create Task Modal */}
       <Modal open={showCreateTask} onClose={() => setShowCreateTask(false)} title="New Task">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div><label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Title *</label><input className="nx-input" placeholder="Task title..." value={taskForm.title} onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))} /></div>
+          <div><label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Title *</label><input autoFocus data-autofocus="true" className="nx-input" placeholder="Task title..." value={taskForm.title} onChange={e => setTaskForm(f => ({ ...f, title: e.target.value }))} /></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div><label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Agent</label><select className="nx-input" value={taskForm.agent} onChange={e => setTaskForm(f => ({ ...f, agent: e.target.value }))}>{['programmer', 'writer', 'researcher', 'reviewer', 'architect'].map(a => <option key={a} value={a}>{a}</option>)}</select></div>
             <div><label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Model Tier</label><select className="nx-input" value={taskForm.model_tier} onChange={e => setTaskForm(f => ({ ...f, model_tier: e.target.value }))}>{['micro', 'small', 'medium', 'standard', 'strong'].map(t => <option key={t} value={t}>{t}</option>)}</select></div>
