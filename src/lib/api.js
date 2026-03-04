@@ -11,12 +11,10 @@ async function req(path, options = {}) {
 }
 
 export const api = {
-  // Status
   status: () => req('/api/status/overview'),
   activity: () => req('/api/status/activity'),
   costs: () => req('/api/status/costs'),
 
-  // Tasks
   tasks: (params = {}) => {
     const q = new URLSearchParams(params).toString();
     return req(`/api/tasks${q ? '?' + q : ''}`);
@@ -26,7 +24,6 @@ export const api = {
   updateTask: (id, body) => req(`/api/tasks/${id}/status`, { method: 'PATCH', body }),
   deleteTask: (id) => req(`/api/tasks/${id}`, { method: 'DELETE' }),
 
-  // Projects
   projects: () => req('/api/projects'),
   archivedProjects: () => req('/api/projects?archived=true'),
   project: (id) => req(`/api/projects/${id}`),
@@ -35,57 +32,47 @@ export const api = {
   archiveProject: (id) => req(`/api/projects/${id}/archive`, { method: 'POST' }),
   unarchiveProject: (id) => req(`/api/projects/${id}/unarchive`, { method: 'POST' }),
 
-  // Agents
   agents: () => req('/api/agents'),
-
-  // Workers
   workerStatus: () => req('/api/worker/status'),
   workerHistory: (limit = 50) => req(`/api/worker/history?limit=${limit}`),
 
-  // Workflows
   workflows: () => req('/api/workflows'),
   workflow: (id) => req(`/api/workflows/${id}`),
   workflowRuns: (limit = 50) => req(`/api/workflows/runs?limit=${limit}`),
 
-  // Usage
   usageDashboard: (window = 'month') => req(`/api/usage/dashboard?window=${window}`),
   usageSummary: (window = 'day') => req(`/api/usage/summary?window=${window}`),
 
-  // Inbox
   inbox: () => req('/api/inbox'),
   inboxItem: (id) => req(`/api/inbox/${id}`),
   inboxRead: (id) => req(`/api/inbox/${id}/read`, { method: 'POST' }),
   inboxDelete: (id) => req(`/api/inbox/${id}`, { method: 'DELETE' }),
+  inboxApprove: (id) => req(`/api/inbox/${id}/approve`, { method: 'POST' }),
+  inboxReject: (id) => req(`/api/inbox/${id}/reject`, { method: 'POST' }),
+  inboxFeedback: (id, text) => req(`/api/inbox/${id}/feedback`, { method: 'POST', body: { text } }),
 
-  // Chat
+  reflections: (params = {}) => {
+    const q = new URLSearchParams(params).toString();
+    return req(`/api/reflections${q ? '?' + q : ''}`);
+  },
+  reflection: (id) => req(`/api/reflections/${id}`),
+
   chatSessions: () => req('/api/chat/sessions'),
   chatMessages: (key) => req(`/api/chat/sessions/${key}/messages`),
 
-  // Knowledge
   knowledge: (params = {}) => {
     const q = new URLSearchParams(params).toString();
     return req(`/api/knowledge${q ? '?' + q : ''}`);
   },
   knowledgeFeed: () => req('/api/knowledge/feed'),
-
-  // Research
   research: () => req('/api/research').catch(() => ({ memos: [] })),
-
-  // Memories
   memories: () => req('/api/memories'),
 
-  // Knowledge (filesystem)
   knowledgeFs: () => req('/api/knowledge-fs/list'),
   knowledgeFsRead: (path) => req('/api/knowledge-fs/read/' + path),
-
-  // Memories (filesystem)
   memoriesFs: (agent) => agent ? req('/api/memories-fs/' + agent) : req('/api/memories-fs'),
 
-  // Orchestrator
   orchestratorStatus: () => req(`/api/orchestrator/status`),
-
-  // Intelligence
-  reflections: () => req(`/api/orchestrator/intelligence/reflections`),
   initiatives: () => req(`/api/orchestrator/intelligence/initiatives`),
   initiativeDecide: (decisions) => req(`/api/orchestrator/intelligence/initiatives/batch-decide`, { method: `POST`, body: { decisions } }),
   initiativeThread: (id) => req(`/api/orchestrator/intelligence/initiatives/` + id + `/thread`),
