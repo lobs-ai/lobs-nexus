@@ -7,6 +7,7 @@ import Tasks from './pages/Tasks';
 import Team from './pages/Team';
 import Workflows from './pages/Workflows';
 import Inbox from './pages/Inbox';
+import Reflections from './pages/Reflections';
 import Chat from './pages/Chat';
 import Knowledge from './pages/Knowledge';
 import Memory from './pages/Memory';
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/team" element={<Team />} />
           <Route path="/workflows" element={<Workflows />} />
           <Route path="/inbox" element={<Inbox />} />
+          <Route path="/reflections" element={<Reflections />} />
           <Route path="/chat" element={<Chat />} />
           <Route path="/knowledge" element={<Knowledge />} />
           <Route path="/memory" element={<Memory />} />

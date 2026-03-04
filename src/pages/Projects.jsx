@@ -22,9 +22,14 @@ const PROJECT_COLORS = ['var(--teal)', 'var(--blue)', 'var(--purple)', 'var(--am
 const PROJECTS_VIEW_STATE_KEY = 'nexus.projects.viewState';
 
 function getViewStateFromUrl(searchParams) {
-  const queryView = searchParams.get('view');
-  const queryProject = searchParams.get('project');
-  const queryScope = searchParams.get('scope');
+  const params =
+    searchParams && typeof searchParams.get === 'function'
+      ? searchParams
+      : new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+
+  const queryView = params.get('view');
+  const queryProject = params.get('project');
+  const queryScope = params.get('scope');
 
   if (queryView === 'kanban' || queryProject || queryScope === 'all') {
     return {
@@ -160,6 +165,30 @@ export default function Projects() {
     setSelectedProjectId(fromUrl.selectedProjectId);
     setShowAllTasks(fromUrl.showAllTasks);
   }, [searchParams]);
+
+  useEffect(() => {
+    const currentView = searchParams.get('view');
+    const currentProject = searchParams.get('project');
+    const currentScope = searchParams.get('scope');
+
+    if (view === 'projects') {
+      if (currentView || currentProject || currentScope) {
+        setSearchParams({}, { replace: true });
+      }
+      return;
+    }
+
+    if (showAllTasks) {
+      if (currentView !== 'kanban' || currentScope !== 'all' || currentProject) {
+        setSearchParams({ view: 'kanban', scope: 'all' }, { replace: true });
+      }
+      return;
+    }
+
+    if (selectedProjectId && (currentView !== 'kanban' || String(currentProject) !== String(selectedProjectId) || currentScope)) {
+      setSearchParams({ view: 'kanban', project: String(selectedProjectId) }, { replace: true });
+    }
+  }, [view, selectedProjectId, showAllTasks, searchParams, setSearchParams]);
 
   const openProjectsView = () => {
     setView('projects');

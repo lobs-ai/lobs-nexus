@@ -82,5 +82,13 @@ export const api = {
   memoriesFs: (agent) => agent ? req('/api/memories-fs/' + agent) : req('/api/memories-fs'),
 
   // Orchestrator
-  orchestratorStatus: () => req('/api/orchestrator/status'),
+  orchestratorStatus: () => req(`/api/orchestrator/status`),
+
+  // Intelligence
+  reflections: () => req(`/api/orchestrator/intelligence/reflections`),
+  initiatives: () => req(`/api/orchestrator/intelligence/initiatives`),
+  initiativeDecide: (decisions) => req(`/api/orchestrator/intelligence/initiatives/batch-decide`, { method: `POST`, body: { decisions } }),
+  initiativeThread: (id) => req(`/api/orchestrator/intelligence/initiatives/` + id + `/thread`),
+  initiativeReply: (id, text) => fetch(`/api/orchestrator/intelligence/initiatives/` + id + `/thread`, { method: `POST`, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, author: `user` }) }).then(r => r.json()),
+  inboxReadState: (ids, is_read) => req(`/api/inbox/read-state`, { method: `POST`, body: { ids, is_read } }),
 };

@@ -25,6 +25,9 @@ export function timeAgo(dateStr) {
   const days = Math.floor(hours / 24);
   if (days < 7) return withDirection(days, 'd');
 
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return withDirection(weeks, 'w');
+
   // For older/farther dates, use an explicit date instead of large relative values.
   return date.toLocaleString(undefined, {
     month: 'short',

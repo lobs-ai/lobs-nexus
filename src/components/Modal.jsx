@@ -2,22 +2,43 @@ import { useEffect, useRef } from 'react';
 
 export default function Modal({ open, onClose, title, children, large, contentStyle }) {
   const modalRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e) => { if (e.key === 'Escape') onCloseRef.current(); };
     window.addEventListener('keydown', handler);
 
-    const focusTimer = setTimeout(() => {
-      const target = modalRef.current?.querySelector('[autofocus], [data-autofocus="true"]');
-      if (target && typeof target.focus === 'function') target.focus();
-    }, 0);
+    let frame1 = 0;
+    let frame2 = 0;
+
+    const focusTarget = () => {
+      const root = modalRef.current;
+      if (!root) return;
+
+      const target = root.querySelector('[data-autofocus="true"], [autofocus], input, textarea, select, button');
+      if (target && typeof target.focus === 'function') {
+        target.focus();
+        if ((target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') && typeof target.select === 'function') {
+          target.select();
+        }
+      }
+    };
+
+    frame1 = window.requestAnimationFrame(() => {
+      frame2 = window.requestAnimationFrame(focusTarget);
+    });
 
     return () => {
       window.removeEventListener('keydown', handler);
-      clearTimeout(focusTimer);
+      window.cancelAnimationFrame(frame1);
+      window.cancelAnimationFrame(frame2);
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
   return (

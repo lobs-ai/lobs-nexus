@@ -67,7 +67,11 @@ const ACT_META = {
 const isLikelyTaskHash = (value) => {
   if (typeof value !== 'string') return false;
   const v = value.trim();
-  return /^(task[_-])?[a-f0-9]{8,}$/i.test(v) || /^tsk_[a-z0-9]{8,}$/i.test(v);
+  return (
+    /^(task[_-])?[a-f0-9]{8,}$/i.test(v) ||
+    /^task[_-][a-z0-9]{6,}$/i.test(v) ||
+    /^tsk_[a-z0-9]{6,}$/i.test(v)
+  );
 };
 
 const getWorkerTaskTitle = (worker) => {
@@ -98,10 +102,15 @@ export default function Dashboard() {
   const taskMap = {};
   (tasksData?.tasks || tasksData || []).forEach(t => { if (t.id) taskMap[t.id] = t; });
 
-  const workers = (workerStatus?.workers || []).map(w => ({
-    ...w,
-    _taskTitle: (w.taskId && taskMap[w.taskId]?.title) || null,
-  }));
+  const workers = (workerStatus?.workers || []).map(w => {
+    const workerTaskId = w.taskId || w.currentTaskId || w.current_task_id;
+    const mappedTaskTitle = workerTaskId ? taskMap[workerTaskId]?.title || taskMap[String(workerTaskId)]?.title : null;
+
+    return {
+      ...w,
+      _taskTitle: mappedTaskTitle || null,
+    };
+  });
   const activities = (activity || []).slice(0, 12);
 
   const stats = [
