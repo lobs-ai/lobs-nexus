@@ -30,6 +30,7 @@ function TaskCard({ task, onClick }) {
         )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        {task.blockedBy && Array.isArray(task.blockedBy) && task.blockedBy.length > 0 && <Badge label="⛔ blocked" color="var(--red)" />}
         {task.agent && <Badge label={task.agent} color={AGENT_COLORS[task.agent] || 'var(--blue)'} />}
         {task.model_tier && <Badge label={task.model_tier} color={TIER_COLORS[task.model_tier] || 'var(--muted)'} />}
         <span style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: '0.72rem' }}>{timeAgo(task.updated_at || task.updatedAt)}</span>
@@ -113,7 +114,8 @@ function TableView({ tasks, onRowClick, sortField, sortDir, onSort }) {
                   />
                 </td>
                 <td style={{ padding: '10px 14px' }}>
-                  {task.agent && <Badge label={task.agent} color={AGENT_COLORS[task.agent] || 'var(--blue)'} />}
+                  {task.blockedBy && Array.isArray(task.blockedBy) && task.blockedBy.length > 0 && <Badge label="⛔ blocked" color="var(--red)" />}
+        {task.agent && <Badge label={task.agent} color={AGENT_COLORS[task.agent] || 'var(--blue)'} />}
                 </td>
                 <td style={{ padding: '10px 14px' }}>
                   {tier && <Badge label={tier} color={TIER_COLORS[tier] || 'var(--muted)'} />}
@@ -467,6 +469,7 @@ export default function Tasks() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <Badge label={selected.status} color={selected.status === 'active' ? 'var(--teal)' : selected.status === 'completed' ? 'var(--green)' : 'var(--muted)'} />
+              {selected.blockedBy && Array.isArray(selected.blockedBy) && selected.blockedBy.length > 0 && <Badge label={"⛔ blocked by " + selected.blockedBy.length + " task(s)"} color="var(--red)" />}
               {selected.agent && <Badge label={selected.agent} color={AGENT_COLORS[selected.agent] || 'var(--blue)'} />}
               {(selected.model_tier || selected.modelTier) && <Badge label={selected.model_tier || selected.modelTier} color={TIER_COLORS[selected.model_tier || selected.modelTier] || 'var(--muted)'} />}
             </div>

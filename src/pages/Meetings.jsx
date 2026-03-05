@@ -396,7 +396,7 @@ function TranscriptItem({ meeting }) {
   useEffect(() => {
     if (expanded && !actionItems) {
       fetch(`/paw/api/meetings/${meeting.id}/action-items`)
-        .then(r => r.json()).then(setActionItems).catch(() => {});
+        .then(r => r.json()).then(d => setActionItems(Array.isArray(d) ? d : [])).catch(() => {});
     }
   }, [expanded, meeting.id]);
 
@@ -510,7 +510,7 @@ export default function Meetings() {
   });
 
   const fetchMyItems = useCallback(() =>
-    fetch('/paw/api/meetings/action-items?assignee=rafe').then(r => r.json()), []);
+    fetch('/paw/api/meetings/action-items?assignee=rafe').then(r => r.json()).then(d => Array.isArray(d) ? d : []), []);
   const { data: myItems } = usePolling(fetchMyItems, 15000);
 
   return (
