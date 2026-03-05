@@ -13,6 +13,7 @@ import Knowledge from './pages/Knowledge';
 import Memory from './pages/Memory';
 import Usage from './pages/Usage';
 import Settings from './pages/Settings';
+import Meetings from './pages/Meetings';
 import { api } from './lib/api';
 
 export default function App() {
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="/memory" element={<Memory />} />
           <Route path="/usage" element={<Usage />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/meetings" element={<Meetings />} />
         </Route>
       </Routes>
     </BrowserRouter>
