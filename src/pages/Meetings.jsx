@@ -19,165 +19,192 @@ function formatDate(ts) {
   return new Date(ts).toLocaleString();
 }
 
-function RecordingSection({ projects, onUploaded }) {
-  const [recording, setRecording] = useState(false);
-  const [transcribing, setTranscribing] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  const [title, setTitle] = useState('');
-  const [projectId, setProjectId] = useState('');
-  const [participants, setParticipants] = useState('');
-  const [meetingType, setMeetingType] = useState('standup');
+function RecordingSection({ onUploaded }) {
+  const [recordings, setRecordings] = useState([]); // [{id, recording, elapsed, mediaRecorder, timerRef, transcribing}]
 
-  const mediaRecorderRef = useRef(null);
-  const chunksRef = useRef([]);
-  const timerRef = useRef(null);
-
-  const startTimer = () => {
-    setElapsed(0);
-    timerRef.current = setInterval(() => setElapsed(e => e + 1), 1000);
-  };
-  const stopTimer = () => { clearInterval(timerRef.current); timerRef.current = null; };
-  useEffect(() => () => stopTimer(), []);
-
-  const startRecording = async () => {
+  const startRecording = async (withSystem = false) => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-      chunksRef.current = [];
-      mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      const streams = [];
+      // Always get mic
+      const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streams.push(micStream);
+
+      // Try system audio for online meetings
+      if (withSystem) {
+        try {
+          const displayStream = await navigator.mediaDevices.getDisplayMedia({
+            video: false,
+            audio: true,
+          });
+          streams.push(displayStream);
+        } catch (e) {
+          // Fall back to mic-only if user cancels screen share
+          showToast('System audio unavailable — recording mic only', 'info');
+        }
+      }
+
+      // Merge streams if we have both
+      let combinedStream;
+      if (streams.length > 1) {
+        const ctx = new AudioContext();
+        const dest = ctx.createMediaStreamDestination();
+        streams.forEach(s => {
+          const source = ctx.createMediaStreamSource(s);
+          source.connect(dest);
+        });
+        combinedStream = dest.stream;
+      } else {
+        combinedStream = streams[0];
+      }
+
+      const id = Date.now().toString();
+      const chunks = [];
+      const mr = new MediaRecorder(combinedStream, { mimeType: 'audio/webm;codecs=opus' });
+      mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
       mr.start(500);
-      mediaRecorderRef.current = mr;
-      setRecording(true);
-      startTimer();
+
+      const timerRef = { current: null };
+      const rec = {
+        id,
+        recording: true,
+        elapsed: 0,
+        mediaRecorder: mr,
+        chunks,
+        timerRef,
+        transcribing: false,
+        streams,
+        withSystem,
+      };
+
+      timerRef.current = setInterval(() => {
+        setRecordings(prev => prev.map(r =>
+          r.id === id ? { ...r, elapsed: r.elapsed + 1 } : r
+        ));
+      }, 1000);
+
+      setRecordings(prev => [...prev, rec]);
     } catch (err) {
       showToast('Microphone access denied: ' + err.message, 'error');
     }
   };
 
-  const stopRecording = () => {
-    const mr = mediaRecorderRef.current;
-    if (!mr) return;
-    const dur = elapsed;
-    mr.onstop = async () => {
-      const blob = new Blob(chunksRef.current, { type: 'audio/webm;codecs=opus' });
-      mr.stream.getTracks().forEach(t => t.stop());
-      await upload(blob, dur);
-    };
-    mr.stop();
-    setRecording(false);
-    stopTimer();
-    setTranscribing(true);
+  const stopRecording = (id) => {
+    setRecordings(prev => prev.map(rec => {
+      if (rec.id !== id) return rec;
+      const mr = rec.mediaRecorder;
+      clearInterval(rec.timerRef.current);
+
+      mr.onstop = async () => {
+        const blob = new Blob(rec.chunks, { type: 'audio/webm;codecs=opus' });
+        // Stop all tracks
+        rec.streams?.forEach(s => s.getTracks().forEach(t => t.stop()));
+
+        setRecordings(prev => prev.map(r =>
+          r.id === id ? { ...r, transcribing: true } : r
+        ));
+
+        try {
+          const formData = new FormData();
+          formData.append('audio', blob, 'recording.webm');
+          const res = await fetch('/paw/api/meetings/upload', { method: 'POST', body: formData });
+          if (!res.ok) throw new Error('Upload failed: ' + res.status);
+          showToast('Meeting uploaded — transcribing & analyzing', 'success');
+          onUploaded();
+        } catch (err) {
+          showToast(err.message, 'error');
+        } finally {
+          setRecordings(prev => prev.filter(r => r.id !== id));
+        }
+      };
+      mr.stop();
+      return { ...rec, recording: false };
+    }));
   };
 
-  const upload = async (blob, dur) => {
-    try {
-      const formData = new FormData();
-      formData.append('audio', blob, 'recording.webm');
-      formData.append('title', title || 'Untitled Meeting');
-      formData.append('project_id', projectId);
-      formData.append('participants', participants);
-      formData.append('meeting_type', meetingType);
-      formData.append('duration', String(dur));
-      const res = await fetch('/paw/api/meetings/upload', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error('Upload failed: ' + res.status);
-      showToast('Meeting uploaded — transcription in progress', 'success');
-      setTitle(''); setParticipants(''); setElapsed(0);
-      onUploaded();
-    } catch (err) {
-      showToast(err.message, 'error');
-    } finally {
-      setTranscribing(false);
-    }
-  };
-
-  const inputStyle = {
-    background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8,
-    padding: '8px 12px', color: 'var(--text)', fontSize: '0.875rem', width: '100%',
-    outline: 'none', boxSizing: 'border-box',
-  };
+  const activeRecordings = recordings.filter(r => r.recording);
+  const processingRecordings = recordings.filter(r => r.transcribing);
 
   return (
     <GlassCard style={{ marginBottom: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: activeRecordings.length > 0 ? 16 : 0 }}>
         <div style={{
           width: 36, height: 36, borderRadius: 10,
-          background: recording ? 'rgba(239,68,68,0.2)' : 'rgba(45,212,191,0.1)',
-          border: `1px solid ${recording ? 'rgba(239,68,68,0.4)' : 'rgba(45,212,191,0.2)'}`,
+          background: activeRecordings.length > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(45,212,191,0.1)',
+          border: `1px solid ${activeRecordings.length > 0 ? 'rgba(239,68,68,0.4)' : 'rgba(45,212,191,0.2)'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <svg width="16" height="16" fill="none" stroke={recording ? '#ef4444' : 'var(--teal)'} strokeWidth="2" viewBox="0 0 24 24">
+          <svg width="16" height="16" fill="none" stroke={activeRecordings.length > 0 ? '#ef4444' : 'var(--teal)'} strokeWidth="2" viewBox="0 0 24 24">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-            <line x1="12" y1="19" x2="12" y2="23"/>
-            <line x1="8" y1="23" x2="16" y2="23"/>
+            <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
           </svg>
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ color: 'var(--text)', fontWeight: 600, fontSize: '1rem' }}>Record Meeting</div>
           <div style={{ color: 'var(--muted)', fontSize: '0.78rem' }}>
-            {transcribing ? 'Transcribing…' : recording ? `Recording — ${formatDuration(elapsed)}` : 'Ready to record'}
+            {activeRecordings.length > 0 ? `${activeRecordings.length} recording active` :
+             processingRecordings.length > 0 ? `${processingRecordings.length} processing` : 'One click to start'}
           </div>
         </div>
-        {recording && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'pulse 1.2s infinite' }} />
-            <span style={{ color: '#ef4444', fontFamily: 'var(--mono)', fontSize: '0.9rem', fontWeight: 700 }}>{formatDuration(elapsed)}</span>
+        {activeRecordings.length === 0 && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => startRecording(false)} style={{
+              background: 'linear-gradient(135deg, var(--teal), var(--blue))', border: 'none',
+              borderRadius: 8, padding: '10px 16px', color: '#fff', fontWeight: 600,
+              fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
+              Record
+            </button>
+            <button onClick={() => startRecording(true)} style={{
+              background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.3)',
+              borderRadius: 8, padding: '10px 16px', color: '#60a5fa', fontWeight: 600,
+              fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+            }} title="Records mic + system audio for online meetings">
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
+              Online Meeting
+            </button>
           </div>
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-        <div style={{ gridColumn: '1 / -1' }}>
-          <label style={{ color: 'var(--muted)', fontSize: '0.75rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>TITLE</label>
-          <input style={inputStyle} placeholder="Meeting title…" value={title} onChange={e => setTitle(e.target.value)} disabled={recording || transcribing} />
-        </div>
-        <div>
-          <label style={{ color: 'var(--muted)', fontSize: '0.75rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>PROJECT</label>
-          <select style={{ ...inputStyle, appearance: 'none' }} value={projectId} onChange={e => setProjectId(e.target.value)} disabled={recording || transcribing}>
-            <option value="">— None —</option>
-            {(projects || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </div>
-        <div>
-          <label style={{ color: 'var(--muted)', fontSize: '0.75rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>MEETING TYPE</label>
-          <select style={{ ...inputStyle, appearance: 'none' }} value={meetingType} onChange={e => setMeetingType(e.target.value)} disabled={recording || transcribing}>
-            {MEETING_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
-        <div style={{ gridColumn: '1 / -1' }}>
-          <label style={{ color: 'var(--muted)', fontSize: '0.75rem', fontWeight: 600, display: 'block', marginBottom: 4 }}>PARTICIPANTS</label>
-          <input style={inputStyle} placeholder="Comma-separated names…" value={participants} onChange={e => setParticipants(e.target.value)} disabled={recording || transcribing} />
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: 10 }}>
-        {!recording && !transcribing ? (
-          <button onClick={startRecording} style={{
-            background: 'linear-gradient(135deg, var(--teal), var(--blue))', border: 'none',
-            borderRadius: 8, padding: '10px 20px', color: '#fff', fontWeight: 600,
-            fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
-            Start Recording
-          </button>
-        ) : recording ? (
-          <button onClick={stopRecording} style={{
+      {/* Active recordings */}
+      {activeRecordings.map(rec => (
+        <div key={rec.id} style={{
+          display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
+          background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)',
+          borderRadius: 8, marginBottom: 8,
+        }}>
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.2s infinite' }} />
+          <span style={{ color: '#ef4444', fontFamily: 'var(--mono)', fontSize: '0.9rem', fontWeight: 700, flex: 1 }}>
+            {formatDuration(rec.elapsed)}
+          </span>
+          {rec.withSystem && <Badge label="System Audio" color="#60a5fa" />}
+          <button onClick={() => stopRecording(rec.id)} style={{
             background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
-            borderRadius: 8, padding: '10px 20px', color: '#ef4444', fontWeight: 600,
-            fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+            borderRadius: 6, padding: '6px 14px', color: '#ef4444', fontWeight: 600,
+            fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
           }}>
-            <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-            Stop Recording
+            <svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+            Stop
           </button>
-        ) : (
-          <div style={{ color: 'var(--muted)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ animation: 'spin 1s linear infinite' }}>
-              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-            </svg>
-            Transcribing audio…
-          </div>
-        )}
-      </div>
+        </div>
+      ))}
+
+      {/* Processing indicators */}
+      {processingRecordings.map(rec => (
+        <div key={rec.id} style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+          color: 'var(--muted)', fontSize: '0.8rem',
+        }}>
+          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" style={{ animation: 'spin 1s linear infinite' }}>
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+          </svg>
+          Uploading & transcribing…
+        </div>
+      ))}
     </GlassCard>
   );
 }
@@ -447,7 +474,7 @@ export default function Meetings() {
         <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.875rem' }}>Record meetings and browse transcripts.</p>
       </div>
 
-      <RecordingSection projects={projects} onUploaded={refresh} />
+      <RecordingSection onUploaded={refresh} />
 
       {myItems && myItems.length > 0 && (
         <GlassCard style={{ marginBottom: 24 }}>
