@@ -59,6 +59,9 @@ export const api = {
     return req(`/api/reflections${q ? '?' + q : ''}`, { signal });
   },
   reflection: (id, signal) => req(`/api/reflections/${id}`, { signal }),
+  approveReflection: (id, body = {}) => req(`/api/reflections/${id}/approve`, { method: 'POST', body }),
+  rejectReflection: (id, body = {}) => req(`/api/reflections/${id}/reject`, { method: 'POST', body }),
+  reflectionFeedback: (id, feedback, author = 'lobs') => req(`/api/reflections/${id}/feedback`, { method: 'POST', body: { feedback, author } }),
 
   chatSessions: (signal) => req('/api/chat/sessions', { signal }),
   chatMessages: (key, signal) => req(`/api/chat/sessions/${key}/messages`, { signal }),
