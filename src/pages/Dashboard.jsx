@@ -368,7 +368,6 @@ export default function Dashboard() {
           </GlassCard>
         )}
 
-      </div>
       {/* Create Task Modal */}
       <Modal open={showCreateTask} onClose={() => setShowCreateTask(false)} title="New Task">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
