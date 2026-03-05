@@ -28,8 +28,8 @@ function buildTree(entries) {
 }
 
 export default function Knowledge() {
-  const { data: fsData, loading } = useApi(() => api.knowledgeFs());
-  const { data: resData, loading: resLoading } = useApi(() => api.research());
+  const { data: fsData, loading } = useApi(signal => api.knowledgeFs(signal));
+  const { data: resData, loading: resLoading } = useApi(signal => api.research(signal));
   const [tab, setTab] = useState('browse');
   const [search, setSearch] = useState('');
   const [currentPath, setCurrentPath] = useState('');

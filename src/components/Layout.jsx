@@ -3,15 +3,28 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import NoiseOverlay from './NoiseOverlay';
 import Toast from './Toast';
+import CommandPalette from './CommandPalette';
 
 export default function Layout({ systemStatus, theme, onThemeToggle }) {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', handler);
     return () => window.removeEventListener('resize', handler);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setPaletteOpen(o => !o);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   return (
@@ -24,6 +37,7 @@ export default function Layout({ systemStatus, theme, onThemeToggle }) {
         theme={theme}
         onThemeToggle={onThemeToggle}
         isMobile={isMobile}
+        onPaletteOpen={() => setPaletteOpen(true)}
       />
       {!isMobile && collapsed && (
         <button
@@ -47,6 +61,7 @@ export default function Layout({ systemStatus, theme, onThemeToggle }) {
         <Outlet />
       </main>
       <Toast />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }

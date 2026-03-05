@@ -25,8 +25,8 @@ function CountUp({ value, duration = 900 }) {
 }
 
 export default function Team() {
-  const { data: agents } = usePolling(() => api.agents(), 10000);
-  const { data: history } = useApi(() => api.workerHistory(200));
+  const { data: agents } = usePolling(signal => api.agents(signal), 10000);
+  const { data: history } = useApi(signal => api.workerHistory(200, signal));
   const [selected, setSelected] = useState(null);
 
   const historyList = history || [];

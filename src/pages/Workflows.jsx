@@ -177,8 +177,8 @@ function DAGView({ workflow }) {
 const STATUS_COLORS = { running: '#2dd4bf', completed: '#34d399', failed: '#f87171', pending: '#fbbf24', cancelled: '#475569' };
 
 export default function Workflows() {
-  const { data: workflows, loading } = useApi(() => api.workflows());
-  const { data: runs } = useApi(() => api.workflowRuns(20));
+  const { data: workflows, loading } = useApi(signal => api.workflows(signal));
+  const { data: runs } = useApi(signal => api.workflowRuns(20, signal));
   const [selectedWf, setSelectedWf] = useState(null);
 
   const wfList = Array.isArray(workflows) ? workflows : (workflows?.workflows || []);

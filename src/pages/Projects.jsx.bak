@@ -103,105 +103,9 @@ function TaskCard({ task, onClick }) {
   );
 }
 
-
-function ProjectSwitcher({ projects, selectedProject, onSelect }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const others = projects.filter(p => !selectedProject || String(p.id) !== String(selectedProject.id));
-
-  return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
-      <button
-        onClick={() => setOpen(v => !v)}
-        style={{
-          background: 'rgba(45,212,191,0.08)',
-          border: '1px solid rgba(45,212,191,0.25)',
-          borderRadius: 8,
-          color: 'var(--teal)',
-          cursor: 'pointer',
-          padding: '5px 12px',
-          fontSize: '0.78rem',
-          fontFamily: 'var(--mono)',
-          fontWeight: 700,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          transition: 'all 0.2s',
-          letterSpacing: '0.5px',
-        }}
-        onMouseEnter={e => e.currentTarget.style.background = 'rgba(45,212,191,0.15)'}
-        onMouseLeave={e => e.currentTarget.style.background = 'rgba(45,212,191,0.08)'}
-        title="Switch project"
-      >
-        <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>
-        </svg>
-        SWITCH PROJECT
-        <svg width="10" height="10" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
-      </button>
-
-      {open && (
-        <div style={{
-          position: 'absolute',
-          top: 'calc(100% + 6px)',
-          left: 0,
-          minWidth: 220,
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 10,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-          zIndex: 100,
-          overflow: 'hidden',
-        }}>
-          {others.length === 0 ? (
-            <div style={{ padding: '12px 16px', color: 'var(--muted)', fontSize: '0.8rem', textAlign: 'center' }}>No other projects</div>
-          ) : others.map((p, i) => (
-            <button
-              key={p.id}
-              onClick={() => { onSelect(p); setOpen(false); }}
-              style={{
-                width: '100%',
-                background: 'none',
-                border: 'none',
-                borderTop: i > 0 ? '1px solid var(--border)' : 'none',
-                color: 'var(--text)',
-                cursor: 'pointer',
-                padding: '10px 16px',
-                textAlign: 'left',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'none'}
-            >
-              <svg width="14" height="14" fill="none" stroke="var(--teal)" strokeWidth="2" viewBox="0 0 24 24">
-                <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>
-              </svg>
-              <span style={{ flex: 1 }}>{p.title}</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function Projects() {
-  const { data: allProjects, loading: projLoading, reload: reloadProjects } = useApi(signal => api.archivedProjects(signal));
-  const { data: allTasks, loading: tasksLoading, reload: reloadTasks } = usePolling(signal => api.tasks({}, signal), 15000);
+  const { data: allProjects, loading: projLoading, reload: reloadProjects } = useApi(() => api.archivedProjects());
+  const { data: allTasks, loading: tasksLoading, reload: reloadTasks } = usePolling(() => api.tasks(), 15000);
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState(() => getInitialViewState(searchParams).view);
   const [selectedProjectId, setSelectedProjectId] = useState(() => getInitialViewState(searchParams).selectedProjectId);
@@ -329,18 +233,7 @@ export default function Projects() {
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             
-            {view === 'kanban' && (
-              <>
-                {!showAllTasks && projectList.length > 1 && (
-                  <ProjectSwitcher
-                    projects={projectList}
-                    selectedProject={selectedProject}
-                    onSelect={openProjectView}
-                  />
-                )}
-                <button className="btn-primary" onClick={() => setShowCreateTask(true)}>+ New Task</button>
-              </>
-            )}
+            {view === 'kanban' && <button className="btn-primary" onClick={() => setShowCreateTask(true)}>+ New Task</button>}
             {view === 'projects' && <>
               <button className="btn-ghost" onClick={openAllTasksView}>All Tasks</button>
               <button className="btn-ghost" onClick={() => setShowArchived(v => !v)} style={showArchived ? { borderColor: 'rgba(45,212,191,0.4)', color: 'var(--teal)' } : {}}>{showArchived ? '✓ Archived' : 'Archived'}</button>

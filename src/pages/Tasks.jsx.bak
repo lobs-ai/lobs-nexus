@@ -38,110 +38,8 @@ function TaskCard({ task, onClick }) {
   );
 }
 
-function TableView({ tasks, onRowClick, sortField, sortDir, onSort }) {
-  const cols = [
-    { id: 'title', label: 'Title' },
-    { id: 'status', label: 'Status' },
-    { id: 'agent', label: 'Agent' },
-    { id: 'model_tier', label: 'Tier' },
-    { id: 'created_at', label: 'Created' },
-    { id: 'updated_at', label: 'Updated' },
-  ];
-
-  const sorted = [...tasks].sort((a, b) => {
-    const av = a[sortField] || a[sortField.replace('_at', 'At')] || '';
-    const bv = b[sortField] || b[sortField.replace('_at', 'At')] || '';
-    if (av < bv) return sortDir === 'asc' ? -1 : 1;
-    if (av > bv) return sortDir === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  const SortIcon = ({ field }) => {
-    if (sortField !== field) return <span style={{ opacity: 0.3, marginLeft: 4 }}>↕</span>;
-    return <span style={{ marginLeft: 4 }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
-  };
-
-  return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-        <thead>
-          <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-            {cols.map(col => (
-              <th
-                key={col.id}
-                onClick={() => onSort(col.id)}
-                style={{
-                  textAlign: 'left',
-                  padding: '10px 14px',
-                  color: 'var(--muted)',
-                  fontWeight: 600,
-                  fontSize: '0.78rem',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {col.label}<SortIcon field={col.id} />
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map(task => {
-            const tier = task.model_tier || task.modelTier;
-            const created = task.created_at || task.createdAt;
-            const updated = task.updated_at || task.updatedAt;
-            return (
-              <tr
-                key={task.id}
-                onClick={() => onRowClick(task)}
-                style={{
-                  borderBottom: '1px solid rgba(255,255,255,0.04)',
-                  cursor: 'pointer',
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-              >
-                <td style={{ padding: '10px 14px', color: 'var(--text)', fontWeight: 500, maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {task.title}
-                </td>
-                <td style={{ padding: '10px 14px' }}>
-                  <Badge
-                    label={task.status}
-                    color={task.status === 'active' ? 'var(--teal)' : task.status === 'completed' ? 'var(--green)' : 'var(--muted)'}
-                  />
-                </td>
-                <td style={{ padding: '10px 14px' }}>
-                  {task.agent && <Badge label={task.agent} color={AGENT_COLORS[task.agent] || 'var(--blue)'} />}
-                </td>
-                <td style={{ padding: '10px 14px' }}>
-                  {tier && <Badge label={tier} color={TIER_COLORS[tier] || 'var(--muted)'} />}
-                </td>
-                <td style={{ padding: '10px 14px', color: 'var(--muted)', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
-                  {created ? timeAgo(created) : '—'}
-                </td>
-                <td style={{ padding: '10px 14px', color: 'var(--muted)', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
-                  {updated ? timeAgo(updated) : '—'}
-                </td>
-              </tr>
-            );
-          })}
-          {sorted.length === 0 && (
-            <tr>
-              <td colSpan={6} style={{ padding: '32px 14px', textAlign: 'center', color: 'var(--muted)', fontSize: '0.82rem' }}>
-                No tasks found
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 function BrainDumpModal({ open, onClose, projects, onConfirmed }) {
-  const [step, setStep] = useState('input');
+  const [step, setStep] = useState('input'); // 'input' | 'parsing' | 'preview'
   const [dumpText, setDumpText] = useState('');
   const [projectId, setProjectId] = useState('');
   const [modelTierOverride, setModelTierOverride] = useState('');
@@ -157,7 +55,10 @@ function BrainDumpModal({ open, onClose, projects, onConfirmed }) {
     setConfirming(false);
   };
 
-  const handleClose = () => { reset(); onClose(); };
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
 
   const parseDump = async () => {
     if (!dumpText.trim()) return;
@@ -187,7 +88,11 @@ function BrainDumpModal({ open, onClose, projects, onConfirmed }) {
     try {
       await api.brainDumpConfirm({
         tasks: toCreate.map(({ title, agent, model_tier, notes }) => ({
-          title, agent, model_tier, notes, project_id: projectId || undefined,
+          title,
+          agent,
+          model_tier,
+          notes,
+          project_id: projectId || undefined,
         })),
       });
       showToast(`Created ${toCreate.length} task${toCreate.length > 1 ? 's' : ''}`, 'success');
@@ -243,6 +148,7 @@ function BrainDumpModal({ open, onClose, projects, onConfirmed }) {
           </div>
         </div>
       )}
+
       {step === 'parsing' && (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
           <div style={{ fontSize: '2rem', marginBottom: 16 }}>🤖</div>
@@ -250,6 +156,7 @@ function BrainDumpModal({ open, onClose, projects, onConfirmed }) {
           <div style={{ fontSize: '0.78rem', marginTop: 8, color: 'var(--faint)' }}>Extracting tasks and assigning agents</div>
         </div>
       )}
+
       {step === 'preview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ color: 'var(--muted)', fontSize: '0.82rem' }}>
@@ -282,13 +189,25 @@ function BrainDumpModal({ open, onClose, projects, onConfirmed }) {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
                   <div>
                     <label style={{ color: 'var(--faint)', fontSize: '0.72rem', display: 'block', marginBottom: 4 }}>Agent</label>
-                    <select className="nx-input" value={task.agent} onChange={e => updateTask(idx, 'agent', e.target.value)} disabled={!task._keep} style={{ fontSize: '0.8rem' }}>
+                    <select
+                      className="nx-input"
+                      value={task.agent}
+                      onChange={e => updateTask(idx, 'agent', e.target.value)}
+                      disabled={!task._keep}
+                      style={{ fontSize: '0.8rem' }}
+                    >
                       {AGENTS.map(a => <option key={a} value={a}>{a}</option>)}
                     </select>
                   </div>
                   <div>
                     <label style={{ color: 'var(--faint)', fontSize: '0.72rem', display: 'block', marginBottom: 4 }}>Tier</label>
-                    <select className="nx-input" value={task.model_tier} onChange={e => updateTask(idx, 'model_tier', e.target.value)} disabled={!task._keep} style={{ fontSize: '0.8rem' }}>
+                    <select
+                      className="nx-input"
+                      value={task.model_tier}
+                      onChange={e => updateTask(idx, 'model_tier', e.target.value)}
+                      disabled={!task._keep}
+                      style={{ fontSize: '0.8rem' }}
+                    >
                       {TIERS.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
                   </div>
@@ -324,15 +243,12 @@ function BrainDumpModal({ open, onClose, projects, onConfirmed }) {
 }
 
 export default function Tasks() {
-  const { data: tasks, loading, reload } = usePolling(signal => api.tasks({}, signal), 15000);
-  const { data: projects } = useApi(signal => api.projects(signal));
+  const { data: tasks, loading, reload } = usePolling(() => api.tasks(), 15000);
+  const { data: projects } = useApi(() => api.projects());
   const [selected, setSelected] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showBrainDump, setShowBrainDump] = useState(false);
   const [filter, setFilter] = useState({ agent: '', tier: '', project: '' });
-  const [viewMode, setViewMode] = useState('table');
-  const [sortField, setSortField] = useState('created_at');
-  const [sortDir, setSortDir] = useState('desc');
   const [form, setForm] = useState({ title: '', agent: 'programmer', model_tier: 'standard', project_id: '', notes: '' });
 
   const filtered = (tasks || []).filter(t => {
@@ -343,15 +259,6 @@ export default function Tasks() {
   });
 
   const byStatus = (status) => filtered.filter(t => t.status === status || (status === 'cancelled' && ['cancelled', 'rejected', 'archived'].includes(t.status)));
-
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDir('desc');
-    }
-  };
 
   const createTask = async () => {
     if (!form.title.trim()) return;
@@ -374,43 +281,12 @@ export default function Tasks() {
           <h2 style={{ color: 'var(--text)', fontWeight: 700 }}>Tasks</h2>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: 8, padding: 2, gap: 2 }}>
-            <button
-              onClick={() => setViewMode('table')}
-              style={{
-                background: viewMode === 'table' ? 'rgba(255,255,255,0.12)' : 'transparent',
-                border: 'none',
-                color: viewMode === 'table' ? 'var(--text)' : 'var(--muted)',
-                borderRadius: 6,
-                padding: '5px 12px',
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-              }}
-            >
-              ☰ Table
-            </button>
-            <button
-              onClick={() => setViewMode('kanban')}
-              style={{
-                background: viewMode === 'kanban' ? 'rgba(255,255,255,0.12)' : 'transparent',
-                border: 'none',
-                color: viewMode === 'kanban' ? 'var(--text)' : 'var(--muted)',
-                borderRadius: 6,
-                padding: '5px 12px',
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-              }}
-            >
-              ⊞ Kanban
-            </button>
-          </div>
           <button className="btn-ghost" onClick={() => setShowBrainDump(true)}>🧠 Brain Dump</button>
           <button className="btn-primary" onClick={() => setShowCreate(true)}>+ New Task</button>
         </div>
       </div>
 
+      {/* Filters */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 24, flexWrap: 'wrap' }}>
         <select className="nx-input" style={{ width: 'auto' }} value={filter.agent} onChange={e => setFilter(f => ({ ...f, agent: e.target.value }))}>
           <option value="">All Agents</option>
@@ -431,17 +307,8 @@ export default function Tasks() {
         )}
       </div>
 
-      {loading ? <LoadingSkeleton lines={6} height={80} /> : viewMode === 'table' ? (
-        <GlassCard style={{ padding: 0, overflow: 'hidden' }}>
-          <TableView
-            tasks={filtered}
-            onRowClick={setSelected}
-            sortField={sortField}
-            sortDir={sortDir}
-            onSort={handleSort}
-          />
-        </GlassCard>
-      ) : (
+      {/* Kanban */}
+      {loading ? <LoadingSkeleton lines={6} height={80} /> : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, alignItems: 'start' }}>
           {COLUMNS.map(col => (
             <div key={col.id} className="kanban-col" style={{ padding: 16 }}>
@@ -462,6 +329,7 @@ export default function Tasks() {
         </div>
       )}
 
+      {/* Task detail modal */}
       <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.title || 'Task'}>
         {selected && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -485,6 +353,7 @@ export default function Tasks() {
         )}
       </Modal>
 
+      {/* Create modal */}
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Task">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
@@ -525,6 +394,7 @@ export default function Tasks() {
         </div>
       </Modal>
 
+      {/* Brain dump modal */}
       <BrainDumpModal
         open={showBrainDump}
         onClose={() => setShowBrainDump(false)}

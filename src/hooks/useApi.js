@@ -5,20 +5,31 @@ export function useApi(fetcher, deps = []) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (signal) => {
     try {
       setLoading(true);
       setError(null);
-      const result = await fetcher();
+      const result = await fetcher(signal);
+      if (signal?.aborted) return;
       setData(result);
     } catch (e) {
+      if (e.name === 'AbortError') return;
       setError(e.message);
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  }, deps);
+  }, deps); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
 
-  return { data, loading, error, reload: load };
+  const reload = useCallback(() => {
+    const controller = new AbortController();
+    load(controller.signal);
+  }, [load]);
+
+  return { data, loading, error, reload };
 }

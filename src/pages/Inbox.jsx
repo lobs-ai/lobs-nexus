@@ -84,7 +84,7 @@ function ItemCard({ item, onRefresh }) {
 
 export default function Inbox() {
   const [view, setView] = useState('needs-action');
-  const { data, loading, reload } = useApi(() => api.inbox());
+  const { data, loading, reload } = useApi(signal => api.inbox(signal));
 
   const items = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const needsAction = items.filter(i => i.requiresAction && i.actionStatus === 'pending');

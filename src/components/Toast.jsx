@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 let toastFn = null;
 export function showToast(msg, type = 'info') {
@@ -7,13 +7,22 @@ export function showToast(msg, type = 'info') {
 
 export default function Toast() {
   const [toasts, setToasts] = useState([]);
+  const timersRef = useRef([]);
+
   useEffect(() => {
     toastFn = (msg, type) => {
       const id = Date.now();
       setToasts(t => [...t, { id, msg, type }]);
-      setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3500);
+      const timer = setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3500);
+      timersRef.current.push(timer);
+    };
+    return () => {
+      toastFn = null;
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current = [];
     };
   }, []);
+
   const colors = { info: 'var(--blue)', success: 'var(--green)', error: 'var(--red)', warning: 'var(--amber)' };
   return (
     <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 9998, display: 'flex', flexDirection: 'column', gap: 8 }}>

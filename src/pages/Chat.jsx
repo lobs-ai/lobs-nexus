@@ -16,7 +16,7 @@ function renderMarkdown(text) {
 }
 
 export default function Chat() {
-  const { data: sessionsData, reload: reloadSessions } = useApi(() => api.chatSessions());
+  const { data: sessionsData, reload: reloadSessions } = useApi(signal => api.chatSessions(signal));
   const [activeSession, setActiveSession] = useState(null);
   const [creating, setCreating] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -80,10 +80,10 @@ export default function Chat() {
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [currentState.messages]);
 
   // Load messages from server (source of truth)
-  const loadMessages = useCallback(async (key) => {
+  const loadMessages = useCallback(async (key, signal) => {
     if (!key) return;
     try {
-      const data = await api.chatMessages(key);
+      const data = await api.chatMessages(key, signal);
       const messages = data?.messages || [];
       const hasUnansweredUserMessage = messages.length > 0 && messages[messages.length - 1]?.role === 'user';
       const isPending = pendingSessionsRef.current.has(key) || hasUnansweredUserMessage;
@@ -93,7 +93,8 @@ export default function Chat() {
       persistPendingSessions();
 
       updateSessionState(key, { messages, sending: isPending });
-    } catch {
+    } catch (e) {
+      if (e.name === 'AbortError') return;
       // Server might be restarting, keep current messages
     }
   }, [persistPendingSessions, updateSessionState]);
@@ -107,8 +108,12 @@ export default function Chat() {
     // Only load from server if we don't already have messages cached
     const cached = sessionStateRef.current[key];
     if (cached && cached.messages.length > 0) return;
+    const controller = new AbortController();
     setLoadingMessages(true);
-    loadMessages(key).finally(() => setLoadingMessages(false));
+    loadMessages(key, controller.signal).finally(() => {
+      if (!controller.signal.aborted) setLoadingMessages(false);
+    });
+    return () => controller.abort();
   }, [activeSession, loadMessages]);
 
   const newChat = async () => {

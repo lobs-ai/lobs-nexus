@@ -22,8 +22,8 @@ const MODEL_TIERS = [
 ];
 
 export default function Settings() {
-  const { data: statusData } = useApi(() => api.status());
-  const { data: orchData } = useApi(() => api.orchestratorStatus());
+  const { data: statusData } = useApi(signal => api.status(signal));
+  const { data: orchData } = useApi(signal => api.orchestratorStatus(signal));
 
   const server = statusData?.server || {};
   const orch = orchData?.settings || orchData?.orchestrator || orchData || {};

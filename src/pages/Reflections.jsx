@@ -34,7 +34,7 @@ function Section({ title, items, color }) {
 export default function Reflections() {
   const [agent, setAgent] = useState('all');
   const [selected, setSelected] = useState(null);
-  const { data, loading } = useApi(() => api.reflections(agent === 'all' ? {} : { agent }));
+  const { data, loading } = useApi(signal => api.reflections(agent === 'all' ? {} : { agent }, signal));
 
   const reflections = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 

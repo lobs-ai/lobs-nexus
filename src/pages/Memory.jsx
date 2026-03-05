@@ -19,7 +19,7 @@ function FilterBtn({ label, active, onClick, color }) {
 }
 
 export default function Memory() {
-  const { data, loading } = useApi(() => api.memoriesFs());
+  const { data, loading } = useApi(signal => api.memoriesFs(undefined, signal));
   const [agentFilter, setAgentFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);

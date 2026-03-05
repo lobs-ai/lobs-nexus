@@ -94,10 +94,10 @@ const getWorkerTaskTitle = (worker) => {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { data: status } = usePolling(() => api.status(), 10000);
-  const { data: activity } = usePolling(() => api.activity(), 10000);
-  const { data: workerStatus } = usePolling(() => api.workerStatus(), 5000);
-  const { data: tasksData } = usePolling(() => api.tasks({ limit: 100 }), 15000);
+  const { data: status } = usePolling(signal => api.status(signal), 10000);
+  const { data: activity } = usePolling(signal => api.activity(signal), 10000);
+  const { data: workerStatus } = usePolling(signal => api.workerStatus(signal), 5000);
+  const { data: tasksData } = usePolling(signal => api.tasks({ limit: 100 }, signal), 15000);
 
   const taskMap = {};
   (tasksData?.tasks || tasksData || []).forEach(t => { if (t.id) taskMap[t.id] = t; });

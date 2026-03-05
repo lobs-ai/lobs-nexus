@@ -11,71 +11,74 @@ async function req(path, options = {}) {
 }
 
 export const api = {
-  status: () => req('/api/status/overview'),
-  activity: () => req('/api/status/activity'),
-  costs: () => req('/api/status/costs'),
+  status: (signal) => req('/api/status/overview', { signal }),
+  activity: (signal) => req('/api/status/activity', { signal }),
+  costs: (signal) => req('/api/status/costs', { signal }),
 
-  tasks: (params = {}) => {
+  tasks: (params = {}, signal) => {
     const q = new URLSearchParams(params).toString();
-    return req(`/api/tasks${q ? '?' + q : ''}`);
+    return req(`/api/tasks${q ? '?' + q : ''}`, { signal });
   },
-  task: (id) => req(`/api/tasks/${id}`),
+  task: (id, signal) => req(`/api/tasks/${id}`, { signal }),
   createTask: (body) => req('/api/tasks', { method: 'POST', body }),
   updateTask: (id, body) => req(`/api/tasks/${id}/status`, { method: 'PATCH', body }),
   deleteTask: (id) => req(`/api/tasks/${id}`, { method: 'DELETE' }),
+  brainDump: (body) => req('/api/tasks/braindump', { method: 'POST', body }),
+  brainDumpConfirm: (body) => req('/api/tasks/braindump/confirm', { method: 'POST', body }),
 
-  projects: () => req('/api/projects'),
-  archivedProjects: () => req('/api/projects?archived=true'),
-  project: (id) => req(`/api/projects/${id}`),
+  projects: (signal) => req('/api/projects', { signal }),
+  archivedProjects: (signal) => req('/api/projects?archived=true', { signal }),
+  project: (id, signal) => req(`/api/projects/${id}`, { signal }),
   createProject: (body) => req('/api/projects', { method: 'POST', body }),
   updateProject: (id, body) => req(`/api/projects/${id}`, { method: 'PATCH', body }),
   archiveProject: (id) => req(`/api/projects/${id}/archive`, { method: 'POST' }),
   unarchiveProject: (id) => req(`/api/projects/${id}/unarchive`, { method: 'POST' }),
 
-  agents: () => req('/api/agents'),
-  workerStatus: () => req('/api/worker/status'),
-  workerHistory: (limit = 50) => req(`/api/worker/history?limit=${limit}`),
+  agents: (signal) => req('/api/agents', { signal }),
+  workerStatus: (signal) => req('/api/worker/status', { signal }),
+  workerHistory: (limit = 50, signal) => req(`/api/worker/history?limit=${limit}`, { signal }),
 
-  workflows: () => req('/api/workflows'),
-  workflow: (id) => req(`/api/workflows/${id}`),
-  workflowRuns: (limit = 50) => req(`/api/workflows/runs?limit=${limit}`),
+  workflows: (signal) => req('/api/workflows', { signal }),
+  workflow: (id, signal) => req(`/api/workflows/${id}`, { signal }),
+  workflowRuns: (limit = 50, signal) => req(`/api/workflows/runs?limit=${limit}`, { signal }),
 
-  usageDashboard: (window = 'month') => req(`/api/usage/dashboard?window=${window}`),
-  usageSummary: (window = 'day') => req(`/api/usage/summary?window=${window}`),
+  usageDashboard: (window = 'month', signal) => req(`/api/usage/dashboard?window=${window}`, { signal }),
+  usageSummary: (window = 'day', signal) => req(`/api/usage/summary?window=${window}`, { signal }),
+  usageProjection: (signal) => req(`/api/usage/projection`, { signal }),
 
-  inbox: () => req('/api/inbox'),
-  inboxItem: (id) => req(`/api/inbox/${id}`),
+  inbox: (signal) => req('/api/inbox', { signal }),
+  inboxItem: (id, signal) => req(`/api/inbox/${id}`, { signal }),
   inboxRead: (id) => req(`/api/inbox/${id}/read`, { method: 'POST' }),
   inboxDelete: (id) => req(`/api/inbox/${id}`, { method: 'DELETE' }),
   inboxApprove: (id) => req(`/api/inbox/${id}/approve`, { method: 'POST' }),
   inboxReject: (id) => req(`/api/inbox/${id}/reject`, { method: 'POST' }),
   inboxFeedback: (id, text) => req(`/api/inbox/${id}/feedback`, { method: 'POST', body: { text } }),
 
-  reflections: (params = {}) => {
+  reflections: (params = {}, signal) => {
     const q = new URLSearchParams(params).toString();
-    return req(`/api/reflections${q ? '?' + q : ''}`);
+    return req(`/api/reflections${q ? '?' + q : ''}`, { signal });
   },
-  reflection: (id) => req(`/api/reflections/${id}`),
+  reflection: (id, signal) => req(`/api/reflections/${id}`, { signal }),
 
-  chatSessions: () => req('/api/chat/sessions'),
-  chatMessages: (key) => req(`/api/chat/sessions/${key}/messages`),
+  chatSessions: (signal) => req('/api/chat/sessions', { signal }),
+  chatMessages: (key, signal) => req(`/api/chat/sessions/${key}/messages`, { signal }),
 
-  knowledge: (params = {}) => {
+  knowledge: (params = {}, signal) => {
     const q = new URLSearchParams(params).toString();
-    return req(`/api/knowledge${q ? '?' + q : ''}`);
+    return req(`/api/knowledge${q ? '?' + q : ''}`, { signal });
   },
-  knowledgeFeed: () => req('/api/knowledge/feed'),
-  research: () => req('/api/research').catch(() => ({ memos: [] })),
-  memories: () => req('/api/memories'),
+  knowledgeFeed: (signal) => req('/api/knowledge/feed', { signal }),
+  research: (signal) => req('/api/research', { signal }).catch(() => ({ memos: [] })),
+  memories: (signal) => req('/api/memories', { signal }),
 
-  knowledgeFs: () => req('/api/knowledge-fs/list'),
-  knowledgeFsRead: (path) => req('/api/knowledge-fs/read/' + path),
-  memoriesFs: (agent) => agent ? req('/api/memories-fs/' + agent) : req('/api/memories-fs'),
+  knowledgeFs: (signal) => req('/api/knowledge-fs/list', { signal }),
+  knowledgeFsRead: (path, signal) => req('/api/knowledge-fs/read/' + path, { signal }),
+  memoriesFs: (agent, signal) => agent ? req('/api/memories-fs/' + agent, { signal }) : req('/api/memories-fs', { signal }),
 
-  orchestratorStatus: () => req(`/api/orchestrator/status`),
-  initiatives: () => req(`/api/orchestrator/intelligence/initiatives`),
+  orchestratorStatus: (signal) => req(`/api/orchestrator/status`, { signal }),
+  initiatives: (signal) => req(`/api/orchestrator/intelligence/initiatives`, { signal }),
   initiativeDecide: (decisions) => req(`/api/orchestrator/intelligence/initiatives/batch-decide`, { method: `POST`, body: { decisions } }),
-  initiativeThread: (id) => req(`/api/orchestrator/intelligence/initiatives/` + id + `/thread`),
+  initiativeThread: (id, signal) => req(`/api/orchestrator/intelligence/initiatives/` + id + `/thread`, { signal }),
   initiativeReply: (id, text) => fetch(`/api/orchestrator/intelligence/initiatives/` + id + `/thread`, { method: `POST`, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, author: `user` }) }).then(r => r.json()),
   inboxReadState: (ids, is_read) => req(`/api/inbox/read-state`, { method: `POST`, body: { ids, is_read } }),
 };
