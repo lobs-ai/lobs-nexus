@@ -289,11 +289,16 @@ function ActionItemsList({ items, onStatusChange }) {
 }
 
 function ShareButton({ meeting, actionItems }) {
-  const [sharing, setSharing] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const buildShareText = () => {
-    let text = `📋 **${meeting.title || 'Meeting'}** — ${formatDate(meeting.created_at)}\n`;
-    if (meeting.summary) text += `\n${meeting.summary}\n`;
+  const buildShareText = (format = 'markdown') => {
+    let text = format === 'markdown'
+      ? `📋 **${meeting.title || 'Meeting'}** — ${formatDate(meeting.created_at)}`
+      : `📋 ${meeting.title || 'Meeting'} — ${formatDate(meeting.created_at)}`;
+    if (meeting.summary) text += `
+
+${meeting.summary}`;
     if (actionItems?.length) {
       const grouped = {};
       actionItems.forEach(i => {
@@ -301,10 +306,14 @@ function ShareButton({ meeting, actionItems }) {
         if (!grouped[k]) grouped[k] = [];
         grouped[k].push(i);
       });
-      text += '\n**Action Items:**';
+      text += `
+
+${format === 'markdown' ? '**Action Items:**' : 'Action Items:'}`;
       Object.entries(grouped).forEach(([assignee, items]) => {
-        text += `\n@${assignee}:`;
-        items.forEach(i => { text += `\n  • ${i.description}`; });
+        text += `
+@${assignee}:`;
+        items.forEach(i => { text += `
+  • ${i.description}`; });
       });
     }
     return text;
@@ -312,22 +321,67 @@ function ShareButton({ meeting, actionItems }) {
 
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(buildShareText());
-      showToast('Summary copied to clipboard', 'success');
+      await navigator.clipboard.writeText(buildShareText('plain'));
+      showToast('Copied to clipboard', 'success');
     } catch { showToast('Copy failed', 'error'); }
+    setShowMenu(false);
+  };
+
+  const sendToDiscord = async () => {
+    setSending(true);
+    try {
+      const res = await fetch('/paw/api/meetings/' + meeting.id + '/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channel: 'discord' }),
+      });
+      if (!res.ok) throw new Error('Failed: ' + res.status);
+      showToast('Sent to Discord', 'success');
+    } catch (e) {
+      showToast(e.message, 'error');
+    } finally {
+      setSending(false);
+      setShowMenu(false);
+    }
   };
 
   return (
-    <button onClick={copyToClipboard} style={{
-      background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
-      borderRadius: 6, padding: '4px 10px', color: 'var(--muted)', fontSize: '0.75rem',
-      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
-    }}>
-      <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-        <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
-      </svg>
-      Share
-    </button>
+    <div style={{ position: 'relative' }}>
+      <button onClick={() => setShowMenu(v => !v)} style={{
+        background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+        borderRadius: 6, padding: '4px 10px', color: 'var(--muted)', fontSize: '0.75rem',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+      }}>
+        <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+        </svg>
+        {sending ? 'Sending…' : 'Share'}
+      </button>
+      {showMenu && (
+        <div style={{
+          position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 10,
+          background: 'var(--card-bg, rgba(15,23,42,0.95))', border: '1px solid var(--border)',
+          borderRadius: 8, padding: 4, minWidth: 160, boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        }}>
+          <button onClick={copyToClipboard} style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px',
+            background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '0.8rem',
+            cursor: 'pointer', borderRadius: 6, textAlign: 'left',
+          }} onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.05)'}
+             onMouseLeave={e => e.target.style.background = 'transparent'}>
+            📋 Copy to clipboard
+          </button>
+          <button onClick={sendToDiscord} style={{
+            display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '8px 12px',
+            background: 'transparent', border: 'none', color: 'var(--text)', fontSize: '0.8rem',
+            cursor: 'pointer', borderRadius: 6, textAlign: 'left',
+          }} onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.05)'}
+             onMouseLeave={e => e.target.style.background = 'transparent'}>
+            💬 Send to Discord
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
