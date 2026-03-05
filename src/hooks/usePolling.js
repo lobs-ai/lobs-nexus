@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export function usePolling(fetcher, intervalMs = 10000, deps = []) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const inflightRef = useRef(null);
 
   const load = useCallback(async (signal) => {
     try {
@@ -20,20 +21,29 @@ export function usePolling(fetcher, intervalMs = 10000, deps = []) {
   }, deps); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const controller = new AbortController();
-    load(controller.signal);
-    const id = setInterval(() => {
-      // Each poll gets its own controller so only the unmount abort matters
+    // Cancel any previous in-flight request before starting a new poll cycle
+    const startPoll = () => {
+      if (inflightRef.current) inflightRef.current.abort();
+      const controller = new AbortController();
+      inflightRef.current = controller;
       load(controller.signal);
-    }, intervalMs);
+    };
+
+    startPoll();
+    const id = setInterval(startPoll, intervalMs);
     return () => {
-      controller.abort();
       clearInterval(id);
+      if (inflightRef.current) {
+        inflightRef.current.abort();
+        inflightRef.current = null;
+      }
     };
   }, [load, intervalMs]);
 
   const reload = useCallback(() => {
+    if (inflightRef.current) inflightRef.current.abort();
     const controller = new AbortController();
+    inflightRef.current = controller;
     load(controller.signal);
   }, [load]);
 
