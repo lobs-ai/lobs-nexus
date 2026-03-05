@@ -190,8 +190,18 @@ function VideoItem({ video, onRefresh }) {
           </div>
         )}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {video.title || video.video_url}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+            <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {video.title || video.video_url}
+            </span>
+            {video.video_url && (
+              <a href={video.video_url} target='_blank' rel='noopener noreferrer' onClick={e => e.stopPropagation()}
+                style={{ flexShrink: 0, color: 'var(--muted)', opacity: 0.7 }} title='Open on YouTube'>
+                <svg width='14' height='14' fill='none' stroke='currentColor' strokeWidth='2' viewBox='0 0 24 24'>
+                  <path d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/><polyline points='15 3 21 3 21 9'/><line x1='10' y1='14' x2='21' y2='3'/>
+                </svg>
+              </a>
+            )}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
             {video.channel && <span style={{ color: 'var(--muted)', fontSize: '0.75rem' }}>{video.channel}</span>}
@@ -261,6 +271,18 @@ export default function YouTube() {
   const fetchVideos = useCallback(() => fetch('/paw/api/youtube').then(r => r.json()), []);
   const { data: videosData, refresh } = usePolling(fetchVideos, 10000);
   const videos = Array.isArray(videosData) ? videosData : videosData?.videos || [];
+  const [search, setSearch] = useState('');
+
+  const filtered = videos.filter(v => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return (v.title || '').toLowerCase().includes(q)
+      || (v.channel || '').toLowerCase().includes(q)
+      || (v.video_summary || '').toLowerCase().includes(q)
+      || (v.reflection || '').toLowerCase().includes(q)
+      || (v.transcript || '').toLowerCase().includes(q)
+      || (v.description || '').toLowerCase().includes(q);
+  });
 
   return (
     <div style={{ padding: '28px 28px 40px', maxWidth: 900, margin: '0 auto' }}>
@@ -277,13 +299,21 @@ export default function YouTube() {
       <IngestBar onSubmit={refresh} />
 
       <GlassCard>
-        <div style={{ color: 'var(--text)', fontWeight: 600, fontSize: '1rem', marginBottom: 16 }}>
-          Videos
-          {videos.length > 0 && <span style={{ marginLeft: 8, color: 'var(--faint)', fontSize: '0.8rem' }}>({videos.length})</span>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <div style={{ color: 'var(--text)', fontWeight: 600, fontSize: '1rem', flex: 1 }}>
+            Videos
+            {videos.length > 0 && <span style={{ marginLeft: 8, color: 'var(--faint)', fontSize: '0.8rem' }}>({filtered.length}{filtered.length !== videos.length ? '/' + videos.length : ''})</span>}
+          </div>
+          <input
+            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', color: 'var(--text)', fontSize: '0.8rem', outline: 'none', width: 240 }}
+            placeholder='Search videos, summaries, reflections...'
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
-        {videos.length === 0
-          ? <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--faint)', fontSize: '0.875rem' }}>No videos ingested yet.</div>
-          : videos.map(v => <VideoItem key={v.id} video={v} onRefresh={refresh} />)
+        {filtered.length === 0
+          ? <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--faint)', fontSize: '0.875rem' }}>{videos.length === 0 ? 'No videos ingested yet.' : 'No videos match your search.'}</div>
+          : filtered.map(v => <VideoItem key={v.id} video={v} onRefresh={refresh} />)
         }
       </GlassCard>
     </div>
