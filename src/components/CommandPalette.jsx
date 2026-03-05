@@ -84,7 +84,8 @@ export default function CommandPalette({ open, onClose }) {
   useEffect(() => {
     if (open) {
       setQuery('');
-      setTimeout(() => inputRef.current?.focus(), 10);
+      const timer = setTimeout(() => inputRef.current?.focus(), 10);
+      return () => clearTimeout(timer);
     }
   }, [open]);
 
