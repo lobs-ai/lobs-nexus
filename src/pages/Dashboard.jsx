@@ -142,6 +142,13 @@ export default function Dashboard() {
     },
   ];
 
+  // Meeting action items for dashboard widget
+  const [actionItems, setActionItems] = useState([]);
+  useEffect(() => {
+    fetch('/paw/api/meetings/action-items?assignee=rafe')
+      .then(r => r.json()).then(items => setActionItems(items?.filter?.(i => i.status !== 'completed') || [])).catch(() => {});
+  }, []);
+
   const quickActions = [
     { label: 'New Task', icon: '+', color: 'var(--teal)', action: () => setShowCreateTask(true) },
     { label: 'Inbox', icon: '📬', color: 'var(--blue)', to: '/inbox' },
@@ -326,6 +333,40 @@ export default function Dashboard() {
             </div>
           </GlassCard>
         </div>
+
+      </div>
+      {/* Meeting Action Items */}
+        {actionItems.length > 0 && (
+          <GlassCard className="fade-in-up-7" style={{ marginTop: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <div className="section-label" style={{ marginBottom: 0 }}>Meetings</div>
+              <div style={{ flex: 1 }} />
+              <span onClick={() => navigate('/meetings')} style={{ color: 'var(--teal)', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>View All →</span>
+            </div>
+            <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 16 }}>Your Action Items <span style={{ color: 'var(--faint)', fontSize: '0.85rem', fontWeight: 400 }}>({actionItems.length})</span></h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {actionItems.slice(0, 5).map(item => (
+                <div key={item.id} style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 12px',
+                  background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid var(--border)',
+                }}>
+                  <svg width="14" height="14" fill="none" stroke="var(--teal)" strokeWidth="2" viewBox="0 0 24 24" style={{ marginTop: 3, flexShrink: 0 }}>
+                    <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                  </svg>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: 'var(--text)', fontSize: '0.85rem', lineHeight: 1.5 }}>{item.description}</div>
+                    {item.due_date && <div style={{ color: 'var(--faint)', fontSize: '0.72rem', marginTop: 2 }}>Due: {item.due_date}</div>}
+                  </div>
+                </div>
+              ))}
+              {actionItems.length > 5 && (
+                <div style={{ color: 'var(--muted)', fontSize: '0.78rem', textAlign: 'center', padding: 4 }}>
+                  +{actionItems.length - 5} more
+                </div>
+              )}
+            </div>
+          </GlassCard>
+        )}
 
       </div>
       {/* Create Task Modal */}
