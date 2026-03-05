@@ -159,7 +159,7 @@ function ProjectSwitcher({ projects, selectedProject, onSelect }) {
           border: '1px solid var(--border)',
           borderRadius: 10,
           boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-          zIndex: 100,
+          zIndex: 9000,
           overflow: 'hidden',
         }}>
           {others.length === 0 ? (
@@ -311,7 +311,7 @@ export default function Projects() {
     <div style={{ position: 'relative', padding: '36px 32px' }}>
       <div className="orb orb-1" style={{ position: 'fixed', zIndex: 0 }} />
       <div className="orb orb-2" style={{ position: 'fixed', zIndex: 0 }} />
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      <div style={{ position: 'relative' }}>
         {/* Header */}
         <div className="fade-in-up" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 36 }}>
           <div>
