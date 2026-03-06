@@ -1,9 +1,60 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import GlassCard from '../components/GlassCard';
 import Badge from '../components/Badge';
 import { showToast } from '../components/Toast';
 import { useApi } from '../hooks/useApi';
 import { usePolling } from '../hooks/usePolling';
+
+// Fetch task status for action items that have a task_id.
+// Returns a map of { taskId -> task } for only the found tasks.
+async function fetchTaskStatuses(taskIds) {
+  if (!taskIds || taskIds.length === 0) return {};
+  const results = {};
+  await Promise.all(taskIds.map(async (id) => {
+    try {
+      const res = await fetch(`/paw/api/tasks/${id}`);
+      if (res.ok) {
+        const task = await res.json();
+        if (task && !task.error) results[id] = task;
+      }
+    } catch (_) {}
+  }));
+  return results;
+}
+
+// Auto-sync action items: if task is done, mark action item complete.
+// Returns updated items array.
+async function syncActionItemsWithTasks(items, onStatusChange) {
+  const itemsWithTasks = items.filter(i => i.taskId || i.task_id);
+  if (itemsWithTasks.length === 0) return items;
+
+  const taskIds = [...new Set(itemsWithTasks.map(i => i.taskId || i.task_id))];
+  const taskMap = await fetchTaskStatuses(taskIds);
+
+  const updatedItems = [...items];
+  await Promise.all(updatedItems.map(async (item, idx) => {
+    const tid = item.taskId || item.task_id;
+    if (!tid) return;
+    const task = taskMap[tid];
+    if (!task) return;
+    const taskDone = task.status === 'closed' || task.status === 'completed';
+    if (taskDone && item.status !== 'completed') {
+      // Auto-mark action item complete
+      try {
+        await fetch(`/paw/api/meetings/action-items/${item.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'completed' }),
+        });
+        updatedItems[idx] = { ...item, status: 'completed', _task: task };
+      } catch (_) {}
+    } else {
+      updatedItems[idx] = { ...item, _task: task };
+    }
+  }));
+  return updatedItems;
+}
 
 const MEETING_TYPES = ['standup', 'planning', 'review', 'retrospective', 'one-on-one', 'brainstorm', 'other'];
 
@@ -231,6 +282,30 @@ function TranscriptBody({ transcript }) {
   return <div style={{ color: 'var(--faint)', fontSize: '0.85rem' }}>Unrecognized transcript format.</div>;
 }
 
+function TaskLink({ task, taskId }) {
+  const navigate = useNavigate();
+  if (!taskId) return null;
+
+  const isDone = task && (task.status === 'closed' || task.status === 'completed');
+  const label = isDone ? '✓ Task Done' : 'View Task';
+  const color = isDone ? '#2dd4bf' : 'var(--blue)';
+
+  return (
+    <button
+      title={task ? task.title : `Task ${taskId}`}
+      onClick={(e) => { e.stopPropagation(); navigate('/tasks'); }}
+      style={{
+        background: isDone ? 'rgba(45,212,191,0.12)' : 'rgba(96,165,250,0.12)',
+        border: `1px solid ${isDone ? 'rgba(45,212,191,0.3)' : 'rgba(96,165,250,0.3)'}`,
+        borderRadius: 5, padding: '2px 8px', color, fontSize: '0.7rem', fontWeight: 600,
+        cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
 function ActionItemsList({ items, onStatusChange }) {
   if (!items || items.length === 0) return null;
 
@@ -260,28 +335,31 @@ function ActionItemsList({ items, onStatusChange }) {
           <div style={{ color: assigneeColor(assignee), fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: 6, letterSpacing: '0.05em' }}>
             {assignee === 'unassigned' ? '📋 Unassigned' : `@${assignee}`}
           </div>
-          {group.map(item => (
-            <div key={item.id} style={{
-              display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 0',
-              borderBottom: '1px solid rgba(255,255,255,0.04)',
-            }}>
-              <input
-                type="checkbox"
-                checked={item.status === 'completed'}
-                onChange={() => onStatusChange(item.id, item.status === 'completed' ? 'pending' : 'completed')}
-                style={{ marginTop: 3, accentColor: 'var(--teal)', cursor: 'pointer' }}
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{
-                  color: item.status === 'completed' ? 'var(--faint)' : 'var(--text)',
-                  fontSize: '0.83rem', lineHeight: 1.5,
-                  textDecoration: item.status === 'completed' ? 'line-through' : 'none',
-                }}>{item.description}</div>
-                {item.due_date && <span style={{ color: 'var(--faint)', fontSize: '0.7rem' }}>Due: {item.due_date}</span>}
+          {group.map(item => {
+            const taskId = item.taskId || item.task_id;
+            return (
+              <div key={item.id} style={{
+                display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 0',
+                borderBottom: '1px solid rgba(255,255,255,0.04)',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={item.status === 'completed'}
+                  onChange={() => onStatusChange(item.id, item.status === 'completed' ? 'pending' : 'completed')}
+                  style={{ marginTop: 3, accentColor: 'var(--teal)', cursor: 'pointer' }}
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    color: item.status === 'completed' ? 'var(--faint)' : 'var(--text)',
+                    fontSize: '0.83rem', lineHeight: 1.5,
+                    textDecoration: item.status === 'completed' ? 'line-through' : 'none',
+                  }}>{item.description}</div>
+                  {item.due_date && <span style={{ color: 'var(--faint)', fontSize: '0.7rem' }}>Due: {item.due_date}</span>}
+                </div>
+                {taskId && <TaskLink task={item._task} taskId={taskId} />}
               </div>
-              {item.task_id && <Badge label="Task" color="var(--blue)" />}
-            </div>
-          ))}
+            );
+          })}
         </div>
       ))}
     </div>
@@ -396,7 +474,14 @@ function TranscriptItem({ meeting }) {
   useEffect(() => {
     if (expanded && !actionItems) {
       fetch(`/paw/api/meetings/${meeting.id}/action-items`)
-        .then(r => r.json()).then(d => setActionItems(Array.isArray(d) ? d : [])).catch(() => {});
+        .then(r => r.json())
+        .then(async (d) => {
+          const items = Array.isArray(d) ? d : [];
+          // Sync task statuses for items that have a task link
+          const synced = await syncActionItemsWithTasks(items, updateItemStatus);
+          setActionItems(synced);
+        })
+        .catch(() => {});
     }
   }, [expanded, meeting.id]);
 
@@ -510,8 +595,14 @@ export default function Meetings() {
   });
 
   const fetchMyItems = useCallback(() =>
-    fetch('/paw/api/meetings/action-items?assignee=rafe').then(r => r.json()).then(d => Array.isArray(d) ? d : []), []);
-  const { data: myItems } = usePolling(fetchMyItems, 15000);
+    fetch('/paw/api/meetings/action-items?assignee=lobs').then(r => r.json()).then(d => Array.isArray(d) ? d : []), []);
+  const { data: rawMyItems, refresh: refreshMyItems } = usePolling(fetchMyItems, 15000);
+  const [myItems, setMyItems] = useState(null);
+
+  useEffect(() => {
+    if (!rawMyItems) return;
+    syncActionItemsWithTasks(rawMyItems, () => {}).then(synced => setMyItems(synced));
+  }, [rawMyItems]);
 
   return (
     <div style={{ padding: '28px 28px 40px', maxWidth: 900, margin: '0 auto' }}>
@@ -539,23 +630,28 @@ export default function Meetings() {
             My Action Items
             <span style={{ color: 'var(--faint)', fontSize: '0.8rem' }}>({myItems.filter(i => i.status !== 'completed').length} open)</span>
           </div>
-          {myItems.filter(i => i.status !== 'completed').map(item => (
-            <div key={item.id} style={{
-              display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0',
-              borderBottom: '1px solid rgba(255,255,255,0.04)',
-            }}>
-              <input type="checkbox" onChange={async () => {
-                await fetch(`/paw/api/meetings/action-items/${item.id}`, {
-                  method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ status: 'completed' }),
-                });
-              }} style={{ marginTop: 3, accentColor: 'var(--teal)', cursor: 'pointer' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ color: 'var(--text)', fontSize: '0.85rem', lineHeight: 1.5 }}>{item.description}</div>
-                {item.due_date && <span style={{ color: 'var(--faint)', fontSize: '0.7rem' }}>Due: {item.due_date}</span>}
+          {myItems.filter(i => i.status !== 'completed').map(item => {
+            const taskId = item.taskId || item.task_id;
+            return (
+              <div key={item.id} style={{
+                display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 0',
+                borderBottom: '1px solid rgba(255,255,255,0.04)',
+              }}>
+                <input type="checkbox" onChange={async () => {
+                  await fetch(`/paw/api/meetings/action-items/${item.id}`, {
+                    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'completed' }),
+                  });
+                  setMyItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'completed' } : i));
+                }} style={{ marginTop: 3, accentColor: 'var(--teal)', cursor: 'pointer' }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: 'var(--text)', fontSize: '0.85rem', lineHeight: 1.5 }}>{item.description}</div>
+                  {item.due_date && <span style={{ color: 'var(--faint)', fontSize: '0.7rem' }}>Due: {item.due_date}</span>}
+                </div>
+                {taskId && <TaskLink task={item._task} taskId={taskId} />}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </GlassCard>
       )}
 

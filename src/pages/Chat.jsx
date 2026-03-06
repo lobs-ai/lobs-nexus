@@ -4,6 +4,10 @@ import { useApi } from '../hooks/useApi';
 import { api } from '../lib/api';
 import { timeAgo } from '../lib/utils';
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function renderMarkdown(text) {
   if (!text) return '';
   return text
@@ -15,31 +19,65 @@ function renderMarkdown(text) {
     .replace(/\n/g, '<br>');
 }
 
+function deriveTitle(text) {
+  const cleaned = text.replace(/\s+/g, ' ').trim();
+  return cleaned.length <= 50 ? cleaned : cleaned.slice(0, 47) + '…';
+}
+
+// ---------------------------------------------------------------------------
+// Custom-title localStorage store
+// ---------------------------------------------------------------------------
+
+const TITLE_STORE_KEY = 'nexus.chat.titles';
+
+function loadTitleStore() {
+  try { return JSON.parse(localStorage.getItem(TITLE_STORE_KEY) || '{}'); } catch { return {}; }
+}
+function saveTitleStore(store) {
+  try { localStorage.setItem(TITLE_STORE_KEY, JSON.stringify(store)); } catch {}
+}
+function getCustomTitle(id) { return loadTitleStore()[id] || null; }
+function setCustomTitle(id, title) {
+  const store = loadTitleStore();
+  store[id] = title;
+  saveTitleStore(store);
+}
+function removeCustomTitle(id) {
+  const store = loadTitleStore();
+  delete store[id];
+  saveTitleStore(store);
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export default function Chat() {
   const { data: sessionsData, reload: reloadSessions } = useApi(signal => api.chatSessions(signal));
   const [activeSession, setActiveSession] = useState(null);
   const [creating, setCreating] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
+
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [, titleTick] = useState(0);
+
   const messagesEndRef = useRef(null);
   const prevSessionRef = useRef(null);
   const pendingSessionsRef = useRef((() => {
     try {
       const raw = JSON.parse(localStorage.getItem('nexus.chat.pendingSessions') || '[]');
       return new Set(Array.isArray(raw) ? raw : []);
-    } catch {
-      return new Set();
-    }
+    } catch { return new Set(); }
   })());
 
-  // Per-session state stored in refs to survive session switches
-  const sessionStateRef = useRef({}); // key -> { messages, sending, sendError }
-  const [, forceUpdate] = useState(0); // trigger re-renders when per-session state changes
+  const sessionStateRef = useRef({});
+  const [, forceUpdate] = useState(0);
 
   const sessions = sessionsData?.sessions || sessionsData || [];
-
   const activeKey = activeSession?.key || activeSession?.sessionKey;
+  const activeId = activeSession?.id;
 
-  // Helper to get/init per-session state
   const getSessionState = useCallback((key) => {
     if (!key) return { messages: [], sending: false, sendError: null };
     if (!sessionStateRef.current[key]) {
@@ -58,9 +96,7 @@ export default function Chat() {
   const persistPendingSessions = useCallback(() => {
     try {
       localStorage.setItem('nexus.chat.pendingSessions', JSON.stringify([...pendingSessionsRef.current]));
-    } catch {
-      // Ignore storage errors
-    }
+    } catch {}
   }, []);
 
   const markSessionPending = useCallback((key, pending) => {
@@ -72,14 +108,12 @@ export default function Chat() {
 
   const currentState = getSessionState(activeKey);
 
-  // Per-session input text
   const [inputMap, setInputMap] = useState({});
   const input = inputMap[activeKey] || '';
   const setInput = (val) => setInputMap(m => ({ ...m, [activeKey]: val }));
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [currentState.messages]);
 
-  // Load messages from server (source of truth)
   const loadMessages = useCallback(async (key, signal) => {
     if (!key) return;
     try {
@@ -87,15 +121,12 @@ export default function Chat() {
       const messages = data?.messages || [];
       const hasUnansweredUserMessage = messages.length > 0 && messages[messages.length - 1]?.role === 'user';
       const isPending = pendingSessionsRef.current.has(key) || hasUnansweredUserMessage;
-
       if (isPending) pendingSessionsRef.current.add(key);
       else pendingSessionsRef.current.delete(key);
       persistPendingSessions();
-
       updateSessionState(key, { messages, sending: isPending });
     } catch (e) {
       if (e.name === 'AbortError') return;
-      // Server might be restarting, keep current messages
     }
   }, [persistPendingSessions, updateSessionState]);
 
@@ -105,7 +136,6 @@ export default function Chat() {
     const key = activeSession.key || activeSession.sessionKey;
     if (prevSessionRef.current === key) return;
     prevSessionRef.current = key;
-    // Only load from server if we don't already have messages cached
     const cached = sessionStateRef.current[key];
     if (cached && cached.messages.length > 0) return;
     const controller = new AbortController();
@@ -115,6 +145,21 @@ export default function Chat() {
     });
     return () => controller.abort();
   }, [activeSession, loadMessages]);
+
+  // Background polling for ALL pending sessions (including non-active ones)
+  useEffect(() => {
+    const poll = async () => {
+      const pendingKeys = [...pendingSessionsRef.current];
+      if (pendingKeys.length === 0) return;
+      await Promise.allSettled(pendingKeys.map(key => loadMessages(key)));
+    };
+    const id = setInterval(poll, 4000);
+    return () => clearInterval(id);
+  }, [loadMessages]);
+
+  // ---------------------------------------------------------------------------
+  // Session management
+  // ---------------------------------------------------------------------------
 
   const newChat = async () => {
     setCreating(true);
@@ -143,6 +188,7 @@ export default function Chat() {
       await fetch(`/api/chat/sessions/${encodeURIComponent(key)}`, { method: 'DELETE' });
       delete sessionStateRef.current[key];
       markSessionPending(key, false);
+      removeCustomTitle(session.id);
       if (activeKey === key) {
         setActiveSession(null);
         prevSessionRef.current = null;
@@ -153,9 +199,29 @@ export default function Chat() {
     }
   };
 
+  const startRename = (e, session) => {
+    e.stopPropagation();
+    setRenamingId(session.id);
+    setRenameValue(getCustomTitle(session.id) || session.title || session.label || 'New Chat');
+  };
+
+  const commitRename = (e, sessionId) => {
+    e.stopPropagation();
+    const trimmed = renameValue.trim();
+    if (trimmed) { setCustomTitle(sessionId, trimmed); titleTick(n => n + 1); }
+    setRenamingId(null);
+  };
+
+  const cancelRename = (e) => { e.stopPropagation(); setRenamingId(null); };
+
+  // ---------------------------------------------------------------------------
+  // Messaging
+  // ---------------------------------------------------------------------------
+
   const sendMessage = async (overrideText) => {
     const text = (overrideText || input).trim();
     const key = activeKey;
+    const sessionId = activeId;
     if (!text || !key) return;
     const state = getSessionState(key);
     if (state.sending) return;
@@ -167,6 +233,12 @@ export default function Chat() {
       messages: [...state.messages, { role: 'user', content: text, timestamp: new Date().toISOString() }],
     });
     markSessionPending(key, true);
+
+    // Auto-title on first message
+    if (state.messages.length === 0 && !getCustomTitle(sessionId) && sessionId) {
+      setCustomTitle(sessionId, deriveTitle(text));
+      titleTick(n => n + 1);
+    }
 
     try {
       const res = await fetch(`/api/chat/sessions/${encodeURIComponent(key)}/messages`, {
@@ -190,8 +262,6 @@ export default function Chat() {
       }
     } catch (err) {
       console.error('Failed to send:', err);
-      // Keep the optimistic user message visible so failed sends don't appear "deleted".
-      // Preserve per-chat drafts/history when another session is busy or transient errors occur.
       markSessionPending(key, false);
       updateSessionState(key, { sending: false, sendError: { text, key } });
     }
@@ -205,11 +275,19 @@ export default function Chat() {
     sendMessage(text);
   };
 
-  // Show a dot indicator on sidebar sessions that are currently "thinking"
-  const isSessionSending = (key) => sessionStateRef.current[key]?.sending || pendingSessionsRef.current.has(key) || false;
+  const isSessionSending = (key) =>
+    sessionStateRef.current[key]?.sending || pendingSessionsRef.current.has(key) || false;
+
+  const getDisplayTitle = (session) =>
+    getCustomTitle(session.id) || session.title || session.label || 'New Chat';
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 32px)', padding: '16px 0 16px 0' }}>
+      {/* Sidebar */}
       <div style={{ width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border)', padding: '16px 20px', background: 'rgba(6,9,20,0.5)' }}>
         <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '4px', color: 'var(--teal)', fontFamily: 'var(--mono)', marginBottom: 16 }}>CONVERSATIONS</div>
         <button className="btn-primary" onClick={newChat} disabled={creating} style={{ marginBottom: 16, width: '100%', fontSize: '0.82rem' }}>
@@ -222,29 +300,58 @@ export default function Chat() {
             const key = s.key || s.sessionKey;
             const isActive = activeKey === key;
             const isSending = isSessionSending(key);
+            const displayTitle = getDisplayTitle(s);
+            const isRenaming = renamingId === s.id;
+
             return (
-              <div key={key} onClick={() => { prevSessionRef.current = null; setActiveSession(s); }}
-                style={{ background: isActive ? 'rgba(45,212,191,0.08)' : 'rgba(255,255,255,0.02)', border: `1px solid ${isActive ? 'rgba(45,212,191,0.3)' : 'var(--border)'}`, borderRadius: 8, padding: '12px 14px', cursor: 'pointer', transition: 'all 0.15s' }}
+              <div key={key}
+                onClick={() => { if (!isRenaming) { prevSessionRef.current = null; setActiveSession(s); } }}
+                style={{ background: isActive ? 'rgba(45,212,191,0.08)' : 'rgba(255,255,255,0.02)', border: `1px solid ${isActive ? 'rgba(45,212,191,0.3)' : 'var(--border)'}`, borderRadius: 8, padding: '10px 12px', cursor: 'pointer', transition: 'all 0.15s' }}
                 onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = 'rgba(45,212,191,0.15)'; }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = 'var(--border)'; }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, overflow: 'hidden' }}>
-                    {isSending && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--teal)', flexShrink: 0, animation: 'pulse 1.5s infinite' }} />}
-                    <div style={{ color: isActive ? 'var(--teal)' : 'var(--text)', fontSize: '0.85rem', fontWeight: 600, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{s.title || s.label || 'Chat'}</div>
+
+                {isRenaming ? (
+                  <div onClick={e => e.stopPropagation()} style={{ display: 'flex', gap: 6 }}>
+                    <input autoFocus value={renameValue} onChange={e => setRenameValue(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') commitRename(e, s.id); if (e.key === 'Escape') cancelRename(e); }}
+                      style={{ flex: 1, background: 'rgba(45,212,191,0.06)', border: '1px solid rgba(45,212,191,0.3)', borderRadius: 4, padding: '2px 6px', color: 'var(--text)', fontSize: '0.82rem', outline: 'none' }} />
+                    <button onClick={e => commitRename(e, s.id)} style={{ background: 'none', border: 'none', color: 'var(--teal)', cursor: 'pointer', fontSize: '0.8rem', padding: '0 2px' }} title="Save">✓</button>
+                    <button onClick={cancelRename} style={{ background: 'none', border: 'none', color: 'var(--faint)', cursor: 'pointer', fontSize: '0.8rem', padding: '0 2px' }} title="Cancel">✕</button>
                   </div>
-                  <button onClick={(e) => deleteChat(e, s)}
-                    style={{ background: 'none', border: 'none', color: 'var(--faint)', cursor: 'pointer', padding: '0 0 0 8px', fontSize: '0.8rem', lineHeight: 1, opacity: 0.5, transition: 'opacity 0.15s' }}
-                    onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#f87171'; }}
-                    onMouseLeave={e => { e.currentTarget.style.opacity = '0.5'; e.currentTarget.style.color = 'var(--faint)'; }}
-                    title="Delete chat">✕</button>
-                </div>
-                <div style={{ color: 'var(--faint)', fontSize: '0.72rem', fontFamily: 'var(--mono)' }}>{timeAgo(s.updatedAt || s.lastMessageAt || s.createdAt)}</div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, overflow: 'hidden' }}>
+                        {isSending && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--teal)', flexShrink: 0, animation: 'pulse 1.5s infinite' }} />}
+                        <div style={{ color: isActive ? 'var(--teal)' : 'var(--text)', fontSize: '0.85rem', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                          {displayTitle}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 2, flexShrink: 0, marginLeft: 4 }}>
+                        <button onClick={e => startRename(e, s)}
+                          style={{ background: 'none', border: 'none', color: 'var(--faint)', cursor: 'pointer', padding: '1px 3px', fontSize: '0.72rem', opacity: 0.4, transition: 'opacity 0.15s' }}
+                          onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = 'var(--teal)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.opacity = '0.4'; e.currentTarget.style.color = 'var(--faint)'; }}
+                          title="Rename">✎</button>
+                        <button onClick={e => deleteChat(e, s)}
+                          style={{ background: 'none', border: 'none', color: 'var(--faint)', cursor: 'pointer', padding: '1px 3px', fontSize: '0.8rem', opacity: 0.4, transition: 'opacity 0.15s' }}
+                          onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#f87171'; }}
+                          onMouseLeave={e => { e.currentTarget.style.opacity = '0.4'; e.currentTarget.style.color = 'var(--faint)'; }}
+                          title="Delete chat">✕</button>
+                      </div>
+                    </div>
+                    <div style={{ color: 'var(--faint)', fontSize: '0.72rem', fontFamily: 'var(--mono)', marginTop: 4 }}>
+                      {timeAgo(s.updatedAt || s.lastMessageAt || s.createdAt)}
+                    </div>
+                  </>
+                )}
               </div>
             );
           })}
         </div>
       </div>
 
+      {/* Main chat area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '0 24px' }}>
         {!activeSession ? (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8 }}>
@@ -256,7 +363,7 @@ export default function Chat() {
           <>
             <div style={{ padding: '16px 0', borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
               <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '3px', color: 'var(--teal)', fontFamily: 'var(--mono)', marginBottom: 4 }}>ACTIVE SESSION</div>
-              <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: '1rem' }}>{activeSession.title || activeSession.label || 'Chat'}</div>
+              <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: '1rem' }}>{getDisplayTitle(activeSession)}</div>
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 16 }}>
@@ -281,7 +388,9 @@ export default function Chat() {
               ))}
               {currentState.sending && (
                 <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-                  <div className="chat-bubble-ai"><span style={{ color: 'var(--teal)', fontFamily: 'var(--mono)', fontSize: '0.82rem' }}>Thinking...</span></div>
+                  <div className="chat-bubble-ai">
+                    <span style={{ color: 'var(--teal)', fontFamily: 'var(--mono)', fontSize: '0.82rem' }}>Thinking...</span>
+                  </div>
                 </div>
               )}
               {currentState.sendError && (
@@ -297,8 +406,12 @@ export default function Chat() {
             </div>
 
             <div style={{ display: 'flex', gap: 10, borderTop: '1px solid var(--border)', paddingTop: 16, paddingBottom: 8 }}>
-              <input className="nx-input" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} placeholder="Send a message..." style={{ flex: 1 }} disabled={currentState.sending} />
-              <button className="btn-primary" onClick={() => sendMessage()} disabled={!input.trim() || currentState.sending} style={{ padding: '10px 20px' }}>{currentState.sending ? '...' : 'Send'}</button>
+              <input className="nx-input" value={input} onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                placeholder="Send a message..." style={{ flex: 1 }} disabled={currentState.sending} />
+              <button className="btn-primary" onClick={() => sendMessage()} disabled={!input.trim() || currentState.sending} style={{ padding: '10px 20px' }}>
+                {currentState.sending ? '...' : 'Send'}
+              </button>
             </div>
           </>
         )}

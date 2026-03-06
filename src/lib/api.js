@@ -22,6 +22,7 @@ export const api = {
   task: (id, signal) => req(`/api/tasks/${id}`, { signal }),
   createTask: (body) => req('/api/tasks', { method: 'POST', body }),
   updateTask: (id, body) => req(`/api/tasks/${id}/status`, { method: 'PATCH', body }),
+  setTaskBlockedBy: (id, blocked_by) => req(`/api/tasks/${id}/blocked-by`, { method: 'PATCH', body: { blocked_by } }),
   deleteTask: (id) => req(`/api/tasks/${id}`, { method: 'DELETE' }),
   brainDump: (body) => req('/api/tasks/braindump', { method: 'POST', body }),
   brainDumpConfirm: (body) => req('/api/tasks/braindump/confirm', { method: 'POST', body }),
