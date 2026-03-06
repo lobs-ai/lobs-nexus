@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import GlassCard from '../components/GlassCard';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
@@ -19,6 +19,7 @@ const COLUMNS = [
 ];
 
 function TaskCard({ task, onClick }) {
+  const blockers = task.blocked_by || task.blockedBy;
   return (
     <div className="task-card" onClick={() => onClick(task)}>
       <div style={{ marginBottom: 8 }}>
@@ -30,7 +31,7 @@ function TaskCard({ task, onClick }) {
         )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        {task.blockedBy && Array.isArray(task.blockedBy) && task.blockedBy.length > 0 && <Badge label="⛔ blocked" color="var(--red)" />}
+        {blockers && Array.isArray(blockers) && blockers.length > 0 && <Badge label="⛔ blocked" color="var(--red)" />}
         {task.agent && <Badge label={task.agent} color={AGENT_COLORS[task.agent] || 'var(--blue)'} />}
         {task.model_tier && <Badge label={task.model_tier} color={TIER_COLORS[task.model_tier] || 'var(--muted)'} />}
         <span style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: '0.72rem' }}>{timeAgo(task.updated_at || task.updatedAt)}</span>
@@ -114,8 +115,8 @@ function TableView({ tasks, onRowClick, sortField, sortDir, onSort }) {
                   />
                 </td>
                 <td style={{ padding: '10px 14px' }}>
-                  {task.blockedBy && Array.isArray(task.blockedBy) && task.blockedBy.length > 0 && <Badge label="⛔ blocked" color="var(--red)" />}
-        {task.agent && <Badge label={task.agent} color={AGENT_COLORS[task.agent] || 'var(--blue)'} />}
+                  {(() => { const b = task.blocked_by || task.blockedBy; return b && Array.isArray(b) && b.length > 0 ? <Badge label="⛔ blocked" color="var(--red)" /> : null; })()}
+                  {task.agent && <Badge label={task.agent} color={AGENT_COLORS[task.agent] || 'var(--blue)'} />}
                 </td>
                 <td style={{ padding: '10px 14px' }}>
                   {tier && <Badge label={tier} color={TIER_COLORS[tier] || 'var(--muted)'} />}
@@ -325,6 +326,89 @@ function BrainDumpModal({ open, onClose, projects, onConfirmed }) {
   );
 }
 
+function TaskDetailModal({ selected, onClose }) {
+  const [blockers, setBlockers] = useState([]);
+  const [loadingBlockers, setLoadingBlockers] = useState(false);
+
+  useEffect(() => {
+    if (!selected) { setBlockers([]); return; }
+    const blockerIds = selected.blocked_by || selected.blockedBy;
+    if (!blockerIds || !Array.isArray(blockerIds) || blockerIds.length === 0) {
+      setBlockers([]);
+      return;
+    }
+    setLoadingBlockers(true);
+    api.task(selected.id).then(fullTask => {
+      // Use the GET /blockers endpoint
+      return fetch(`/api/tasks/${selected.id}/blockers`).then(r => r.ok ? r.json() : []);
+    }).then(data => {
+      setBlockers(data);
+    }).catch(() => setBlockers([])).finally(() => setLoadingBlockers(false));
+  }, [selected?.id]);
+
+  if (!selected) return null;
+  const blockerIds = selected.blocked_by || selected.blockedBy;
+  const isBlocked = blockerIds && Array.isArray(blockerIds) && blockerIds.length > 0;
+
+  return (
+    <Modal open={!!selected} onClose={onClose} title={selected?.title || 'Task'}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Badge label={selected.status} color={selected.status === 'active' ? 'var(--teal)' : selected.status === 'completed' ? 'var(--green)' : 'var(--muted)'} />
+          {isBlocked && <Badge label={`⛔ blocked by ${blockerIds.length} task${blockerIds.length > 1 ? 's' : ''}`} color="var(--red)" />}
+          {selected.agent && <Badge label={selected.agent} color={AGENT_COLORS[selected.agent] || 'var(--blue)'} />}
+          {(selected.model_tier || selected.modelTier) && <Badge label={selected.model_tier || selected.modelTier} color={TIER_COLORS[selected.model_tier || selected.modelTier] || 'var(--muted)'} />}
+        </div>
+
+        {isBlocked && (
+          <div style={{ background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 8, padding: 14 }}>
+            <div style={{ color: 'var(--red)', fontSize: '0.78rem', fontWeight: 600, marginBottom: 8 }}>⛔ Blocked by</div>
+            {loadingBlockers ? (
+              <div style={{ color: 'var(--muted)', fontSize: '0.78rem' }}>Loading blockers…</div>
+            ) : blockers.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {blockers.map(b => (
+                  <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{
+                      display: 'inline-block',
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: b.status === 'completed' ? 'var(--green)' : b.status === 'active' ? 'var(--teal)' : 'var(--muted)',
+                      flexShrink: 0,
+                    }} />
+                    <span style={{ color: 'var(--text)', fontSize: '0.82rem' }}>{b.title}</span>
+                    <Badge label={b.status} color={b.status === 'completed' ? 'var(--green)' : b.status === 'active' ? 'var(--teal)' : 'var(--muted)'} />
+                    {b.agent && <Badge label={b.agent} color={AGENT_COLORS[b.agent] || 'var(--blue)'} />}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {blockerIds.map(id => (
+                  <div key={id} style={{ color: 'var(--muted)', fontSize: '0.78rem', fontFamily: 'var(--mono)' }}>{id}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {selected.notes && (
+          <div style={{ background: 'rgba(11,15,30,0.6)', borderRadius: 8, padding: 16 }}>
+            <div style={{ color: 'var(--muted)', fontSize: '0.78rem', marginBottom: 8 }}>Notes</div>
+            <div style={{ color: 'var(--text)', fontSize: '0.875rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{selected.notes}</div>
+          </div>
+        )}
+        <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
+          <div>Created: {timeAgo(selected.created_at || selected.createdAt)}</div>
+          <div>Updated: {timeAgo(selected.updated_at || selected.updatedAt)}</div>
+          <div style={{ fontFamily: 'var(--mono)', color: 'var(--faint)', marginTop: 4 }}>ID: {selected.id}</div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export default function Tasks() {
   const { data: tasks, loading, reload } = usePolling(signal => api.tasks({}, signal), 15000);
   const { data: projects } = useApi(signal => api.projects(signal));
@@ -464,29 +548,8 @@ export default function Tasks() {
         </div>
       )}
 
-      <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.title || 'Task'}>
-        {selected && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <Badge label={selected.status} color={selected.status === 'active' ? 'var(--teal)' : selected.status === 'completed' ? 'var(--green)' : 'var(--muted)'} />
-              {selected.blockedBy && Array.isArray(selected.blockedBy) && selected.blockedBy.length > 0 && <Badge label={"⛔ blocked by " + selected.blockedBy.length + " task(s)"} color="var(--red)" />}
-              {selected.agent && <Badge label={selected.agent} color={AGENT_COLORS[selected.agent] || 'var(--blue)'} />}
-              {(selected.model_tier || selected.modelTier) && <Badge label={selected.model_tier || selected.modelTier} color={TIER_COLORS[selected.model_tier || selected.modelTier] || 'var(--muted)'} />}
-            </div>
-            {selected.notes && (
-              <div style={{ background: 'rgba(11,15,30,0.6)', borderRadius: 8, padding: 16 }}>
-                <div style={{ color: 'var(--muted)', fontSize: '0.78rem', marginBottom: 8 }}>Notes</div>
-                <div style={{ color: 'var(--text)', fontSize: '0.875rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{selected.notes}</div>
-              </div>
-            )}
-            <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
-              <div>Created: {timeAgo(selected.created_at || selected.createdAt)}</div>
-              <div>Updated: {timeAgo(selected.updated_at || selected.updatedAt)}</div>
-              <div style={{ fontFamily: 'var(--mono)', color: 'var(--faint)', marginTop: 4 }}>ID: {selected.id}</div>
-            </div>
-          </div>
-        )}
-      </Modal>
+      <TaskDetailModal selected={selected} onClose={() => setSelected(null)} />
+
 
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Task">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
