@@ -9,7 +9,7 @@ import { showToast } from '../components/Toast';
 import { useApi } from '../hooks/useApi';
 import { usePolling } from '../hooks/usePolling';
 import { api } from '../lib/api';
-import { timeAgo, AGENT_COLORS, TIER_COLORS } from '../lib/utils';
+import { timeAgo, formatDate, AGENT_COLORS, TIER_COLORS } from '../lib/utils';
 
 const AGENTS = ['programmer', 'writer', 'researcher', 'reviewer', 'architect'];
 const TIERS = ['micro', 'small', 'medium', 'standard', 'strong'];
@@ -482,8 +482,8 @@ export default function Projects() {
               </div>
             )}
             <div style={{ fontSize: '0.78rem', color: 'var(--muted)', fontFamily: 'var(--mono)', marginBottom: 16 }}>
-              <div>Created: {timeAgo(selectedTask.created_at || selectedTask.createdAt)}</div>
-              <div>Updated: {timeAgo(selectedTask.updated_at || selectedTask.updatedAt)}</div>
+              <div>Created: {formatDate(selectedTask.created_at || selectedTask.createdAt)}</div>
+              <div>Updated: {formatDate(selectedTask.updated_at || selectedTask.updatedAt)}</div>
               <div style={{ color: 'var(--faint)', marginTop: 4 }}>ID: {selectedTask.id}</div>
             </div>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>

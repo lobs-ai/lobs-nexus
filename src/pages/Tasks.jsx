@@ -8,7 +8,7 @@ import { showToast } from '../components/Toast';
 import { useApi } from '../hooks/useApi';
 import { usePolling } from '../hooks/usePolling';
 import { api } from '../lib/api';
-import { timeAgo, AGENT_COLORS, TIER_COLORS } from '../lib/utils';
+import { timeAgo, formatDate, AGENT_COLORS, TIER_COLORS } from '../lib/utils';
 
 const AGENTS = ['programmer', 'writer', 'researcher', 'reviewer', 'architect'];
 const TIERS = ['micro', 'small', 'medium', 'standard', 'strong'];
@@ -20,6 +20,7 @@ const COLUMNS = [
 
 function TaskCard({ task, onClick }) {
   const blockers = task.blocked_by || task.blockedBy;
+  const blockerCount = blockers && Array.isArray(blockers) ? blockers.length : 0;
   return (
     <div className="task-card" onClick={() => onClick(task)}>
       <div style={{ marginBottom: 8 }}>
@@ -31,7 +32,26 @@ function TaskCard({ task, onClick }) {
         )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        {blockers && Array.isArray(blockers) && blockers.length > 0 && <Badge label="⛔ blocked" color="var(--red)" />}
+        {blockerCount > 0 && (
+          <span
+            title={`Blocked by ${blockerCount} task${blockerCount > 1 ? 's' : ''} — click for details`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '2px 7px',
+              borderRadius: 4,
+              background: 'rgba(220,38,38,0.18)',
+              border: '1px solid rgba(220,38,38,0.45)',
+              color: 'var(--red)',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              cursor: 'help',
+            }}
+          >
+            ⛔ blocked ({blockerCount})
+          </span>
+        )}
         {task.agent && <Badge label={task.agent} color={AGENT_COLORS[task.agent] || 'var(--blue)'} />}
         {task.model_tier && <Badge label={task.model_tier} color={TIER_COLORS[task.model_tier] || 'var(--muted)'} />}
         <span style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: '0.72rem' }}>{timeAgo(task.updated_at || task.updatedAt)}</span>
@@ -115,17 +135,41 @@ function TableView({ tasks, onRowClick, sortField, sortDir, onSort }) {
                   />
                 </td>
                 <td style={{ padding: '10px 14px' }}>
-                  {(() => { const b = task.blocked_by || task.blockedBy; return b && Array.isArray(b) && b.length > 0 ? <Badge label="⛔ blocked" color="var(--red)" /> : null; })()}
+                  {(() => {
+                    const b = task.blocked_by || task.blockedBy;
+                    const n = b && Array.isArray(b) ? b.length : 0;
+                    return n > 0 ? (
+                      <span
+                        title={`Blocked by ${n} task${n > 1 ? 's' : ''}`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          padding: '2px 7px',
+                          borderRadius: 4,
+                          background: 'rgba(220,38,38,0.18)',
+                          border: '1px solid rgba(220,38,38,0.45)',
+                          color: 'var(--red)',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          marginRight: 4,
+                          cursor: 'help',
+                        }}
+                      >
+                        ⛔ {n}
+                      </span>
+                    ) : null;
+                  })()}
                   {task.agent && <Badge label={task.agent} color={AGENT_COLORS[task.agent] || 'var(--blue)'} />}
                 </td>
                 <td style={{ padding: '10px 14px' }}>
                   {tier && <Badge label={tier} color={TIER_COLORS[tier] || 'var(--muted)'} />}
                 </td>
                 <td style={{ padding: '10px 14px', color: 'var(--muted)', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
-                  {created ? timeAgo(created) : '—'}
+                  {created ? formatDate(created) : '—'}
                 </td>
                 <td style={{ padding: '10px 14px', color: 'var(--muted)', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
-                  {updated ? timeAgo(updated) : '—'}
+                  {updated ? formatDate(updated) : '—'}
                 </td>
               </tr>
             );
@@ -338,12 +382,15 @@ function TaskDetailModal({ selected, onClose }) {
       return;
     }
     setLoadingBlockers(true);
-    api.task(selected.id).then(fullTask => {
-      // Use the GET /blockers endpoint
-      return fetch(`/api/tasks/${selected.id}/blockers`).then(r => r.ok ? r.json() : []);
-    }).then(data => {
-      setBlockers(data);
-    }).catch(() => setBlockers([])).finally(() => setLoadingBlockers(false));
+    // GET /api/tasks/:id/blockers returns full task objects with titles + statuses
+    fetch(`/api/tasks/${selected.id}/blockers`)
+      .then(r => r.ok ? r.json() : { blockers: [] })
+      .then(data => {
+        // Response shape: { blockers: [...], resolved: bool, unresolved_count: N }
+        setBlockers(Array.isArray(data) ? data : (data.blockers || []));
+      })
+      .catch(() => setBlockers([]))
+      .finally(() => setLoadingBlockers(false));
   }, [selected?.id]);
 
   if (!selected) return null;
@@ -400,8 +447,8 @@ function TaskDetailModal({ selected, onClose }) {
           </div>
         )}
         <div style={{ fontSize: '0.78rem', color: 'var(--muted)' }}>
-          <div>Created: {timeAgo(selected.created_at || selected.createdAt)}</div>
-          <div>Updated: {timeAgo(selected.updated_at || selected.updatedAt)}</div>
+          <div>Created: {formatDate(selected.created_at || selected.createdAt)}</div>
+          <div>Updated: {formatDate(selected.updated_at || selected.updatedAt)}</div>
           <div style={{ fontFamily: 'var(--mono)', color: 'var(--faint)', marginTop: 4 }}>ID: {selected.id}</div>
         </div>
       </div>

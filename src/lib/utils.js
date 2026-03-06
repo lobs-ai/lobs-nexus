@@ -1,13 +1,28 @@
+export function formatDate(dateStr, opts = {}) {
+  if (!dateStr) return '—';
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    ...opts,
+  });
+}
+
 export function timeAgo(dateStr) {
   if (!dateStr) return 'never';
 
   const date = new Date(dateStr);
-  if (Number.isNaN(date.getTime())) return 'invalid date';
+  if (Number.isNaN(date.getTime())) return '—';
 
   const now = Date.now();
   const diffMs = now - date.getTime();
   const isFuture = diffMs < 0;
-  const absSeconds = Math.floor(Math.abs(diffMs) / 1000);
+  const absMs = Math.abs(diffMs);
+  const absSeconds = Math.floor(absMs / 1000);
 
   const withDirection = (value, unit) => {
     if (isFuture) return `in ${value}${unit}`;
@@ -29,13 +44,7 @@ export function timeAgo(dateStr) {
   if (weeks < 5) return withDirection(weeks, 'w');
 
   // For older/farther dates, use an explicit date instead of large relative values.
-  return date.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  return formatDate(dateStr);
 }
 
 export function formatDuration(startedAt, endedAt) {
