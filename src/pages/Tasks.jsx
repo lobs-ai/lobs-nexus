@@ -466,7 +466,7 @@ export default function Tasks() {
   const [viewMode, setViewMode] = useState('table');
   const [sortField, setSortField] = useState('created_at');
   const [sortDir, setSortDir] = useState('desc');
-  const [form, setForm] = useState({ title: '', agent: 'programmer', model_tier: 'standard', project_id: '', notes: '' });
+  const [form, setForm] = useState({ title: '', agent: 'programmer', model_tier: 'standard', project_id: '', notes: '', blocked_by: [] });
 
   const filtered = (tasks || []).filter(t => {
     if (filter.agent && t.agent !== filter.agent) return false;
@@ -489,10 +489,12 @@ export default function Tasks() {
   const createTask = async () => {
     if (!form.title.trim()) return;
     try {
-      await api.createTask(form);
+      const payload = { ...form };
+      if (!payload.blocked_by || payload.blocked_by.length === 0) delete payload.blocked_by;
+      await api.createTask(payload);
       showToast('Task created', 'success');
       setShowCreate(false);
-      setForm({ title: '', agent: 'programmer', model_tier: 'standard', project_id: '', notes: '' });
+      setForm({ title: '', agent: 'programmer', model_tier: 'standard', project_id: '', notes: '', blocked_by: [] });
       reload();
     } catch (e) {
       showToast('Failed to create task', 'error');
@@ -625,6 +627,37 @@ export default function Tasks() {
                 <option value="">No project</option>
                 {projects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
               </select>
+            </div>
+          )}
+          {tasks?.length > 0 && (
+            <div>
+              <label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>
+                Blocked by (dependencies)
+                {form.blocked_by.length > 0 && <span style={{ marginLeft: 8, color: 'var(--red)', fontWeight: 600 }}>{form.blocked_by.length} selected</span>}
+              </label>
+              <select
+                className="nx-input"
+                multiple
+                size={Math.min(5, tasks.filter(t => !['completed', 'archived', 'cancelled', 'rejected'].includes(t.status)).length) || 3}
+                value={form.blocked_by}
+                onChange={e => {
+                  const selected = Array.from(e.target.selectedOptions, o => o.value);
+                  setForm(f => ({ ...f, blocked_by: selected }));
+                }}
+                style={{ height: 'auto', minHeight: 60 }}
+              >
+                {tasks
+                  .filter(t => !['completed', 'archived', 'cancelled', 'rejected'].includes(t.status))
+                  .sort((a, b) => (a.title || '').localeCompare(b.title || ''))
+                  .map(t => (
+                    <option key={t.id} value={t.id}>
+                      [{t.agent || '?'}] {t.title}
+                    </option>
+                  ))}
+              </select>
+              <div style={{ color: 'var(--muted)', fontSize: '0.72rem', marginTop: 4 }}>
+                Hold Ctrl/Cmd to select multiple. Selected tasks must complete before this task spawns.
+              </div>
             </div>
           )}
           <div>
