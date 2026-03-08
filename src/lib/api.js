@@ -79,6 +79,17 @@ export const api = {
   knowledgeFsRead: (path, signal) => req('/api/knowledge-fs/read/' + path, { signal }),
   memoriesFs: (agent, signal) => agent ? req('/api/memories-fs/' + agent, { signal }) : req('/api/memories-fs', { signal }),
 
+  // Learning system
+  learningStats: (agent = 'all', lookbackDays = 30, signal) => req(`/api/learning/stats?agent=${agent}&lookback_days=${lookbackDays}`, { signal }),
+  learnings: (agent, active = true, signal) => {
+    const q = new URLSearchParams({ ...(agent ? { agent } : {}), active: String(active) }).toString();
+    return req(`/api/learning/learnings?${q}`, { signal });
+  },
+  learningKillSwitch: (signal) => req('/api/learning/kill-switch', { signal }),
+  setLearningKillSwitch: (body) => req('/api/learning/kill-switch', { method: 'POST', body }),
+  triggerLearningExtract: () => req('/api/learning/extract', { method: 'POST' }),
+  deactivateLearning: (id) => req(`/api/learning/learnings/${id}/deactivate`, { method: 'PATCH' }),
+
   orchestratorStatus: (signal) => req(`/api/orchestrator/status`, { signal }),
   initiatives: (signal) => req(`/api/orchestrator/intelligence/initiatives`, { signal }),
   initiativeDecide: (decisions) => req(`/api/orchestrator/intelligence/initiatives/batch-decide`, { method: `POST`, body: { decisions } }),

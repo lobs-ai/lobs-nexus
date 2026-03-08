@@ -15,6 +15,7 @@ import Usage from './pages/Usage';
 import Settings from './pages/Settings';
 import Meetings from './pages/Meetings';
 import YouTube from './pages/YouTube';
+import LearningInsights from './pages/LearningInsights';
 import { api } from './lib/api';
 
 export default function App() {
@@ -59,6 +60,7 @@ export default function App() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/meetings" element={<Meetings />} />
           <Route path="/youtube" element={<YouTube />} />
+          <Route path="/learning" element={<LearningInsights />} />
         </Route>
       </Routes>
     </BrowserRouter>
