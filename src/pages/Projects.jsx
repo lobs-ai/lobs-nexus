@@ -212,6 +212,7 @@ export default function Projects() {
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showBraindump, setShowBraindump] = useState(false);
   const [braindumpText, setBraindumpText] = useState('');
+  const [braindumpProjectId, setBraindumpProjectId] = useState('');
   const [braindumpLoading, setBraindumpLoading] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [projForm, setProjForm] = useState({ title: '', type: 'project', notes: '' });
@@ -233,7 +234,7 @@ export default function Projects() {
 
   const submitBraindump = async () => {
     if (!braindumpText.trim()) return;
-    const projectId = selectedProject?.id;
+    const projectId = selectedProject?.id || braindumpProjectId;
     if (!projectId) { showToast('Select a project first', 'error'); return; }
     setBraindumpLoading(true);
     try {
@@ -241,6 +242,7 @@ export default function Projects() {
       showToast('Brain dump submitted — processing into tasks...', 'success');
       setShowBraindump(false);
       setBraindumpText('');
+      setBraindumpProjectId('');
       // Poll for new tasks after a delay
       setTimeout(() => reloadTasks(), 5000);
       setTimeout(() => reloadTasks(), 15000);
@@ -362,16 +364,18 @@ export default function Projects() {
                     onSelect={openProjectView}
                   />
                 )}
-                {selectedProject && !showAllTasks && (
-                  <button className="btn-ghost" onClick={() => setShowBraindump(true)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3C7.03 3 3 7.03 3 12s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9z"/><path d="M12 8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/><path d="M8.5 13.5c-.83.83-.83 2.17 0 3M15.5 13.5c.83.83.83 2.17 0 3"/></svg>
-                    Brain Dump
-                  </button>
-                )}
+                <button className="btn-ghost" onClick={() => setShowBraindump(true)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3C7.03 3 3 7.03 3 12s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9z"/><path d="M12 8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/><path d="M8.5 13.5c-.83.83-.83 2.17 0 3M15.5 13.5c.83.83.83 2.17 0 3"/></svg>
+                  Brain Dump
+                </button>
                 <button className="btn-primary" onClick={() => setShowCreateTask(true)}>+ New Task</button>
               </>
             )}
             {view === 'projects' && <>
+              <button className="btn-ghost" onClick={() => setShowBraindump(true)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3C7.03 3 3 7.03 3 12s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9z"/><path d="M12 8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/><path d="M8.5 13.5c-.83.83-.83 2.17 0 3M15.5 13.5c.83.83.83 2.17 0 3"/></svg>
+                Brain Dump
+              </button>
               <button className="btn-ghost" onClick={openAllTasksView}>All Tasks</button>
               <button className="btn-ghost" onClick={() => setShowArchived(v => !v)} style={showArchived ? { borderColor: 'rgba(45,212,191,0.4)', color: 'var(--teal)' } : {}}>{showArchived ? '✓ Archived' : 'Archived'}</button>
               <button className="btn-primary" onClick={() => setShowCreate(true)}>+ New Project</button>
@@ -497,11 +501,20 @@ export default function Projects() {
         </div>
       </Modal>
 
-      <Modal open={showBraindump} onClose={() => setShowBraindump(false)} title={`Brain Dump → ${selectedProject?.title || 'Project'}`}>
+      <Modal open={showBraindump} onClose={() => { setShowBraindump(false); setBraindumpProjectId(''); }} title={`Brain Dump → ${selectedProject?.title || (projectList.find(p => p.id === braindumpProjectId)?.title) || 'Select Project'}`}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ color: 'var(--muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>
-            Paste your raw thoughts, ideas, requirements, or notes. An agent will process them into structured tasks for this project.
+            Paste your raw thoughts, ideas, requirements, or notes. An agent will process them into structured tasks.
           </div>
+          {!selectedProject && (
+            <div>
+              <label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Project *</label>
+              <select className="nx-input" value={braindumpProjectId} onChange={e => setBraindumpProjectId(e.target.value)}>
+                <option value="">Select a project...</option>
+                {projectList.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+              </select>
+            </div>
+          )}
           <textarea
             className="nx-input"
             rows={12}
@@ -520,7 +533,7 @@ export default function Projects() {
               <button
                 className="btn-primary"
                 onClick={submitBraindump}
-                disabled={braindumpLoading || !braindumpText.trim()}
+                disabled={braindumpLoading || !braindumpText.trim() || (!selectedProject && !braindumpProjectId)}
                 style={braindumpLoading ? { opacity: 0.6 } : {}}
               >
                 {braindumpLoading ? 'Processing...' : '⚡ Process into Tasks'}
