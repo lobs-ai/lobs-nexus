@@ -4,6 +4,11 @@ import Badge from '../components/Badge';
 import EmptyState from '../components/EmptyState';
 import LoadingSkeleton from '../components/LoadingSkeleton';
 import { useApi } from '../hooks/useApi';
+import { useAffordances } from '../hooks/useAffordances';
+import AIAffordance from '../components/ai/AIAffordance';
+import AISummarizeButton from '../components/ai/AISummarizeButton';
+import AIReplyChips from '../components/ai/AIReplyChips';
+import AIContextPanel from '../components/ai/AIContextPanel';
 import { api } from '../lib/api';
 import { timeAgo } from '../lib/utils';
 
@@ -21,10 +26,14 @@ const STATUS_COLORS = {
   feedback_pending: 'var(--purple)',
 };
 
-function ItemCard({ item, onRefresh }) {
+function ItemCard({ item, onRefresh, affordances }) {
   const [feedback, setFeedback] = useState('');
   const [busy, setBusy] = useState(null);
   const actionable = !!item.requiresAction && (item.actionStatus || "pending") === "pending";
+  const itemContext = JSON.stringify({ id: item.id, title: item.title, content: item.summary || item.content, type: item.type, sourceAgent: item.sourceAgent });
+  const summarizeAffordance = affordances.find(a => a.type === 'button') || { pluginId: 'paw', id: 'inbox-summarize', type: 'button', label: 'Summarize' };
+  const replyAffordance = affordances.find(a => a.type === 'chips') || { pluginId: 'paw', id: 'inbox-reply-suggestions', type: 'chips', label: 'Suggestions' };
+  const contextAffordance = affordances.find(a => a.type === 'context-panel') || { pluginId: 'paw', id: 'inbox-context', type: 'context-panel', label: 'Related Context' };
 
   const run = async (action) => {
     setBusy(action);
@@ -59,6 +68,17 @@ function ItemCard({ item, onRefresh }) {
         <div style={{ color: 'var(--faint)', fontSize: '0.72rem', fontFamily: 'var(--mono)' }}>{timeAgo(item.modifiedAt)}</div>
       </div>
 
+      {/* AI Features */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12, alignItems: 'flex-start' }}>
+        <AISummarizeButton affordance={summarizeAffordance} context={itemContext} />
+        <AIContextPanel affordance={contextAffordance} context={itemContext} />
+      </div>
+      {actionable && (
+        <div style={{ marginTop: 8 }}>
+          <AIReplyChips affordance={replyAffordance} context={itemContext} onSelect={(text) => setFeedback(text)} />
+        </div>
+      )}
+
       <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
         {actionable ? (
           <>
@@ -85,6 +105,7 @@ function ItemCard({ item, onRefresh }) {
 export default function Inbox() {
   const [view, setView] = useState('needs-action');
   const { data, loading, reload } = useApi(signal => api.inbox(signal));
+  const affordances = useAffordances('inbox-card');
 
   const items = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const needsAction = items.filter(i => i.requiresAction && i.actionStatus === 'pending');
@@ -111,7 +132,7 @@ export default function Inbox() {
           <EmptyState icon="📬" title="Inbox is clear" subtitle={view === 'needs-action' ? 'No pending approvals right now.' : 'No inbox items available.'} />
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
-            {shown.map(item => <ItemCard key={item.id} item={item} onRefresh={reload} />)}
+            {shown.map(item => <ItemCard key={item.id} item={item} onRefresh={reload} affordances={affordances} />)}
           </div>
         )}
       </div>

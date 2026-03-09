@@ -1,6 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { useAIInvoke } from '../hooks/useAIInvoke';
+
+const AI_COMMANDS = [
+  { prefix: 'summarize today', label: 'Summarize today\'s activity', affordance: 'daily-summary' },
+  { prefix: 'status report', label: 'Generate status report', affordance: 'status-report' },
+  { prefix: 'what should i work on', label: 'Suggest next task', affordance: 'suggest-task' },
+];
 
 const NAV_ITEMS = [
   { type: 'nav', label: 'Home / Dashboard', to: '/' },
@@ -32,10 +39,12 @@ function fuzzy(text, query) {
 
 export default function CommandPalette({ open, onClose }) {
   const navigate = useNavigate();
+  const { invoke, loading: aiLoading } = useAIInvoke();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [selected, setSelected] = useState(0);
   const [dataItems, setDataItems] = useState([]);
+  const [aiResult, setAiResult] = useState(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -77,8 +86,15 @@ export default function CommandPalette({ open, onClose }) {
   useEffect(() => {
     const all = [...NAV_ITEMS, ...dataItems];
     const filtered = query ? all.filter(item => fuzzy(item.label, query)) : NAV_ITEMS;
-    setResults(filtered.slice(0, 12));
+    // Add matching AI commands
+    const q = query.toLowerCase();
+    const aiMatches = q.length >= 3
+      ? AI_COMMANDS.filter(c => c.prefix.includes(q) || c.label.toLowerCase().includes(q))
+          .map(c => ({ type: 'ai', label: `✨ ${c.label}`, sub: 'AI command', affordance: c.affordance }))
+      : [];
+    setResults([...aiMatches, ...filtered].slice(0, 12));
     setSelected(0);
+    setAiResult(null);
   }, [query, dataItems]);
 
   useEffect(() => {
@@ -89,10 +105,15 @@ export default function CommandPalette({ open, onClose }) {
     }
   }, [open]);
 
-  const handleSelect = useCallback((item) => {
+  const handleSelect = useCallback(async (item) => {
+    if (item.type === 'ai' && item.affordance) {
+      const result = await invoke('paw', item.affordance, new Date().toISOString().slice(0, 10));
+      if (result) setAiResult(result);
+      return;
+    }
     navigate(item.to);
     onClose();
-  }, [navigate, onClose]);
+  }, [navigate, onClose, invoke]);
 
   const handleKeyDown = (e) => {
     if (e.key === 'ArrowDown') {
@@ -203,6 +224,17 @@ export default function CommandPalette({ open, onClose }) {
           )}
         </div>
 
+        {aiLoading && (
+          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', color: 'var(--teal)', fontSize: '0.82rem' }}>
+            ✨ Thinking...
+          </div>
+        )}
+        {aiResult && (
+          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', maxHeight: 200, overflowY: 'auto' }}>
+            <div style={{ fontSize: '0.68rem', color: 'var(--teal)', fontFamily: 'var(--mono)', marginBottom: 6, letterSpacing: '1px' }}>✨ AI RESPONSE</div>
+            <div style={{ color: 'var(--text)', fontSize: '0.85rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{aiResult}</div>
+          </div>
+        )}
         <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)', display: 'flex', gap: 16, color: 'var(--faint)', fontSize: '0.7rem', fontFamily: 'var(--mono)' }}>
           <span>↑↓ navigate</span>
           <span>↵ select</span>

@@ -553,6 +553,12 @@ pre { background: rgba(8,12,24,0.9); border: 1px solid var(--border); border-rad
   .btn-primary, .btn-ghost, .btn-danger, .btn-success { padding: 10px 16px !important; font-size: 0.82rem !important; }
 }
 
+/* AI shimmer animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
 /* Tablet: 769-1024px */
 @media (min-width: 769px) and (max-width: 1024px) {
   .sidebar { width: 64px; }

@@ -5,8 +5,21 @@ import { showToast } from '../components/Toast';
 import GlassCard from '../components/GlassCard';
 import Badge from '../components/Badge';
 import { usePolling } from '../hooks/usePolling';
+import { useAffordances } from '../hooks/useAffordances';
+import { useAIInvoke } from '../hooks/useAIInvoke';
+import AIAffordance from '../components/ai/AIAffordance';
+import AISummarizeButton from '../components/ai/AISummarizeButton';
+import Shimmer from '../components/ai/Shimmer';
+import AgentLayout from '../components/AgentLayout';
+import LayoutSwitcher, { LAYOUTS } from '../components/LayoutSwitcher';
+import { useUIConfig } from '../hooks/useUIConfig';
 import { api } from '../lib/api';
 import { timeAgo, formatDuration, formatUptime, AGENT_COLORS } from '../lib/utils';
+import DailySummaryWidget from '../components/widgets/DailySummaryWidget';
+import SystemPulseWidget from '../components/widgets/SystemPulseWidget';
+import QuickActionsWidget from '../components/widgets/QuickActionsWidget';
+import ScheduleWidget from '../components/widgets/ScheduleWidget';
+import StaleItemsWidget from '../components/widgets/StaleItemsWidget';
 
 function CountUp({ value, duration = 1200 }) {
   const [display, setDisplay] = useState(0);
@@ -94,10 +107,27 @@ const getWorkerTaskTitle = (worker) => {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { config: uiConfig, updateConfig: updateUIConfig } = useUIConfig();
   const { data: status } = usePolling(signal => api.status(signal), 10000);
   const { data: activity } = usePolling(signal => api.activity(signal), 10000);
   const { data: workerStatus } = usePolling(signal => api.workerStatus(signal), 5000);
   const { data: tasksData } = usePolling(signal => api.tasks({ limit: 100 }, signal), 15000);
+
+  // Merge layout preset with agent config
+  const activeLayout = LAYOUTS[uiConfig.layout] || LAYOUTS['command-center'];
+  const effectiveHidden = uiConfig.hiddenWidgets?.length > 0 ? uiConfig.hiddenWidgets : activeLayout.hiddenWidgets;
+  const effectiveOrder = uiConfig.widgetOrder?.length > 0 ? uiConfig.widgetOrder : activeLayout.widgetOrder;
+
+  const handleLayoutChange = (layoutKey) => {
+    const preset = LAYOUTS[layoutKey];
+    if (preset) {
+      updateUIConfig({
+        layout: layoutKey,
+        widgetOrder: preset.widgetOrder,
+        hiddenWidgets: preset.hiddenWidgets,
+      });
+    }
+  };
 
   const taskMap = {};
   (tasksData?.tasks || tasksData || []).forEach(t => { if (t.id) taskMap[t.id] = t; });
@@ -142,6 +172,11 @@ export default function Dashboard() {
     },
   ];
 
+  const affordances = useAffordances('dashboard');
+  const { invoke: aiInvoke, loading: aiLoading } = useAIInvoke();
+  const [dailySummary, setDailySummary] = useState(null);
+  const dailySummaryRequested = useRef(false);
+
   // Meeting action items for dashboard widget
   const [actionItems, setActionItems] = useState([]);
   useEffect(() => {
@@ -174,7 +209,10 @@ export default function Dashboard() {
       <div style={{ position: 'relative', zIndex: 1 }}>
 
         {/* HERO */}
-        <div className="fade-in-up" style={{ marginBottom: 48, textAlign: 'center', padding: '40px 0 20px' }}>
+        <div className="fade-in-up" style={{ marginBottom: 48, textAlign: 'center', padding: '40px 0 20px', position: 'relative' }}>
+          <div style={{ position: 'absolute', top: 40, right: 0 }}>
+            <LayoutSwitcher current={uiConfig.layout} onChange={handleLayoutChange} />
+          </div>
           <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '6px', color: 'var(--teal)', fontFamily: 'var(--mono)', marginBottom: 16, opacity: 0.8 }}>
             LOBS NEXUS — PAW COMMAND SYSTEM
           </div>
@@ -186,8 +224,26 @@ export default function Dashboard() {
           </p>
         </div>
 
+        <AgentLayout
+          widgetOrder={effectiveOrder}
+          hiddenWidgets={effectiveHidden}
+          agentHighlights={uiConfig.agentHighlights || []}
+          isAgentSet={uiConfig.updatedBy === 'agent'}
+        >
+
+        {/* SMART WIDGETS */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 24 }}>
+          <DailySummaryWidget />
+          <SystemPulseWidget />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 24 }}>
+          <ScheduleWidget />
+          <QuickActionsWidget />
+          <StaleItemsWidget />
+        </div>
+
         {/* STAT CARDS */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, marginBottom: 36 }}>
+        <div data-widget-id="stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, marginBottom: 36 }}>
           {stats.map((s, i) => (
             <div key={i} className={`hud-stat-card fade-in-up-${i+1} float-anim`} style={{ animationDelay: `${i * 0.5}s` }}>
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${s.color}, transparent)`, opacity: 0.6, borderRadius: '14px 14px 0 0' }} />
@@ -207,8 +263,58 @@ export default function Dashboard() {
           ))}
         </div>
 
+        {/* AI DAILY SUMMARY */}
+        <GlassCard className="fade-in-up-2" style={{ marginBottom: 24, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, var(--purple), transparent)', opacity: 0.6, borderRadius: '14px 14px 0 0' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: '0.9rem' }}>✨</span>
+              <div className="section-label" style={{ marginBottom: 0 }}>AI Briefing</div>
+            </div>
+            <button
+              onClick={async () => {
+                if (dailySummaryRequested.current || aiLoading) return;
+                dailySummaryRequested.current = true;
+                const context = JSON.stringify({
+                  tasksCompletedToday: status?.tasks?.completed_today ?? 0,
+                  activeTasks: status?.tasks?.active ?? 0,
+                  activeWorkers: status?.workers?.active ?? 0,
+                  totalRuns: status?.workers?.total_completed ?? 0,
+                  recentActivity: activities.slice(0, 5).map(a => a.title),
+                });
+                const res = await aiInvoke('paw', 'daily-summary', context);
+                if (res) setDailySummary(res);
+              }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 5,
+                padding: '3px 10px', borderRadius: 6,
+                border: '1px solid rgba(167,139,250,0.3)',
+                background: dailySummary ? 'rgba(167,139,250,0.12)' : 'rgba(167,139,250,0.06)',
+                color: 'var(--purple)', fontSize: '0.75rem', fontWeight: 600,
+                cursor: aiLoading ? 'wait' : 'pointer', transition: 'all 0.2s',
+              }}
+            >
+              {aiLoading ? 'Generating…' : dailySummary ? '↻ Refresh' : 'Generate Summary'}
+            </button>
+          </div>
+          {dailySummary ? (
+            <p style={{ color: 'var(--muted)', fontSize: '0.85rem', lineHeight: 1.7, margin: 0 }}>
+              <span style={{ color: 'var(--purple)', marginRight: 6 }}>✨</span>{dailySummary}
+            </p>
+          ) : (
+            <p style={{ color: 'var(--faint)', fontSize: '0.82rem', margin: 0 }}>
+              Click "Generate Summary" for an AI-powered overview of today's activity.
+            </p>
+          )}
+          {affordances.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+              {affordances.map(a => <AIAffordance key={a.id} affordance={a} context={JSON.stringify({ page: 'dashboard' })} />)}
+            </div>
+          )}
+        </GlassCard>
+
         {/* MAIN GRID */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, marginBottom: 24 }}>
+        <div data-widget-id="workers" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, marginBottom: 24 }}>
 
           {/* Left: Active Workers */}
           <GlassCard className="fade-in-up-3">
@@ -279,7 +385,7 @@ export default function Dashboard() {
                       <div className="timeline-dot" style={{ background: meta.color + '22', borderColor: meta.color, color: meta.color, fontSize: '0.55rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {meta.icon}
                       </div>
-                      <div style={{ marginLeft: 4 }}>
+                      <div style={{ marginLeft: 4, flex: 1 }}>
                         <div style={{ color: 'var(--text)', fontSize: '0.8rem', fontWeight: 500, lineHeight: 1.3 }}>{a.title}</div>
                         <div style={{ color: 'var(--faint)', fontSize: '0.7rem', marginTop: 2, fontFamily: 'var(--mono)' }}>{timeAgo(a.timestamp)}</div>
                       </div>
@@ -292,7 +398,7 @@ export default function Dashboard() {
         </div>
 
         {/* QUICK ACTIONS + SYSTEM STATUS */}
-        <div className="mobile-2col" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
+        <div data-widget-id="quick-actions" className="mobile-2col" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24 }}>
           <GlassCard className="fade-in-up-5">
             <div className="section-label" style={{ marginBottom: 4 }}>Shortcuts</div>
             <h3 style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: 20 }}>Quick Actions</h3>
@@ -334,9 +440,9 @@ export default function Dashboard() {
           </GlassCard>
         </div>
 
-      </div>
       {/* Meeting Action Items */}
         {actionItems.length > 0 && (
+          <div data-widget-id="meetings">
           <GlassCard className="fade-in-up-7" style={{ marginTop: 24 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
               <div className="section-label" style={{ marginBottom: 0 }}>Meetings</div>
@@ -366,7 +472,12 @@ export default function Dashboard() {
               )}
             </div>
           </GlassCard>
+          </div>
         )}
+
+        </AgentLayout>
+
+      </div>
 
       {/* Create Task Modal */}
       <Modal open={showCreateTask} onClose={() => setShowCreateTask(false)} title="New Task">

@@ -91,6 +91,15 @@ export const api = {
   triggerLearningExtract: () => req('/api/learning/extract', { method: 'POST' }),
   deactivateLearning: (id) => req(`/api/learning/learnings/${id}/deactivate`, { method: 'PATCH' }),
 
+  // Plugin system
+  plugins: (signal) => req('/api/plugins', { signal }),
+  plugin: (id, signal) => req(`/api/plugins/${id}`, { signal }),
+  updatePlugin: (id, body) => req(`/api/plugins/${id}`, { method: 'PATCH', body }),
+  uiAffordances: (signal) => req('/api/ui-affordances', { signal }),
+  invokePlugin: (id, body) => req(`/api/plugins/${id}/invoke`, { method: 'POST', body }),
+  uiConfig: (signal) => req('/api/ui-config', { signal }),
+  updateUiConfig: (body) => req('/api/ui-config', { method: 'PATCH', body }),
+
   orchestratorStatus: (signal) => req(`/api/orchestrator/status`, { signal }),
   initiatives: (signal) => req(`/api/orchestrator/intelligence/initiatives`, { signal }),
   initiativeDecide: (decisions) => req(`/api/orchestrator/intelligence/initiatives/batch-decide`, { method: `POST`, body: { decisions } }),

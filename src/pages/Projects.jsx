@@ -8,6 +8,10 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import { showToast } from '../components/Toast';
 import { useApi } from '../hooks/useApi';
 import { usePolling } from '../hooks/usePolling';
+import { useAffordances } from '../hooks/useAffordances';
+import AISummarizeButton from '../components/ai/AISummarizeButton';
+import AIInlineText from '../components/ai/AIInlineText';
+import AIAffordance from '../components/ai/AIAffordance';
 import { api } from '../lib/api';
 import { timeAgo, formatDate, AGENT_COLORS, TIER_COLORS } from '../lib/utils';
 
@@ -217,6 +221,8 @@ export default function Projects() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [projForm, setProjForm] = useState({ title: '', type: 'project', notes: '' });
   const [taskForm, setTaskForm] = useState({ title: '', agent: 'programmer', model_tier: 'standard', project_id: '', notes: '' });
+
+  const projectAffordances = useAffordances('project-card');
 
   const projectList = projects || [];
   const selectedProject = projectList.find(p => String(p.id) === String(selectedProjectId)) || null;

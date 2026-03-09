@@ -7,6 +7,8 @@ import LoadingSkeleton from '../components/LoadingSkeleton';
 import { showToast } from '../components/Toast';
 import { useApi } from '../hooks/useApi';
 import { usePolling } from '../hooks/usePolling';
+import { useAffordances } from '../hooks/useAffordances';
+import AIAffordance from '../components/ai/AIAffordance';
 import { api } from '../lib/api';
 import { timeAgo, formatDate, AGENT_COLORS, TIER_COLORS } from '../lib/utils';
 
@@ -21,6 +23,9 @@ const COLUMNS = [
 function TaskCard({ task, onClick }) {
   const blockers = task.blocked_by || task.blockedBy;
   const blockerCount = blockers && Array.isArray(blockers) ? blockers.length : 0;
+  const affordances = useAffordances('task-card');
+  const taskContext = JSON.stringify({ id: task.id, title: task.title, notes: task.notes, agent: task.agent, status: task.status });
+
   return (
     <div className="task-card" onClick={() => onClick(task)}>
       <div style={{ marginBottom: 8 }}>
@@ -31,6 +36,11 @@ function TaskCard({ task, onClick }) {
           </div>
         )}
       </div>
+      {affordances.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }} onClick={e => e.stopPropagation()}>
+          {affordances.map(a => <AIAffordance key={a.id} affordance={a} context={taskContext} />)}
+        </div>
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
         {blockerCount > 0 && (
           <span
