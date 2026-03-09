@@ -210,6 +210,9 @@ export default function Projects() {
   const projects = (allProjects || []).filter(p => showArchived ? p.archived : !p.archived);
   const [showCreate, setShowCreate] = useState(false);
   const [showCreateTask, setShowCreateTask] = useState(false);
+  const [showBraindump, setShowBraindump] = useState(false);
+  const [braindumpText, setBraindumpText] = useState('');
+  const [braindumpLoading, setBraindumpLoading] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [projForm, setProjForm] = useState({ title: '', type: 'project', notes: '' });
   const [taskForm, setTaskForm] = useState({ title: '', agent: 'programmer', model_tier: 'standard', project_id: '', notes: '' });
@@ -226,6 +229,27 @@ export default function Projects() {
     if (!projForm.title.trim()) return;
     try { await api.createProject(projForm); showToast('Project created', 'success'); setShowCreate(false); setProjForm({ title: '', type: 'project', notes: '' }); reloadProjects(); }
     catch { showToast('Failed', 'error'); }
+  };
+
+  const submitBraindump = async () => {
+    if (!braindumpText.trim()) return;
+    const projectId = selectedProject?.id;
+    if (!projectId) { showToast('Select a project first', 'error'); return; }
+    setBraindumpLoading(true);
+    try {
+      await api.projectBraindump(projectId, braindumpText);
+      showToast('Brain dump submitted — processing into tasks...', 'success');
+      setShowBraindump(false);
+      setBraindumpText('');
+      // Poll for new tasks after a delay
+      setTimeout(() => reloadTasks(), 5000);
+      setTimeout(() => reloadTasks(), 15000);
+      setTimeout(() => reloadTasks(), 30000);
+    } catch (e) {
+      showToast('Failed to submit brain dump', 'error');
+    } finally {
+      setBraindumpLoading(false);
+    }
   };
 
   const createTask = async () => {
@@ -337,6 +361,12 @@ export default function Projects() {
                     selectedProject={selectedProject}
                     onSelect={openProjectView}
                   />
+                )}
+                {selectedProject && !showAllTasks && (
+                  <button className="btn-ghost" onClick={() => setShowBraindump(true)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3C7.03 3 3 7.03 3 12s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9z"/><path d="M12 8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/><path d="M8.5 13.5c-.83.83-.83 2.17 0 3M15.5 13.5c.83.83.83 2.17 0 3"/></svg>
+                    Brain Dump
+                  </button>
                 )}
                 <button className="btn-primary" onClick={() => setShowCreateTask(true)}>+ New Task</button>
               </>
@@ -464,6 +494,39 @@ export default function Projects() {
           </div>
           <div><label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Notes</label><textarea className="nx-input" rows={4} placeholder="Task description..." value={taskForm.notes} onChange={e => setTaskForm(f => ({ ...f, notes: e.target.value }))} style={{ resize: 'vertical' }} /></div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}><button className="btn-ghost" onClick={() => setShowCreateTask(false)}>Cancel</button><button className="btn-primary" onClick={createTask}>Create Task</button></div>
+        </div>
+      </Modal>
+
+      <Modal open={showBraindump} onClose={() => setShowBraindump(false)} title={`Brain Dump → ${selectedProject?.title || 'Project'}`}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ color: 'var(--muted)', fontSize: '0.82rem', lineHeight: 1.5 }}>
+            Paste your raw thoughts, ideas, requirements, or notes. An agent will process them into structured tasks for this project.
+          </div>
+          <textarea
+            className="nx-input"
+            rows={12}
+            placeholder="Paste anything — feature ideas, bug reports, meeting notes, TODO lists, stream of consciousness..."
+            value={braindumpText}
+            onChange={e => setBraindumpText(e.target.value)}
+            style={{ resize: 'vertical', fontFamily: 'var(--mono)', fontSize: '0.85rem', lineHeight: 1.6 }}
+            autoFocus
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--faint)', fontSize: '0.72rem', fontFamily: 'var(--mono)' }}>
+              {braindumpText.length > 0 ? `${braindumpText.length} chars` : ''}
+            </span>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn-ghost" onClick={() => setShowBraindump(false)}>Cancel</button>
+              <button
+                className="btn-primary"
+                onClick={submitBraindump}
+                disabled={braindumpLoading || !braindumpText.trim()}
+                style={braindumpLoading ? { opacity: 0.6 } : {}}
+              >
+                {braindumpLoading ? 'Processing...' : '⚡ Process into Tasks'}
+              </button>
+            </div>
+          </div>
         </div>
       </Modal>
 

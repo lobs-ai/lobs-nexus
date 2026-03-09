@@ -34,6 +34,7 @@ export const api = {
   updateProject: (id, body) => req(`/api/projects/${id}`, { method: 'PATCH', body }),
   archiveProject: (id) => req(`/api/projects/${id}/archive`, { method: 'POST' }),
   unarchiveProject: (id) => req(`/api/projects/${id}/unarchive`, { method: 'POST' }),
+  projectBraindump: (id, text) => req(`/api/projects/${id}/braindump`, { method: 'POST', body: { text } }),
 
   agents: (signal) => req('/api/agents', { signal }),
   workerStatus: (signal) => req('/api/worker/status', { signal }),
