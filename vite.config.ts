@@ -15,6 +15,9 @@ const proxy = {
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    assetsDir: 'static',
+  },
   preview: {
     allowedHosts: true,
     proxy,
