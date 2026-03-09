@@ -5,6 +5,8 @@ import Badge from '../components/Badge';
 import { showToast } from '../components/Toast';
 import { useApi } from '../hooks/useApi';
 import { usePolling } from '../hooks/usePolling';
+import { useAffordances } from '../hooks/useAffordances';
+import AIReplyChips from '../components/ai/AIReplyChips';
 
 // Fetch task status for action items that have a task_id.
 // Returns a map of { taskId -> task } for only the found tasks.
@@ -471,6 +473,15 @@ function TranscriptItem({ meeting }) {
     ? meeting.participants.join(', ')
     : (meeting.participants || null);
 
+  const meetingAffordances = useAffordances('meeting-card');
+  const actionChipsAffordance = meetingAffordances.find(a => a.type === 'chips') || null;
+  const meetingContext = JSON.stringify({
+    title: meeting.title || 'Untitled Meeting',
+    type: meeting.meeting_type,
+    summary: meeting.summary,
+    participants,
+  });
+
   useEffect(() => {
     if (expanded && !actionItems) {
       fetch(`/paw/api/meetings/${meeting.id}/action-items`)
@@ -561,6 +572,12 @@ function TranscriptItem({ meeting }) {
                 ) : (
                   <div style={{ color: 'var(--faint)', fontSize: '0.85rem', fontStyle: 'italic', marginBottom: 12 }}>
                     {meeting.analysis_status === 'processing' ? '⏳ Generating summary…' : 'No summary available.'}
+                  </div>
+                )}
+                {actionChipsAffordance && (
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Meeting Actions</div>
+                    <AIReplyChips affordance={actionChipsAffordance} context={meetingContext} onSelect={(text) => showToast(text, 'info')} />
                   </div>
                 )}
                 <ActionItemsList items={actionItems} onStatusChange={updateItemStatus} />

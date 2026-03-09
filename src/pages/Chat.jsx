@@ -1,6 +1,8 @@
 import RichMessage from '../components/rich/RichMessage';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useApi } from '../hooks/useApi';
+import { useAffordances } from '../hooks/useAffordances';
+import AISummarizeButton from '../components/ai/AISummarizeButton';
 import { api } from '../lib/api';
 import { timeAgo } from '../lib/utils';
 
@@ -77,6 +79,9 @@ export default function Chat() {
   const sessions = sessionsData?.sessions || sessionsData || [];
   const activeKey = activeSession?.key || activeSession?.sessionKey;
   const activeId = activeSession?.id;
+
+  const chatAffordances = useAffordances('chat-session');
+  const summarizeAffordance = chatAffordances.find(a => a.type === 'button') || null;
 
   const getSessionState = useCallback((key) => {
     if (!key) return { messages: [], sending: false, sendError: null };
@@ -363,7 +368,18 @@ export default function Chat() {
           <>
             <div style={{ padding: '16px 0', borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
               <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '3px', color: 'var(--teal)', fontFamily: 'var(--mono)', marginBottom: 4 }}>ACTIVE SESSION</div>
-              <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: '1rem' }}>{getDisplayTitle(activeSession)}</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                <div style={{ color: 'var(--text)', fontWeight: 700, fontSize: '1rem' }}>{getDisplayTitle(activeSession)}</div>
+                {summarizeAffordance && currentState.messages.length > 0 && (
+                  <AISummarizeButton
+                    affordance={summarizeAffordance}
+                    context={JSON.stringify({
+                      sessionTitle: getDisplayTitle(activeSession),
+                      messages: currentState.messages.slice(-20).map(m => ({ role: m.role, content: m.content })),
+                    })}
+                  />
+                )}
+              </div>
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 16 }}>
