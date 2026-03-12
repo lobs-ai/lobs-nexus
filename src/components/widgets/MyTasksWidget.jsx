@@ -24,8 +24,9 @@ export default function MyTasksWidget() {
         api.myTasks({ status: 'active', sort: 'priority' }),
         api.myTaskStats(),
       ]);
-      setTasks(tasksData.slice(0, 5));
-      setStats(statsData);
+      const taskList = Array.isArray(tasksData) ? tasksData : tasksData?.tasks || [];
+      setTasks(taskList.slice(0, 5));
+      setStats(statsData || {});
     } catch (err) {
       console.error('Failed to fetch my tasks:', err);
     } finally {

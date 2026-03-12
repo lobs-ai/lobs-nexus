@@ -33,7 +33,7 @@ export default function DailyBriefWidget() {
 
   if (!brief) return null;
 
-  const nextItems = brief.schedule.slice(0, 3);
+  const nextItems = (brief.schedule || []).slice(0, 3);
 
   return (
     <GlassCard>

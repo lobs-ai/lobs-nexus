@@ -11,7 +11,7 @@ export default function QuickCaptureWidget() {
   const loadRecent = async () => {
     try {
       const data = await api.recentCaptures(5);
-      setRecent(data);
+      setRecent(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load recent captures:', err);
     }

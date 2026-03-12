@@ -38,7 +38,7 @@ export default function GitHubFeedWidget() {
     );
   }
 
-  if (!feed || feed.events.length === 0) {
+  if (!feed || !feed.events || feed.events.length === 0) {
     return (
       <GlassCard>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
@@ -60,12 +60,12 @@ export default function GitHubFeedWidget() {
           <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text)' }}>GitHub Activity</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {feed.summary.totalPRs > 0 && (
+          {feed.summary?.totalPRs > 0 && (
             <span style={{ padding: '2px 6px', background: 'rgba(99,102,241,0.1)', borderRadius: 4, fontSize: '0.7rem', color: 'var(--blue)' }}>
               {feed.summary.totalPRs} PRs
             </span>
           )}
-          {feed.summary.failedCI > 0 && (
+          {feed.summary?.failedCI > 0 && (
             <span style={{ padding: '2px 6px', background: 'rgba(239,68,68,0.1)', borderRadius: 4, fontSize: '0.7rem', color: 'var(--red)' }}>
               {feed.summary.failedCI} CI ✗
             </span>

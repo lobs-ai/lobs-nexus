@@ -38,7 +38,8 @@ export default function FocusTimerWidget() {
   const loadTasks = async () => {
     try {
       const data = await api.tasks({ status: 'active' });
-      setTasks(data);
+      const taskList = Array.isArray(data) ? data : data?.tasks || [];
+      setTasks(taskList);
     } catch (err) {
       console.error('Failed to load tasks:', err);
     }
