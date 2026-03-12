@@ -35,10 +35,10 @@ export default function Explore() {
       });
 
       if (!response.ok) throw new Error("Failed to get response");
-      
+
       const data = await response.json();
       const reply = data.reply || data.message || "No response";
-      
+
       setMessages(prev => [...prev, { role: "assistant", text: reply }]);
     } catch (err) {
       setMessages(prev => [
@@ -51,91 +51,137 @@ export default function Explore() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-2">
-          <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg>
-          Explore
-        </h1>
-        <p className="text-gray-400">Ask anything about your system</p>
+    <div style={{ padding: '28px 28px 40px', maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+          <svg width="22" height="22" fill="none" stroke="var(--teal)" strokeWidth="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/>
+          </svg>
+          <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>Explore</h1>
+        </div>
+        <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.875rem' }}>Ask anything about your system</p>
       </div>
 
-      <div className="mb-6">
-        <div className="flex gap-2 mb-4">
-          <div className="relative flex-1">
-            <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      {/* Search bar */}
+      <GlassCard style={{ marginBottom: 24 }}>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+          <div style={{ position: 'relative', flex: 1 }}>
+            <svg width="16" height="16" fill="none" stroke="var(--muted)" strokeWidth="2" viewBox="0 0 24 24"
+              style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }}>
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
               placeholder="Ask anything..."
-              className="w-full pl-12 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-colors"
+              style={{
+                width: '100%', padding: '12px 14px 12px 42px',
+                background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                borderRadius: 8, color: 'var(--text)', fontSize: '0.9rem',
+                outline: 'none',
+              }}
             />
           </div>
           <button
             onClick={() => handleSubmit()}
             disabled={loading || !query.trim()}
-            className="px-6 py-3 rounded-lg font-medium bg-blue-500 hover:bg-blue-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              padding: '10px 20px', borderRadius: 8, border: 'none',
+              background: loading || !query.trim() ? 'rgba(45,212,191,0.2)' : 'linear-gradient(135deg, var(--teal), var(--blue))',
+              color: '#fff', fontWeight: 600, fontSize: '0.85rem',
+              cursor: loading || !query.trim() ? 'not-allowed' : 'pointer',
+              opacity: loading || !query.trim() ? 0.5 : 1,
+            }}
           >
             {loading ? "..." : "Ask"}
           </button>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {quickActions.map((action) => (
             <button
               key={action}
               onClick={() => handleSubmit(action)}
               disabled={loading}
-              className="px-3 py-1.5 rounded-lg text-sm bg-white/5 hover:bg-white/10 text-gray-300 border border-white/10 transition-colors disabled:opacity-50"
+              style={{
+                padding: '6px 12px', borderRadius: 6, fontSize: '0.78rem',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+                color: 'var(--muted)', cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.5 : 1, transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { if (!loading) e.target.style.background = 'rgba(255,255,255,0.08)'; }}
+              onMouseLeave={e => { e.target.style.background = 'rgba(255,255,255,0.04)'; }}
             >
               {action}
             </button>
           ))}
         </div>
-      </div>
+      </GlassCard>
 
-      <div className="space-y-4">
+      {/* Messages */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {messages.length === 0 ? (
-          <GlassCard className="p-12 text-center">
-            <svg className="w-12 h-12 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/></svg>
-            <p className="text-gray-400">
+          <GlassCard style={{ textAlign: 'center', padding: '48px 24px' }}>
+            <svg width="40" height="40" fill="none" stroke="var(--faint)" strokeWidth="1.5" viewBox="0 0 24 24"
+              style={{ margin: '0 auto 16px', opacity: 0.5 }}>
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"/>
+            </svg>
+            <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
               Ask questions about tasks, projects, agents, or system health.
-            </p>
+            </div>
           </GlassCard>
         ) : (
           messages.map((msg, i) => (
             <div
               key={i}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              style={{
+                display: 'flex',
+                justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+              }}
             >
               <div
-                className={`max-w-[80%] p-4 rounded-lg ${
-                  msg.role === "user"
-                    ? "bg-blue-500/10 border border-blue-500/20 text-blue-100"
+                style={{
+                  maxWidth: '80%', padding: '12px 16px', borderRadius: 10,
+                  background: msg.role === "user"
+                    ? 'rgba(45,212,191,0.08)'
                     : msg.error
-                    ? "bg-red-500/10 border border-red-500/20 text-red-400"
-                    : "bg-white/5 border border-white/10 text-gray-200"
-                }`}
+                    ? 'rgba(239,68,68,0.08)'
+                    : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${
+                    msg.role === "user"
+                      ? 'rgba(45,212,191,0.2)'
+                      : msg.error
+                      ? 'rgba(239,68,68,0.2)'
+                      : 'var(--border)'
+                  }`,
+                  color: msg.error ? '#f87171' : 'var(--text)',
+                  fontSize: '0.88rem', lineHeight: 1.6,
+                }}
               >
-                <div className="whitespace-pre-wrap break-words">{msg.text}</div>
+                <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{msg.text}</div>
               </div>
             </div>
           ))
         )}
-        
+
         {loading && (
-          <div className="flex justify-start">
-            <div className="max-w-[80%] p-4 rounded-lg bg-white/5 border border-white/10">
-              <div className="flex items-center gap-2 text-gray-400">
-                <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></div>
-                </div>
-                Thinking...
-              </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <div style={{
+              padding: '12px 16px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+              display: 'flex', alignItems: 'center', gap: 8,
+              color: 'var(--muted)', fontSize: '0.85rem',
+            }}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"
+                style={{ animation: 'spin 1s linear infinite' }}>
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+              </svg>
+              Thinking...
             </div>
           </div>
         )}
