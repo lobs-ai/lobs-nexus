@@ -3,7 +3,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-INFRA_DIR="$HOME/lobslab-infra"
+INFRA_DIR="$HOME/lobs/lobslab-infra"
 
 echo "→ Building Nexus..."
 cd "$SCRIPT_DIR"
