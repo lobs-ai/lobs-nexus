@@ -89,21 +89,21 @@ export const api = {
     const q = new URLSearchParams(params).toString();
     return req(`/api/knowledge${q ? '?' + q : ''}`, { signal });
   },
-  knowledgeFeed: (signal) => req('/api/knowledge/feed', { signal }),
-  research: (signal) => req('/api/research', { signal }).catch(() => ({ memos: [] })),
-  memories: (signal) => req('/api/memories', { signal }),
+  knowledgeFeed: (signal) => reqSafe('/api/knowledge/feed', { signal }, []),
+  research: (signal) => reqSafe('/api/research', { signal }, { memos: [] }),
+  memories: (signal) => reqSafe('/api/memories', { signal }, []),
 
-  knowledgeFs: (signal) => req('/api/knowledge-fs/list', { signal }),
-  knowledgeFsRead: (path, signal) => req('/api/knowledge-fs/read/' + path, { signal }),
-  memoriesFs: (agent, signal) => agent ? req('/api/memories-fs/' + agent, { signal }) : req('/api/memories-fs', { signal }),
+  knowledgeFs: (signal) => reqSafe('/api/knowledge-fs/list', { signal }, { files: [] }),
+  knowledgeFsRead: (path, signal) => reqSafe('/api/knowledge-fs/read/' + path, { signal }, { content: '' }),
+  memoriesFs: (agent, signal) => agent ? reqSafe('/api/memories-fs/' + agent, { signal }, []) : reqSafe('/api/memories-fs', { signal }, []),
 
   // Learning system
-  learningOverview: (agent = 'all', lookbackDays = 30, signal) => req(`/api/learning/stats?agent=${agent}&lookback_days=${lookbackDays}`, { signal }),
+  learningOverview: (agent = 'all', lookbackDays = 30, signal) => reqSafe(`/api/learning/stats?agent=${agent}&lookback_days=${lookbackDays}`, { signal }, {}),
   learnings: (agent, active = true, signal) => {
     const q = new URLSearchParams({ ...(agent ? { agent } : {}), active: String(active) }).toString();
-    return req(`/api/learning/learnings?${q}`, { signal });
+    return reqSafe(`/api/learning/learnings?${q}`, { signal }, []);
   },
-  learningKillSwitch: (signal) => req('/api/learning/kill-switch', { signal }),
+  learningKillSwitch: (signal) => reqSafe('/api/learning/kill-switch', { signal }, { enabled: false }),
   setLearningKillSwitch: (body) => req('/api/learning/kill-switch', { method: 'POST', body }),
   triggerLearningExtract: () => req('/api/learning/extract', { method: 'POST' }),
   deactivateLearning: (id) => req(`/api/learning/learnings/${id}/deactivate`, { method: 'PATCH' }),
@@ -118,8 +118,8 @@ export const api = {
   uiConfig: () => Promise.resolve({ layout: 'command-center', widgetOrder: [], hiddenWidgets: [], agentHighlights: [] }),
   updateUiConfig: () => Promise.resolve({}),
 
-  orchestratorStatus: (signal) => req(`/api/orchestrator/status`, { signal }),
-  initiatives: (signal) => req(`/api/orchestrator/intelligence/initiatives`, { signal }),
+  orchestratorStatus: (signal) => reqSafe(`/api/orchestrator/status`, { signal }, {}),
+  initiatives: (signal) => reqSafe(`/api/orchestrator/intelligence/initiatives`, { signal }, []),
   initiativeDecide: (decisions) => req(`/api/orchestrator/intelligence/initiatives/batch-decide`, { method: `POST`, body: { decisions } }),
   initiativeThread: (id, signal) => req(`/api/orchestrator/intelligence/initiatives/` + id + `/thread`, { signal }),
   initiativeReply: (id, text) => fetch(`/api/orchestrator/intelligence/initiatives/` + id + `/thread`, { method: `POST`, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, author: `user` }) }).then(r => r.json()),
@@ -129,17 +129,17 @@ export const api = {
   dailyBrief: (signal) => reqSafe('/api/daily-brief', { signal }, null),
 
   // Micro-Learning
-  learningTopics: (signal) => req('/api/learning/topics', { signal }),
+  learningTopics: (signal) => reqSafe('/api/learning/topics', { signal }, []),
   createLearningTopic: (body) => req('/api/learning/topics', { method: 'POST', body }),
   updateLearningTopic: (id, body) => req(`/api/learning/topics/${id}`, { method: 'PATCH', body }),
   deleteLearningTopic: (id) => req(`/api/learning/topics/${id}`, { method: 'DELETE' }),
   generateCards: (topicId, body) => req(`/api/learning/topics/${topicId}/generate`, { method: 'POST', body }),
-  learningCards: (topicId, signal) => req(`/api/learning/cards?topic_id=${topicId || ''}`, { signal }),
-  cardsDue: (signal) => req('/api/learning/cards/due', { signal }),
+  learningCards: (topicId, signal) => reqSafe(`/api/learning/cards?topic_id=${topicId || ''}`, { signal }, []),
+  cardsDue: (signal) => reqSafe('/api/learning/cards/due', { signal }, []),
   reviewCard: (id, grade) => req(`/api/learning/cards/${id}/review`, { method: 'POST', body: { grade } }),
   createCard: (body) => req('/api/learning/cards', { method: 'POST', body }),
   deleteCard: (id) => req(`/api/learning/cards/${id}`, { method: 'DELETE' }),
-  learningStats: (signal) => req('/api/learning/stats', { signal }),
+  learningStats: (signal) => reqSafe('/api/learning/stats', { signal }, {}),
 
   // Quick Capture (endpoint not yet implemented — graceful stubs)
   capture: (body) => reqSafe('/api/capture', { method: 'POST', body }),

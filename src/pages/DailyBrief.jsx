@@ -29,7 +29,7 @@ export default function DailyBrief() {
     );
   }
 
-  if (!brief) return <div style={{ padding: 32, color: 'var(--muted)' }}>Failed to load daily brief</div>;
+  if (!brief || !brief.stats) return <div style={{ padding: 32, color: 'var(--muted)' }}>Daily brief unavailable</div>;
 
   return (
     <div style={{ padding: 32, maxWidth: 1200, margin: '0 auto' }}>
