@@ -10,10 +10,17 @@ async function req(path, options = {}) {
   return res.json();
 }
 
-// Like req() but returns fallback on error instead of throwing
+// Like req() but returns fallback on error instead of throwing.
+// Uses fetch directly to avoid req() throwing on non-200 (browser still logs 404 in network tab but JS won't error).
 async function reqSafe(path, options = {}, fallback = {}) {
   try {
-    return await req(path, options);
+    const res = await fetch(BASE + path, {
+      headers: { 'Content-Type': 'application/json', ...options.headers },
+      ...options,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+    if (!res.ok) return fallback;
+    return res.json();
   } catch {
     return fallback;
   }

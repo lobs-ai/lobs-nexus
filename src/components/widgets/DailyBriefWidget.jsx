@@ -31,7 +31,7 @@ export default function DailyBriefWidget() {
     );
   }
 
-  if (!brief) return null;
+  if (!brief || !brief.stats) return null;
 
   const nextItems = (brief.schedule || []).slice(0, 3);
 
