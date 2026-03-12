@@ -188,7 +188,7 @@ export default function Dashboard() {
   const [actionItems, setActionItems] = useState([]);
   useEffect(() => {
     fetch('/paw/api/meetings/action-items?assignee=rafe')
-      .then(r => r.json()).then(items => setActionItems(items?.filter?.(i => i.status !== 'completed') || [])).catch(() => {});
+      .then(r => r.ok ? r.json() : []).then(items => setActionItems(Array.isArray(items) ? items.filter(i => i.status !== 'completed') : [])).catch(() => {});
   }, []);
 
   const quickActions = [

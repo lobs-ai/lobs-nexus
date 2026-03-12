@@ -10,6 +10,15 @@ async function req(path, options = {}) {
   return res.json();
 }
 
+// Like req() but returns fallback on error instead of throwing
+async function reqSafe(path, options = {}, fallback = {}) {
+  try {
+    return await req(path, options);
+  } catch {
+    return fallback;
+  }
+}
+
 export const api = {
   status: (signal) => req('/api/status/overview', { signal }),
   activity: (signal) => req('/api/status/activity', { signal }),
@@ -110,7 +119,7 @@ export const api = {
   inboxReadState: (ids, is_read) => req(`/api/inbox/read-state`, { method: `POST`, body: { ids, is_read } }),
 
   // Daily Brief
-  dailyBrief: (signal) => req('/api/daily-brief', { signal }),
+  dailyBrief: (signal) => reqSafe('/api/daily-brief', { signal }, null),
 
   // Micro-Learning
   learningTopics: (signal) => req('/api/learning/topics', { signal }),
@@ -125,32 +134,32 @@ export const api = {
   deleteCard: (id) => req(`/api/learning/cards/${id}`, { method: 'DELETE' }),
   learningStats: (signal) => req('/api/learning/stats', { signal }),
 
-  // Quick Capture
-  capture: (body) => req('/api/capture', { method: 'POST', body }),
-  recentCaptures: (limit, signal) => req(`/api/capture/recent?limit=${limit || 10}`, { signal }),
+  // Quick Capture (endpoint not yet implemented — graceful stubs)
+  capture: (body) => reqSafe('/api/capture', { method: 'POST', body }),
+  recentCaptures: (limit, signal) => reqSafe(`/api/capture/recent?limit=${limit || 10}`, { signal }, []),
 
   // GitHub Feed
-  githubFeed: (limit, signal) => req(`/api/github/feed?limit=${limit || 30}`, { signal }),
-  githubPRs: (signal) => req('/api/github/prs', { signal }),
-  githubCI: (signal) => req('/api/github/ci', { signal }),
+  githubFeed: (limit, signal) => reqSafe(`/api/github/feed?limit=${limit || 30}`, { signal }, null),
+  githubPRs: (signal) => reqSafe('/api/github/prs', { signal }, []),
+  githubCI: (signal) => reqSafe('/api/github/ci', { signal }, []),
 
-  // Focus Timer
-  startFocus: (body) => req('/api/focus/start', { method: 'POST', body }),
-  stopFocus: (sessionId) => req('/api/focus/stop', { method: 'POST', body: { sessionId } }),
-  currentFocus: (signal) => req('/api/focus/current', { signal }),
-  focusHistory: (limit, signal) => req(`/api/focus/history?limit=${limit || 20}`, { signal }),
-  focusStats: (signal) => req('/api/focus/stats', { signal }),
+  // Focus Timer (endpoint not yet implemented — graceful stubs)
+  startFocus: (body) => reqSafe('/api/focus/start', { method: 'POST', body }),
+  stopFocus: (sessionId) => reqSafe('/api/focus/stop', { method: 'POST', body: { sessionId } }),
+  currentFocus: (signal) => reqSafe('/api/focus/current', { signal }, null),
+  focusHistory: (limit, signal) => reqSafe(`/api/focus/history?limit=${limit || 20}`, { signal }, []),
+  focusStats: (signal) => reqSafe('/api/focus/stats', { signal }, {}),
 
-  // My Tasks — Personal task management for Rafe
+  // My Tasks (endpoint not yet implemented — graceful stubs)
   myTasks: (params = {}, signal) => {
     const q = new URLSearchParams(params).toString();
-    return req(`/api/my-tasks${q ? '?' + q : ''}`, { signal });
+    return reqSafe(`/api/my-tasks${q ? '?' + q : ''}`, { signal }, { tasks: [] });
   },
-  myTaskStats: (signal) => req('/api/my-tasks/stats', { signal }),
-  createMyTask: (body) => req('/api/my-tasks', { method: 'POST', body }),
-  updateMyTask: (id, body) => req(`/api/my-tasks/${id}`, { method: 'PATCH', body }),
-  completeMyTask: (id) => req(`/api/my-tasks/${id}/complete`, { method: 'POST' }),
-  snoozeMyTask: (id, until) => req(`/api/my-tasks/${id}/snooze`, { method: 'POST', body: { until } }),
-  deleteMyTask: (id) => req(`/api/my-tasks/${id}`, { method: 'DELETE' }),
-  assignToRafe: (body) => req('/api/my-tasks/from-agent', { method: 'POST', body }),
+  myTaskStats: (signal) => reqSafe('/api/my-tasks/stats', { signal }, {}),
+  createMyTask: (body) => reqSafe('/api/my-tasks', { method: 'POST', body }),
+  updateMyTask: (id, body) => reqSafe(`/api/my-tasks/${id}`, { method: 'PATCH', body }),
+  completeMyTask: (id) => reqSafe(`/api/my-tasks/${id}/complete`, { method: 'POST' }),
+  snoozeMyTask: (id, until) => reqSafe(`/api/my-tasks/${id}/snooze`, { method: 'POST', body: { until } }),
+  deleteMyTask: (id) => reqSafe(`/api/my-tasks/${id}`, { method: 'DELETE' }),
+  assignToRafe: (body) => reqSafe('/api/my-tasks/from-agent', { method: 'POST', body }),
 };
