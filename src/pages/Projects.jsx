@@ -211,7 +211,9 @@ export default function Projects() {
   const [selectedProjectId, setSelectedProjectId] = useState(() => getInitialViewState(searchParams).selectedProjectId);
   const [showAllTasks, setShowAllTasks] = useState(() => getInitialViewState(searchParams).showAllTasks);
   const [showArchived, setShowArchived] = useState(false);
-  const projects = (allProjects || []).filter(p => showArchived ? p.archived : !p.archived);
+  const projectList = Array.isArray(allProjects) ? allProjects : allProjects?.projects || [];
+  const projects = projectList.filter(p => showArchived ? p.archived : !p.archived);
+  // Note: projectList = all projects; projects = filtered by archive state
   const [showCreate, setShowCreate] = useState(false);
   const [showCreateTask, setShowCreateTask] = useState(false);
   const [showBraindump, setShowBraindump] = useState(false);
@@ -224,9 +226,9 @@ export default function Projects() {
 
   const projectAffordances = useAffordances('project-card');
 
-  const projectList = projects || [];
-  const selectedProject = projectList.find(p => String(p.id) === String(selectedProjectId)) || null;
-  const getProjectTasks = (pid) => (allTasks || []).filter(t => t.project_id === pid || t.projectId === pid);
+  const selectedProject = projects.find(p => String(p.id) === String(selectedProjectId)) || null;
+  const taskArr = Array.isArray(allTasks) ? allTasks : allTasks?.tasks || [];
+  const getProjectTasks = (pid) => taskArr.filter(t => t.project_id === pid || t.projectId === pid);
   const getProjectColor = (p, idx) => {
     const active = getProjectTasks(p.id).filter(t => t.status === 'active').length;
     return active > 0 ? 'var(--teal)' : PROJECT_COLORS[idx % PROJECT_COLORS.length];
@@ -270,7 +272,7 @@ export default function Projects() {
     } catch { showToast('Failed', 'error'); }
   };
 
-  const kanbanTasks = showAllTasks ? (allTasks || []) : selectedProject ? getProjectTasks(selectedProject.id) : (allTasks || []);
+  const kanbanTasks = showAllTasks ? taskArr : selectedProject ? getProjectTasks(selectedProject.id) : taskArr;
   const byStatus = (status) => kanbanTasks.filter(t => t.status === status || (status === 'active' && ['active', 'inbox', 'pending', 'waiting'].includes(t.status)) || (status === 'cancelled' && ['cancelled', 'rejected', 'archived'].includes(t.status)));
 
   useEffect(() => {
@@ -396,9 +398,9 @@ export default function Projects() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 32 }}>
                 {[
                   { label: 'Projects', value: projectList.length, color: 'var(--teal)' },
-                  { label: 'Active Tasks', value: (allTasks || []).filter(t => t.status === 'active').length, color: 'var(--blue)' },
-                  { label: 'Completed', value: (allTasks || []).filter(t => t.status === 'completed').length, color: 'var(--green)' },
-                  { label: 'Total Tasks', value: (allTasks || []).length, color: 'var(--purple)' },
+                  { label: 'Active Tasks', value: taskArr.filter(t => t.status === 'active').length, color: 'var(--blue)' },
+                  { label: 'Completed', value: taskArr.filter(t => t.status === 'completed').length, color: 'var(--green)' },
+                  { label: 'Total Tasks', value: taskArr.length, color: 'var(--purple)' },
                 ].map((s, i) => (
                   <div key={i} className={`hud-stat-card fade-in-up-${i+1}`}>
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${s.color}, transparent)`, opacity: 0.6, borderRadius: '14px 14px 0 0' }} />

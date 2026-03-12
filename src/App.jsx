@@ -4,8 +4,10 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import Tasks from './pages/Tasks';
+import MyTasks from './pages/MyTasks';
 import Team from './pages/Team';
-import Workflows from './pages/Workflows';
+import Scheduler from './pages/Scheduler';
+import Explore from './pages/Explore';
 import Inbox from './pages/Inbox';
 import Reflections from './pages/Reflections';
 import Chat from './pages/Chat';
@@ -16,7 +18,10 @@ import Settings from './pages/Settings';
 import Meetings from './pages/Meetings';
 import YouTube from './pages/YouTube';
 import LearningInsights from './pages/LearningInsights';
-import Plugins from './pages/Plugins';
+import DailyBrief from './pages/DailyBrief';
+import MicroLearning from './pages/MicroLearning';
+import GitHubFeed from './pages/GitHubFeed';
+import FocusTimer from './pages/FocusTimer';
 import { api } from './lib/api';
 
 export default function App() {
@@ -48,10 +53,12 @@ export default function App() {
       <Routes>
         <Route element={<Layout systemStatus={systemStatus} theme={theme} onThemeToggle={toggleTheme} />}>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/my-tasks" element={<MyTasks />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/team" element={<Team />} />
-          <Route path="/workflows" element={<Workflows />} />
+          <Route path="/scheduler" element={<Scheduler />} />
+          <Route path="/explore" element={<Explore />} />
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/reflections" element={<Reflections />} />
           <Route path="/chat" element={<Chat />} />
@@ -62,7 +69,10 @@ export default function App() {
           <Route path="/meetings" element={<Meetings />} />
           <Route path="/youtube" element={<YouTube />} />
           <Route path="/learning" element={<LearningInsights />} />
-          <Route path="/plugins" element={<Plugins />} />
+          <Route path="/daily-brief" element={<DailyBrief />} />
+          <Route path="/micro-learning" element={<MicroLearning />} />
+          <Route path="/github" element={<GitHubFeed />} />
+          <Route path="/focus" element={<FocusTimer />} />
         </Route>
       </Routes>
     </BrowserRouter>

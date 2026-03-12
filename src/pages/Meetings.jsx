@@ -7,6 +7,7 @@ import { useApi } from '../hooks/useApi';
 import { usePolling } from '../hooks/usePolling';
 import { useAffordances } from '../hooks/useAffordances';
 import AIReplyChips from '../components/ai/AIReplyChips';
+import { api } from '../lib/api';
 
 // Fetch task status for action items that have a task_id.
 // Returns a map of { taskId -> task } for only the found tasks.
@@ -28,6 +29,7 @@ async function fetchTaskStatuses(taskIds) {
 // Auto-sync action items: if task is done, mark action item complete.
 // Returns updated items array.
 async function syncActionItemsWithTasks(items, onStatusChange) {
+  if (!Array.isArray(items)) return [];
   const itemsWithTasks = items.filter(i => i.taskId || i.task_id);
   if (itemsWithTasks.length === 0) return items;
 
@@ -595,11 +597,11 @@ function TranscriptItem({ meeting }) {
 }
 
 export default function Meetings() {
-  const { data: projectsData } = useApi('/paw/api/projects');
+  const { data: projectsData } = useApi(signal => api.projects(signal));
   const projects = projectsData?.projects || projectsData || [];
 
   const fetchMeetings = useCallback(() => fetch('/paw/api/meetings').then(r => r.json()), []);
-  const { data: meetingsData, refresh } = usePolling(fetchMeetings, 15000);
+  const { data: meetingsData, reload: refresh } = usePolling(fetchMeetings, 15000);
   const meetings = meetingsData?.meetings || meetingsData || [];
 
   const [search, setSearch] = useState('');
@@ -613,7 +615,7 @@ export default function Meetings() {
 
   const fetchMyItems = useCallback(() =>
     fetch('/paw/api/meetings/action-items?assignee=lobs').then(r => r.json()).then(d => Array.isArray(d) ? d : []), []);
-  const { data: rawMyItems, refresh: refreshMyItems } = usePolling(fetchMyItems, 15000);
+  const { data: rawMyItems, reload: refreshMyItems } = usePolling(fetchMyItems, 15000);
   const [myItems, setMyItems] = useState(null);
 
   useEffect(() => {

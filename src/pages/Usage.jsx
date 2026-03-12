@@ -117,7 +117,7 @@ export default function Usage() {
   const { data: projection } = useApi(signal => api.usageProjection(signal), []);
   const { data: workers } = useApi(signal => api.workerHistory(100, signal));
 
-  const workerList = workers?.runs || workers || [];
+  const workerList = Array.isArray(workers?.runs) ? workers.runs : Array.isArray(workers) ? workers : [];
   const totals = dashboard?.totals || {};
   const summary = {
     totalCost: totals.estimated_cost_usd || 0,

@@ -467,8 +467,8 @@ function TaskDetailModal({ selected, onClose }) {
 }
 
 export default function Tasks() {
-  const { data: tasks, loading, reload } = usePolling(signal => api.tasks({}, signal), 15000);
-  const { data: projects } = useApi(signal => api.projects(signal));
+  const { data: tasksData, loading, reload } = usePolling(signal => api.tasks({}, signal), 15000);
+  const { data: projectsData } = useApi(signal => api.projects(signal));
   const [selected, setSelected] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showBrainDump, setShowBrainDump] = useState(false);
@@ -478,7 +478,10 @@ export default function Tasks() {
   const [sortDir, setSortDir] = useState('desc');
   const [form, setForm] = useState({ title: '', agent: 'programmer', model_tier: 'standard', project_id: '', notes: '', blocked_by: [] });
 
-  const filtered = (tasks || []).filter(t => {
+  const tasks = Array.isArray(tasksData) ? tasksData : tasksData?.tasks || [];
+  const projects = Array.isArray(projectsData) ? projectsData : projectsData?.projects || [];
+
+  const filtered = tasks.filter(t => {
     if (filter.agent && t.agent !== filter.agent) return false;
     if (filter.tier && t.model_tier !== filter.tier && t.modelTier !== filter.tier) return false;
     if (filter.project && t.project_id !== filter.project && t.projectId !== filter.project) return false;

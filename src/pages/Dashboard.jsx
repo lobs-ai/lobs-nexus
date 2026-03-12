@@ -20,6 +20,12 @@ import SystemPulseWidget from '../components/widgets/SystemPulseWidget';
 import QuickActionsWidget from '../components/widgets/QuickActionsWidget';
 import ScheduleWidget from '../components/widgets/ScheduleWidget';
 import StaleItemsWidget from '../components/widgets/StaleItemsWidget';
+import MyTasksWidget from '../components/widgets/MyTasksWidget';
+import DailyBriefWidget from '../components/widgets/DailyBriefWidget';
+import MicroLearningWidget from '../components/widgets/MicroLearningWidget';
+import QuickCaptureWidget from '../components/widgets/QuickCaptureWidget';
+import GitHubFeedWidget from '../components/widgets/GitHubFeedWidget';
+import FocusTimerWidget from '../components/widgets/FocusTimerWidget';
 
 function CountUp({ value, duration = 1200 }) {
   const [display, setDisplay] = useState(0);
@@ -130,9 +136,10 @@ export default function Dashboard() {
   };
 
   const taskMap = {};
-  (tasksData?.tasks || tasksData || []).forEach(t => { if (t.id) taskMap[t.id] = t; });
+  const taskArr = Array.isArray(tasksData?.tasks) ? tasksData.tasks : Array.isArray(tasksData) ? tasksData : [];
+  taskArr.forEach(t => { if (t.id) taskMap[t.id] = t; });
 
-  const workers = (workerStatus?.workers || []).map(w => {
+  const workers = (Array.isArray(workerStatus?.workers) ? workerStatus.workers : []).map(w => {
     const workerTaskId = w.taskId || w.currentTaskId || w.current_task_id;
     const mappedTaskTitle = workerTaskId ? taskMap[workerTaskId]?.title || taskMap[String(workerTaskId)]?.title : null;
 
@@ -234,10 +241,22 @@ export default function Dashboard() {
         {/* SMART WIDGETS */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 24 }}>
           <DailySummaryWidget />
+          <MyTasksWidget />
           <SystemPulseWidget />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 24 }}>
+          <DailyBriefWidget />
+          <QuickCaptureWidget />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 24 }}>
+          <MicroLearningWidget />
+          <FocusTimerWidget />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 24 }}>
+          <GitHubFeedWidget />
           <ScheduleWidget />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 24 }}>
           <QuickActionsWidget />
           <StaleItemsWidget />
         </div>

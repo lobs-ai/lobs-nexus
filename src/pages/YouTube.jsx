@@ -269,7 +269,7 @@ function VideoItem({ video, onRefresh }) {
 
 export default function YouTube() {
   const fetchVideos = useCallback(() => fetch('/paw/api/youtube').then(r => r.json()), []);
-  const { data: videosData, refresh } = usePolling(fetchVideos, 10000);
+  const { data: videosData, reload: refresh } = usePolling(fetchVideos, 10000);
   const videos = Array.isArray(videosData) ? videosData : videosData?.videos || [];
   const [search, setSearch] = useState('');
 
