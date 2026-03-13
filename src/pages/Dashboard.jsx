@@ -18,11 +18,11 @@ export default function Dashboard() {
     20000
   );
 
-  const activeTasks = tasksData?.tasks || [];
-  const recentRuns = history?.runs || [];
+  const activeTasks = Array.isArray(tasksData) ? tasksData : (tasksData?.tasks || []);
+  const recentRuns = Array.isArray(history) ? history : (history?.runs || []);
   
   // Compute stats
-  const activeWorkers = overview?.workers?.filter(w => w.status === 'active').length || 0;
+  const activeWorkers = typeof overview?.workers?.active === 'number' ? overview.workers.active : (Array.isArray(overview?.workers) ? overview.workers.filter(w => w.status === 'active').length : 0);
   const tasksCompletedToday = recentRuns.filter(r => {
     const startTime = new Date(r.startedAt);
     const today = new Date();

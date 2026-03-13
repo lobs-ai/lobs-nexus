@@ -14,7 +14,7 @@ export default function Workers() {
   );
 
   const workers = statusData?.workers || [];
-  const runs = historyData?.runs || [];
+  const runs = Array.isArray(historyData) ? historyData : (historyData?.runs || []);
 
   // Active vs idle workers
   const activeWorkers = workers.filter(w => w.status === 'active');

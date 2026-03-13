@@ -19,7 +19,7 @@ export default function Tasks() {
     [statusFilter]
   );
 
-  const tasks = tasksData?.tasks || [];
+  const tasks = Array.isArray(tasksData) ? tasksData : (tasksData?.tasks || []);
 
   const handleCreate = async (e) => {
     e.preventDefault();
