@@ -119,10 +119,13 @@ export default function Usage() {
 
   const workerList = Array.isArray(workers?.runs) ? workers.runs : Array.isArray(workers) ? workers : [];
   const totals = dashboard?.totals || {};
+  // Compute from worker_runs as fallback when legacy modelUsageEvents is empty
+  const workerTotalCost = workerList.reduce((s, r) => s + (r.totalCost || r.totalCostUsd || 0), 0);
+  const workerTotalTokens = workerList.reduce((s, r) => s + (r.totalTokens || 0), 0);
   const summary = {
-    totalCost: totals.estimated_cost_usd || 0,
-    totalTokens: totals.total_tokens || 0,
-    totalRuns: totals.task_count || totals.requests || 0,
+    totalCost: totals.estimated_cost_usd || workerTotalCost,
+    totalTokens: totals.total_tokens || workerTotalTokens,
+    totalRuns: totals.task_count || totals.requests || workerList.length,
   };
   const byModel = dashboard?.by_model || [];
   const byProvider = dashboard?.by_provider || [];
