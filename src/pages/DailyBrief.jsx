@@ -31,6 +31,13 @@ export default function DailyBrief() {
 
   if (!brief) return <div style={{ padding: 32, color: 'var(--muted)' }}>Failed to load daily brief</div>;
 
+  // Normalize: API may return `tasks` or `stats`
+  const stats = brief.stats || {
+    completedToday: brief.tasks?.completed_today ?? 0,
+    activeWorkers: brief.tasks?.active ?? 0,
+    inboxPending: brief.tasks?.blocked ?? 0,
+  };
+
   return (
     <div style={{ padding: 32, maxWidth: 1200, margin: '0 auto' }}>
       <div style={{ marginBottom: 32 }}>
@@ -49,15 +56,15 @@ export default function DailyBrief() {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
             <div>
-              <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--green)' }}>{brief.stats.completedToday}</div>
+              <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--green)' }}>{brief?.stats?.completedToday ?? 0}</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Completed</div>
             </div>
             <div>
-              <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--blue)' }}>{brief.stats.activeWorkers}</div>
+              <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--blue)' }}>{stats.activeWorkers ?? 0}</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Working</div>
             </div>
             <div>
-              <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--amber)' }}>{brief.stats.inboxPending}</div>
+              <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--amber)' }}>{stats.inboxPending ?? 0}</div>
               <div style={{ fontSize: '0.7rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Inbox</div>
             </div>
           </div>

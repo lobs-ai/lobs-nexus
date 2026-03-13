@@ -31,9 +31,15 @@ export default function DailyBriefWidget() {
     );
   }
 
-  if (!brief || !brief.stats) return null;
+  if (!brief) return null;
 
-  const nextItems = (brief.schedule || []).slice(0, 3);
+  // Normalize: API may return `tasks` or `stats`
+  const stats = brief.stats || {
+    completedToday: brief.tasks?.completed_today ?? 0,
+    activeWorkers: brief.tasks?.active ?? 0,
+    inboxPending: brief.tasks?.blocked ?? 0,
+  };
+  const nextItems = (brief.schedule || brief.calendar || []).slice(0, 3);
 
   return (
     <GlassCard>
@@ -65,15 +71,15 @@ export default function DailyBriefWidget() {
 
       <div style={{ display: 'flex', gap: 16, marginBottom: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
         <div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--green)' }}>{brief.stats.completedToday}</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--green)' }}>{stats.completedToday ?? 0}</div>
           <div style={{ fontSize: '0.65rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Completed</div>
         </div>
         <div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--blue)' }}>{brief.stats.activeWorkers}</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--blue)' }}>{stats.activeWorkers ?? 0}</div>
           <div style={{ fontSize: '0.65rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Active</div>
         </div>
         <div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--amber)' }}>{brief.stats.inboxPending}</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--amber)' }}>{stats.inboxPending ?? 0}</div>
           <div style={{ fontSize: '0.65rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Inbox</div>
         </div>
       </div>
