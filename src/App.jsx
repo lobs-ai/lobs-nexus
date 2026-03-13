@@ -20,6 +20,8 @@ import Insights from './pages/Insights';
 import DailyBrief from './pages/DailyBrief';
 import GitHubFeed from './pages/GitHubFeed';
 import Workers from './pages/Workers';
+import YouTube from './pages/YouTube';
+import MicroLearning from './pages/MicroLearning';
 import { api } from './lib/api';
 
 export default function App() {
@@ -69,6 +71,8 @@ export default function App() {
           <Route path="/daily-brief" element={<DailyBrief />} />
           <Route path="/github" element={<GitHubFeed />} />
           <Route path="/workers" element={<Workers />} />
+          <Route path="/youtube" element={<YouTube />} />
+          <Route path="/micro-learning" element={<MicroLearning />} />
         </Route>
       </Routes>
     </BrowserRouter>
