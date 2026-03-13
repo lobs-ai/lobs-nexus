@@ -96,6 +96,7 @@ export const api = {
   knowledgeFs: (signal) => reqSafe('/api/knowledge-fs/list', { signal }, { files: [] }),
   knowledgeFsRead: (path, signal) => reqSafe('/api/knowledge-fs/read/' + path, { signal }, { content: '' }),
   memoriesFs: (agent, signal) => agent ? reqSafe('/api/memories-fs/' + agent, { signal }, []) : reqSafe('/api/memories-fs', { signal }, []),
+  memorySearch: (query, options = {}, signal) => req('/memory-api/search', { method: 'POST', body: { query, limit: options.limit || 10, collections: options.collections }, signal }),
 
   // Learning system
   learningOverview: (agent = 'all', lookbackDays = 30, signal) => reqSafe(`/api/learning/stats?agent=${agent}&lookback_days=${lookbackDays}`, { signal }, {}),

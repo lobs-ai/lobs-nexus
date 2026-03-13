@@ -11,6 +11,10 @@ const proxy = {
     target: 'http://127.0.0.1:18789',
     changeOrigin: true,
   },
+  '/memory-api': {
+    target: 'http://127.0.0.1:7420',
+    changeOrigin: true,
+  },
 }
 
 export default defineConfig({
