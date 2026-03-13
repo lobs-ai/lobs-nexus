@@ -20,12 +20,9 @@ import SystemPulseWidget from '../components/widgets/SystemPulseWidget';
 import QuickActionsWidget from '../components/widgets/QuickActionsWidget';
 import ScheduleWidget from '../components/widgets/ScheduleWidget';
 import StaleItemsWidget from '../components/widgets/StaleItemsWidget';
-import MyTasksWidget from '../components/widgets/MyTasksWidget';
 import DailyBriefWidget from '../components/widgets/DailyBriefWidget';
 import MicroLearningWidget from '../components/widgets/MicroLearningWidget';
-import QuickCaptureWidget from '../components/widgets/QuickCaptureWidget';
 import GitHubFeedWidget from '../components/widgets/GitHubFeedWidget';
-import FocusTimerWidget from '../components/widgets/FocusTimerWidget';
 
 function CountUp({ value, duration = 1200 }) {
   const [display, setDisplay] = useState(0);
@@ -241,16 +238,11 @@ export default function Dashboard() {
         {/* SMART WIDGETS */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 24 }}>
           <DailySummaryWidget />
-          <MyTasksWidget />
           <SystemPulseWidget />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 24 }}>
           <DailyBriefWidget />
-          <QuickCaptureWidget />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 24 }}>
           <MicroLearningWidget />
-          <FocusTimerWidget />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 24 }}>
           <GitHubFeedWidget />

@@ -4,7 +4,6 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import Tasks from './pages/Tasks';
-import MyTasks from './pages/MyTasks';
 import Team from './pages/Team';
 import Scheduler from './pages/Scheduler';
 import Explore from './pages/Explore';
@@ -21,7 +20,6 @@ import LearningInsights from './pages/LearningInsights';
 import DailyBrief from './pages/DailyBrief';
 import MicroLearning from './pages/MicroLearning';
 import GitHubFeed from './pages/GitHubFeed';
-import FocusTimer from './pages/FocusTimer';
 import Workers from './pages/Workers';
 import Insights from './pages/Insights';
 import { api } from './lib/api';
@@ -55,7 +53,6 @@ export default function App() {
       <Routes>
         <Route element={<Layout systemStatus={systemStatus} theme={theme} onThemeToggle={toggleTheme} />}>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/my-tasks" element={<MyTasks />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/team" element={<Team />} />
@@ -74,7 +71,6 @@ export default function App() {
           <Route path="/daily-brief" element={<DailyBrief />} />
           <Route path="/micro-learning" element={<MicroLearning />} />
           <Route path="/github" element={<GitHubFeed />} />
-          <Route path="/focus" element={<FocusTimer />} />
           <Route path="/workers" element={<Workers />} />
           <Route path="/insights" element={<Insights />} />
         </Route>
