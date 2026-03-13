@@ -17,7 +17,7 @@ export default function Insights() {
     30000
   );
 
-  const runs = history?.runs || [];
+  const runs = Array.isArray(history) ? history : (history?.runs || []);
 
   // Calculate success/failure rates
   const totalRuns = runs.length;

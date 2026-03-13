@@ -54,7 +54,12 @@ export const api = {
 
   agents: (signal) => req('/api/agents', { signal }),
   workerStatus: (signal) => req('/api/worker/status', { signal }),
-  workerHistory: (limit = 50, signal) => req(`/api/worker/history?limit=${limit}`, { signal }),
+  workerHistory: async (limit = 50, signal) => {
+    const data = await req(`/api/worker/history?limit=${limit}`, { signal });
+    const runs = Array.isArray(data) ? data : (data?.runs || []);
+    // Normalize field names: API returns totalCostUsd, frontend expects totalCost
+    return runs.map(r => ({ ...r, totalCost: r.totalCost ?? r.totalCostUsd ?? 0 }));
+  },
 
   // Legacy workflow system removed — graceful stubs
   workflows: () => Promise.resolve([]),

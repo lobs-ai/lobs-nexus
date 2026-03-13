@@ -8,7 +8,7 @@ export default function Usage() {
     20000
   );
 
-  const runs = history?.runs || [];
+  const runs = Array.isArray(history) ? history : (history?.runs || []);
 
   // Calculate totals
   const totalTokens = runs.reduce((sum, r) => sum + (r.totalTokens || 0), 0);
