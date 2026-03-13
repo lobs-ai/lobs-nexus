@@ -16,12 +16,14 @@ import Memory from './pages/Memory';
 import Usage from './pages/Usage';
 import Settings from './pages/Settings';
 import Meetings from './pages/Meetings';
-import Insights from './pages/Insights';
-import DailyBrief from './pages/DailyBrief';
-import GitHubFeed from './pages/GitHubFeed';
-import Workers from './pages/Workers';
 import YouTube from './pages/YouTube';
+import LearningInsights from './pages/LearningInsights';
+import DailyBrief from './pages/DailyBrief';
 import MicroLearning from './pages/MicroLearning';
+import GitHubFeed from './pages/GitHubFeed';
+import FocusTimer from './pages/FocusTimer';
+import Workers from './pages/Workers';
+import Insights from './pages/Insights';
 import { api } from './lib/api';
 
 export default function App() {
@@ -67,12 +69,14 @@ export default function App() {
           <Route path="/usage" element={<Usage />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/meetings" element={<Meetings />} />
-          <Route path="/insights" element={<Insights />} />
-          <Route path="/daily-brief" element={<DailyBrief />} />
-          <Route path="/github" element={<GitHubFeed />} />
-          <Route path="/workers" element={<Workers />} />
           <Route path="/youtube" element={<YouTube />} />
+          <Route path="/learning" element={<LearningInsights />} />
+          <Route path="/daily-brief" element={<DailyBrief />} />
           <Route path="/micro-learning" element={<MicroLearning />} />
+          <Route path="/github" element={<GitHubFeed />} />
+          <Route path="/focus" element={<FocusTimer />} />
+          <Route path="/workers" element={<Workers />} />
+          <Route path="/insights" element={<Insights />} />
         </Route>
       </Routes>
     </BrowserRouter>

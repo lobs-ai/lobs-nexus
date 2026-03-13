@@ -36,13 +36,6 @@ export default function Knowledge() {
   const [selected, setSelected] = useState(null);
   const [fileContent, setFileContent] = useState(null);
   const [loadingFile, setLoadingFile] = useState(false);
-  
-  // Search tab state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState(null);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState(null);
-  const [searchScope, setSearchScope] = useState('knowledge'); // 'knowledge' or 'all'
 
   const entries = fsData?.entries || [];
   const memos = resData?.memos || resData || [];
@@ -88,30 +81,6 @@ export default function Knowledge() {
     setLoadingFile(false);
   };
 
-  const handleSearch = async (e) => {
-    e?.preventDefault();
-    if (!searchQuery.trim()) return;
-    
-    setSearchLoading(true);
-    setSearchError(null);
-    try {
-      const options = searchScope === 'knowledge' ? { collections: ['knowledge'] } : {};
-      const results = await api.memorySearch(searchQuery, options);
-      setSearchResults(results);
-    } catch (err) {
-      setSearchError('Memory search server unavailable. Make sure it\'s running on port 7420.');
-      setSearchResults(null);
-    } finally {
-      setSearchLoading(false);
-    }
-  };
-
-  const getScoreColor = (score) => {
-    if (score > 0.8) return 'var(--green)';
-    if (score > 0.5) return '#f59e0b'; // amber
-    return '#ef4444'; // red
-  };
-
   const totalFiles = entries.length;
   const topFolders = [...new Set(entries.map(e => e.path.split('/')[0]))].length;
 
@@ -129,9 +98,8 @@ export default function Knowledge() {
           <div style={{ display: 'flex', gap: 8 }}>
             <button className={`hud-tab ${tab === 'browse' ? 'active' : ''}`} onClick={() => { setTab('browse'); setSearch(''); }}>Docs ({totalFiles})</button>
             <button className={`hud-tab ${tab === 'research' ? 'active' : ''}`} onClick={() => setTab('research')}>Research ({memos.length})</button>
-            <button className={`hud-tab ${tab === 'search' ? 'active' : ''}`} onClick={() => setTab('search')}>Search</button>
           </div>
-          {tab !== 'search' && <input className="nx-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search all files..." style={{ maxWidth: 300, marginLeft: 'auto' }} />}
+          <input className="nx-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search all files..." style={{ maxWidth: 300, marginLeft: 'auto' }} />
         </div>
 
         {tab === 'browse' && (
@@ -222,201 +190,6 @@ export default function Knowledge() {
               </GlassCard>
             ))}
           </div>
-        )}
-
-        {tab === 'search' && (
-          <>
-            {/* Search Form */}
-            <form onSubmit={handleSearch} style={{ marginBottom: 28 }}>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
-                <input 
-                  className="nx-input" 
-                  value={searchQuery} 
-                  onChange={e => setSearchQuery(e.target.value)} 
-                  placeholder="Semantic search across knowledge base..." 
-                  style={{ flex: 1 }}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                />
-                <button 
-                  type="submit"
-                  onClick={handleSearch}
-                  disabled={searchLoading || !searchQuery.trim()}
-                  style={{
-                    background: 'var(--teal)1a',
-                    border: '1px solid var(--teal)66',
-                    borderRadius: 8,
-                    padding: '10px 28px',
-                    color: 'var(--teal)',
-                    cursor: searchLoading ? 'wait' : 'pointer',
-                    fontSize: '0.85rem',
-                    fontWeight: 700,
-                    transition: 'all 0.2s',
-                    opacity: (!searchQuery.trim() || searchLoading) ? 0.5 : 1,
-                  }}
-                >
-                  {searchLoading ? 'Searching...' : 'Search'}
-                </button>
-              </div>
-              
-              {/* Scope Toggle */}
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontSize: '0.72rem', color: 'var(--muted)', fontFamily: 'var(--mono)', letterSpacing: '2px', textTransform: 'uppercase' }}>Scope:</span>
-                <button 
-                  type="button"
-                  onClick={() => setSearchScope('knowledge')}
-                  style={{
-                    background: searchScope === 'knowledge' ? 'var(--teal)1a' : 'transparent',
-                    border: `1px solid ${searchScope === 'knowledge' ? 'var(--teal)66' : 'var(--border)'}`,
-                    borderRadius: 6,
-                    padding: '6px 16px',
-                    color: searchScope === 'knowledge' ? 'var(--teal)' : 'var(--muted)',
-                    cursor: 'pointer',
-                    fontSize: '0.78rem',
-                    fontWeight: searchScope === 'knowledge' ? 600 : 400,
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  Knowledge
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => setSearchScope('all')}
-                  style={{
-                    background: searchScope === 'all' ? 'var(--blue)1a' : 'transparent',
-                    border: `1px solid ${searchScope === 'all' ? 'var(--blue)66' : 'var(--border)'}`,
-                    borderRadius: 6,
-                    padding: '6px 16px',
-                    color: searchScope === 'all' ? 'var(--blue)' : 'var(--muted)',
-                    cursor: 'pointer',
-                    fontSize: '0.78rem',
-                    fontWeight: searchScope === 'all' ? 600 : 400,
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  All
-                </button>
-              </div>
-            </form>
-
-            {/* Error State */}
-            {searchError && (
-              <GlassCard style={{ marginBottom: 24 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ fontSize: '1.5rem' }}>⚠️</div>
-                  <div>
-                    <div style={{ color: '#ef4444', fontWeight: 600, marginBottom: 4 }}>Search Unavailable</div>
-                    <div style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>{searchError}</div>
-                  </div>
-                </div>
-              </GlassCard>
-            )}
-
-            {/* Loading State */}
-            {searchLoading && (
-              <div style={{ color: 'var(--muted)', textAlign: 'center', padding: '60px 0' }}>Searching...</div>
-            )}
-
-            {/* Search Results */}
-            {!searchLoading && searchResults && (
-              <>
-                {searchResults.results?.length === 0 ? (
-                  <GlassCard><div style={{ padding: '60px 0', textAlign: 'center' }}>
-                    <div style={{ fontSize: '2.5rem', marginBottom: 16, opacity: 0.3 }}>🔍</div>
-                    <div style={{ color: 'var(--text)', fontWeight: 600 }}>No results found</div>
-                    <div style={{ color: 'var(--muted)', fontSize: '0.85rem', marginTop: 8 }}>Try different search terms</div>
-                  </div></GlassCard>
-                ) : (
-                  <>
-                    {/* Results List */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
-                      {searchResults.results?.map((result, i) => {
-                        const scoreColor = getScoreColor(result.score);
-                        return (
-                          <GlassCard 
-                            key={i} 
-                            className={`fade-in-up-${Math.min(i+1, 6)}`}
-                            onClick={async () => {
-                              // Open file content in modal
-                              setSelected({ path: result.path, name: result.path.split('/').pop() });
-                              setLoadingFile(true);
-                              try {
-                                const data = await api.knowledgeFsRead(result.path);
-                                setFileContent(data?.content || 'Unable to read file');
-                              } catch {
-                                setFileContent('Error loading file');
-                              }
-                              setLoadingFile(false);
-                            }}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                                <Badge 
-                                  label={`${(result.score * 100).toFixed(0)}%`} 
-                                  color={scoreColor}
-                                  style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}
-                                />
-                                <span style={{ color: 'var(--muted)', fontSize: '0.75rem', fontFamily: 'var(--mono)', background: 'rgba(255,255,255,0.04)', padding: '2px 8px', borderRadius: 4 }}>
-                                  {result.path}
-                                </span>
-                                <span style={{ color: 'var(--faint)', fontSize: '0.72rem', fontFamily: 'var(--mono)' }}>
-                                  lines {result.startLine}–{result.endLine}
-                                </span>
-                              </div>
-                            </div>
-                            <div style={{ 
-                              color: 'var(--text)', 
-                              fontSize: '0.85rem', 
-                              lineHeight: 1.6,
-                              background: 'rgba(8,12,24,0.6)',
-                              border: '1px solid var(--border)',
-                              borderRadius: 6,
-                              padding: '12px 14px',
-                              fontFamily: 'var(--mono)',
-                              whiteSpace: 'pre-wrap',
-                            }}>
-                              {result.snippet}
-                            </div>
-                          </GlassCard>
-                        );
-                      })}
-                    </div>
-
-                    {/* Timing Breakdown */}
-                    {searchResults.timings && (
-                      <GlassCard>
-                        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
-                          <div style={{ fontSize: '0.72rem', color: 'var(--muted)', fontFamily: 'var(--mono)', letterSpacing: '2px', textTransform: 'uppercase' }}>
-                            Search Timing
-                          </div>
-                          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--faint)', fontFamily: 'var(--mono)' }}>BM25</span>
-                              <span style={{ fontSize: '0.85rem', color: 'var(--teal)', fontWeight: 600, fontFamily: 'var(--mono)' }}>{searchResults.timings.bm25Ms}ms</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--faint)', fontFamily: 'var(--mono)' }}>Vector</span>
-                              <span style={{ fontSize: '0.85rem', color: 'var(--blue)', fontWeight: 600, fontFamily: 'var(--mono)' }}>{searchResults.timings.vectorMs}ms</span>
-                            </div>
-                            {searchResults.timings.rerankMs !== undefined && (
-                              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-                                <span style={{ fontSize: '0.7rem', color: 'var(--faint)', fontFamily: 'var(--mono)' }}>Rerank</span>
-                                <span style={{ fontSize: '0.85rem', color: 'var(--purple)', fontWeight: 600, fontFamily: 'var(--mono)' }}>{searchResults.timings.rerankMs}ms</span>
-                              </div>
-                            )}
-                            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, paddingLeft: 16, borderLeft: '1px solid var(--border)' }}>
-                              <span style={{ fontSize: '0.7rem', color: 'var(--faint)', fontFamily: 'var(--mono)' }}>Total</span>
-                              <span style={{ fontSize: '0.9rem', color: 'var(--text)', fontWeight: 700, fontFamily: 'var(--mono)' }}>{searchResults.timings.totalMs}ms</span>
-                            </div>
-                          </div>
-                        </div>
-                      </GlassCard>
-                    )}
-                  </>
-                )}
-              </>
-            )}
-          </>
         )}
       </div>
 
