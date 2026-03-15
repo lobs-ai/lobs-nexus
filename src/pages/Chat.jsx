@@ -221,6 +221,7 @@ function ChatInterface({ session, onSendMessage, processing }) {
     if (!text || processing) return;
     
     setInput('');
+    if (inputRef.current) inputRef.current.style.height = 'auto';
     onSendMessage(text);
   };
 
@@ -364,11 +365,28 @@ function ChatInterface({ session, onSendMessage, processing }) {
           <textarea
             ref={inputRef}
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={e => {
+              setInput(e.target.value);
+              const el = e.target;
+              el.style.height = 'auto';
+              el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+            }}
             onKeyDown={e => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSend();
+              }
+              if (e.key === 'Tab' && e.shiftKey) {
+                e.preventDefault();
+                const start = e.target.selectionStart;
+                const end = e.target.selectionEnd;
+                const val = input.slice(0, start) + '\n' + input.slice(end);
+                setInput(val);
+                requestAnimationFrame(() => {
+                  e.target.selectionStart = e.target.selectionEnd = start + 1;
+                  e.target.style.height = 'auto';
+                  e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+                });
               }
             }}
             placeholder="Message Lobs..."
@@ -385,7 +403,7 @@ function ChatInterface({ session, onSendMessage, processing }) {
               outline: 'none',
               fontFamily: 'inherit',
               minHeight: 44,
-              maxHeight: 120,
+              maxHeight: 200,
               overflow: 'auto',
             }}
           />
