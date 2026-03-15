@@ -16,7 +16,7 @@ function renderMarkdown(text) {
 }
 
 // ---------------------------------------------------------------------------
-// Tool Step Component — clickable, expandable tool call display
+// Tool Step Component — collapsible tool call display
 // ---------------------------------------------------------------------------
 
 function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
@@ -25,6 +25,7 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
   if (!isVisible) return null;
 
   const isRunning = status === 'running';
+  const inputPreview = toolInput ? (toolInput.length > 120 ? toolInput.substring(0, 120) + '...' : toolInput) : '';
 
   // Parse input JSON for better display
   let parsedInput = null;
@@ -32,293 +33,130 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
     if (toolInput) parsedInput = JSON.parse(toolInput);
   } catch { /* use raw */ }
 
-  // Generate a smart summary line based on tool + params
-  const getSummary = () => {
-    if (!parsedInput) return toolInput ? (toolInput.length > 80 ? toolInput.substring(0, 80) + '…' : toolInput) : '';
-    switch (toolName) {
-      case 'exec':
-        return parsedInput.command ? `$ ${parsedInput.command}` : '';
-      case 'read':
-        return parsedInput.path || parsedInput.file_path || '';
-      case 'write':
-        return parsedInput.path || parsedInput.file_path || '';
-      case 'edit':
-        return parsedInput.path || parsedInput.file_path || '';
-      case 'web_search':
-        return parsedInput.query ? `"${parsedInput.query}"` : '';
-      case 'web_fetch':
-        return parsedInput.url || '';
-      case 'memory_search':
-        return parsedInput.query ? `"${parsedInput.query}"` : '';
-      case 'memory_read':
-        return parsedInput.path || '';
-      case 'memory_write':
-        return parsedInput.content ? parsedInput.content.substring(0, 60) + (parsedInput.content.length > 60 ? '…' : '') : '';
-      case 'spawn_agent':
-        return parsedInput.agent_type ? `${parsedInput.agent_type}${parsedInput.task ? ': ' + parsedInput.task.substring(0, 50) + '…' : ''}` : '';
-      case 'process':
-        return parsedInput.action ? `${parsedInput.action}${parsedInput.command ? ': ' + parsedInput.command : ''}` : '';
-      default: {
-        const firstVal = Object.values(parsedInput).find(v => typeof v === 'string');
-        return firstVal ? (firstVal.length > 80 ? firstVal.substring(0, 80) + '…' : firstVal) : '';
-      }
-    }
+  // Format the tool name nicely
+  const formatToolName = (name) => {
+    if (!name) return 'tool';
+    return name.replace(/_/g, ' ').replace(/\b\w/g, l => l);
   };
-
-  // Format parsed input as key-value pairs
-  const renderInputParams = () => {
-    if (!parsedInput || typeof parsedInput !== 'object') {
-      return toolInput ? (
-        <pre style={{
-          margin: 0, fontFamily: 'var(--mono)', fontSize: '0.72rem',
-          color: 'var(--muted)', whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-        }}>{toolInput}</pre>
-      ) : null;
-    }
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {Object.entries(parsedInput).map(([key, val]) => (
-          <div key={key} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-            <span style={{
-              fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--teal)',
-              opacity: 0.7, flexShrink: 0, minWidth: 60,
-            }}>{key}:</span>
-            <span style={{
-              fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--muted)',
-              whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 200, overflowY: 'auto',
-            }}>{typeof val === 'string' ? val : JSON.stringify(val, null, 2)}</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const summary = getSummary();
-  const resultPreview = result ? (result.length > 120 ? result.substring(0, 120) + '…' : result) : '';
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'flex-start', margin: '2px 0' }}>
+    <div style={{
+      display: 'flex',
+      justifyContent: 'flex-start',
+      margin: '2px 0',
+    }}>
       <div
-        onClick={() => !isRunning && setExpanded(!expanded)}
+        onClick={() => setExpanded(!expanded)}
         style={{
-          maxWidth: '85%', minWidth: 200, padding: '8px 12px', borderRadius: 10,
-          background: isError ? 'rgba(239,68,68,0.06)' : 'rgba(45,212,191,0.04)',
-          border: `1px solid ${isError ? 'rgba(239,68,68,0.15)' : 'rgba(45,212,191,0.1)'}`,
-          cursor: isRunning ? 'default' : 'pointer',
-          transition: 'all 0.15s ease', fontSize: '0.8rem',
-          color: 'var(--muted)', userSelect: 'none',
+          maxWidth: '80%',
+          padding: '8px 12px',
+          borderRadius: 12,
+          background: isError ? 'rgba(239,68,68,0.08)' : 'rgba(45,212,191,0.05)',
+          border: `1px solid ${isError ? 'rgba(239,68,68,0.2)' : 'rgba(45,212,191,0.12)'}`,
+          cursor: 'pointer',
+          transition: 'all 0.15s ease',
+          fontSize: '0.8rem',
+          color: 'var(--muted)',
+          userSelect: 'none',
         }}
       >
-        {/* Header row — always visible */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Header row */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+        }}>
           {isRunning ? (
             <span style={{
-              display: 'inline-block', width: 12, height: 12,
-              border: '2px solid var(--teal)', borderTopColor: 'transparent',
-              borderRadius: '50%', animation: 'spin 0.8s linear infinite', flexShrink: 0,
+              display: 'inline-block',
+              width: 12,
+              height: 12,
+              border: '2px solid var(--teal)',
+              borderTopColor: 'transparent',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+              flexShrink: 0,
             }} />
           ) : (
-            <span style={{
-              fontSize: '0.72rem', flexShrink: 0,
-              color: expanded ? 'var(--teal)' : 'var(--muted)',
-              opacity: 0.6, width: 12, textAlign: 'center',
-            }}>
-              {expanded ? '▾' : '▸'}
-            </span>
+            <span style={{ fontSize: '0.85rem' }}>{isError ? '❌' : '✓'}</span>
           )}
           <span style={{
-            fontFamily: 'var(--mono)', fontSize: '0.78rem',
-            color: isRunning ? 'var(--teal)' : (isError ? '#ef4444' : 'var(--foreground)'),
-            fontWeight: 600, flexShrink: 0,
+            fontFamily: 'var(--mono)',
+            fontSize: '0.78rem',
+            color: isRunning ? 'var(--teal)' : (isError ? '#ef4444' : 'var(--muted)'),
+            fontWeight: 500,
           }}>
             {toolName}
           </span>
-          {summary && (
+          {!isRunning && (
             <span style={{
-              fontFamily: 'var(--mono)', fontSize: '0.72rem', color: 'var(--muted)',
-              opacity: 0.7, overflow: 'hidden', textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap', flex: 1, minWidth: 0,
+              fontSize: '0.7rem',
+              color: 'var(--muted)',
+              opacity: 0.6,
+              marginLeft: 'auto',
+              paddingLeft: 8,
             }}>
-              {summary}
+              {expanded ? '▼' : '▶'}
             </span>
-          )}
-          {!isRunning && !expanded && isError && (
-            <span style={{ fontSize: '0.72rem', flexShrink: 0 }}>❌</span>
           )}
         </div>
 
-        {/* Expanded content — full input params + result */}
+        {/* Input preview (always shown when running) */}
+        {isRunning && inputPreview && (
+          <div style={{
+            marginTop: 4,
+            fontFamily: 'var(--mono)',
+            fontSize: '0.72rem',
+            color: 'var(--muted)',
+            opacity: 0.7,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            maxWidth: 400,
+          }}>
+            {inputPreview}
+          </div>
+        )}
+
+        {/* Expanded content */}
         {expanded && !isRunning && (
           <div style={{ marginTop: 8 }}>
             {toolInput && (
               <div style={{
-                padding: '8px 10px', background: 'rgba(0,0,0,0.2)',
-                borderRadius: 6, marginBottom: result ? 6 : 0,
+                padding: '6px 8px',
+                background: 'rgba(0,0,0,0.2)',
+                borderRadius: 6,
+                fontFamily: 'var(--mono)',
+                fontSize: '0.72rem',
+                color: 'var(--muted)',
+                maxHeight: 120,
+                overflowY: 'auto',
+                marginBottom: result ? 6 : 0,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
               }}>
-                <div style={{
-                  fontSize: '0.65rem', color: 'var(--muted)', opacity: 0.5,
-                  marginBottom: 4, fontFamily: 'var(--mono)',
-                  textTransform: 'uppercase', letterSpacing: '0.05em',
-                }}>Input</div>
-                {renderInputParams()}
+                {toolInput}
               </div>
             )}
             {result && (
               <div style={{
-                padding: '8px 10px',
+                padding: '6px 8px',
                 background: isError ? 'rgba(239,68,68,0.05)' : 'rgba(45,212,191,0.03)',
                 borderRadius: 6,
+                fontFamily: 'var(--mono)',
+                fontSize: '0.72rem',
+                color: isError ? '#ef4444' : 'var(--muted)',
+                maxHeight: 150,
+                overflowY: 'auto',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
               }}>
-                <div style={{
-                  fontSize: '0.65rem', color: isError ? '#ef4444' : 'var(--muted)',
-                  opacity: 0.5, marginBottom: 4, fontFamily: 'var(--mono)',
-                  textTransform: 'uppercase', letterSpacing: '0.05em',
-                }}>{isError ? 'Error' : 'Output'}</div>
-                <pre style={{
-                  margin: 0, fontFamily: 'var(--mono)', fontSize: '0.72rem',
-                  color: isError ? '#ef4444' : 'var(--muted)',
-                  maxHeight: 300, overflowY: 'auto',
-                  whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-                }}>{result}</pre>
+                {result}
               </div>
             )}
           </div>
         )}
-
-        {/* Collapsed result preview for completed tool calls */}
-        {!expanded && !isRunning && resultPreview && (
-          <div style={{
-            marginTop: 4, fontFamily: 'var(--mono)', fontSize: '0.68rem',
-            color: isError ? 'rgba(239,68,68,0.6)' : 'var(--muted)',
-            opacity: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-          }}>
-            → {resultPreview}
-          </div>
-        )}
       </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Tool Config Panel — toggle individual tools on/off
-// ---------------------------------------------------------------------------
-
-function ToolConfigPanel({ sessionKey, isOpen, onClose }) {
-  const [tools, setTools] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!isOpen || !sessionKey) return;
-    setLoading(true);
-    fetch(`/api/chat/sessions/${sessionKey}/tools`)
-      .then(r => r.json())
-      .then(data => {
-        setTools(data.tools || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [isOpen, sessionKey]);
-
-  const toggleTool = async (toolName) => {
-    const updated = tools.map(t =>
-      t.name === toolName ? { ...t, enabled: !t.enabled } : t
-    );
-    setTools(updated);
-
-    setSaving(true);
-    const disabledTools = updated.filter(t => !t.enabled).map(t => t.name);
-    try {
-      await fetch(`/api/chat/sessions/${sessionKey}/tools`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ disabled_tools: disabledTools }),
-      });
-    } catch (err) {
-      console.error('Failed to save tool config:', err);
-    }
-    setSaving(false);
-  };
-
-  if (!isOpen) return null;
-
-  const enabledCount = tools.filter(t => t.enabled).length;
-
-  return (
-    <div style={{
-      position: 'absolute', top: 52, right: 16, width: 300,
-      maxHeight: 'calc(100vh - 80px)', background: 'var(--card)',
-      border: '1px solid var(--border)', borderRadius: 12,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 100,
-      overflow: 'hidden', display: 'flex', flexDirection: 'column',
-    }}>
-      <div style={{
-        padding: '12px 16px', borderBottom: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--foreground)' }}>
-          Tools {!loading && `(${enabledCount}/${tools.length})`}
-        </span>
-        <button onClick={onClose} style={{
-          background: 'none', border: 'none', color: 'var(--muted)',
-          cursor: 'pointer', fontSize: '1rem', padding: '2px 6px',
-        }}>×</button>
-      </div>
-
-      <div style={{ padding: '8px 0', overflowY: 'auto', flex: 1 }}>
-        {loading ? (
-          <div style={{ padding: 16, textAlign: 'center', color: 'var(--muted)', fontSize: '0.8rem' }}>
-            Loading tools…
-          </div>
-        ) : tools.length === 0 ? (
-          <div style={{ padding: 16, textAlign: 'center', color: 'var(--muted)', fontSize: '0.8rem' }}>
-            No tools available
-          </div>
-        ) : (
-          tools.map(tool => (
-            <div
-              key={tool.name}
-              onClick={() => toggleTool(tool.name)}
-              style={{
-                padding: '8px 16px', display: 'flex', alignItems: 'center',
-                gap: 10, cursor: 'pointer', transition: 'background 0.1s',
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
-              <div style={{
-                width: 36, height: 20, borderRadius: 10,
-                background: tool.enabled ? 'var(--teal)' : 'rgba(255,255,255,0.1)',
-                position: 'relative', transition: 'background 0.2s', flexShrink: 0,
-              }}>
-                <div style={{
-                  width: 16, height: 16, borderRadius: '50%', background: 'white',
-                  position: 'absolute', top: 2, left: tool.enabled ? 18 : 2,
-                  transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontFamily: 'var(--mono)', fontSize: '0.78rem',
-                  color: tool.enabled ? 'var(--foreground)' : 'var(--muted)', fontWeight: 500,
-                }}>{tool.name}</div>
-                <div style={{
-                  fontSize: '0.68rem', color: 'var(--muted)', opacity: 0.6,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>{tool.description}</div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      {saving && (
-        <div style={{
-          padding: '8px 16px', borderTop: '1px solid var(--border)',
-          fontSize: '0.7rem', color: 'var(--teal)', textAlign: 'center',
-        }}>Saving…</div>
-      )}
     </div>
   );
 }
@@ -539,7 +377,7 @@ function formatSessionTime(timestamp) {
 // Main Chat Interface — now with tool step streaming
 // ---------------------------------------------------------------------------
 
-function ChatInterface({ session, onSendMessage, processing, streamEvents, showTools, onToggleTools, toolConfigOpen, onToggleToolConfig }) {
+function ChatInterface({ session, onSendMessage, processing, streamEvents, showTools, onToggleTools }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -571,7 +409,6 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
     if (!text || processing) return;
     
     setInput('');
-    if (inputRef.current) inputRef.current.style.height = 'auto';
     onSendMessage(text);
   };
 
@@ -709,56 +546,27 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
           </div>
         </div>
 
-        {/* Tool controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
-          {/* Show/hide tool calls toggle */}
-          <button
-            onClick={onToggleTools}
-            style={{
-              padding: '6px 12px',
-              borderRadius: 8,
-              border: `1px solid ${showTools ? 'var(--teal)' : 'var(--border)'}`,
-              background: showTools ? 'rgba(45,212,191,0.1)' : 'transparent',
-              color: showTools ? 'var(--teal)' : 'var(--muted)',
-              cursor: 'pointer',
-              fontSize: '0.78rem',
-              fontFamily: 'var(--mono)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              transition: 'all 0.15s ease',
-            }}
-            title={showTools ? 'Hide tool calls' : 'Show tool calls'}
-          >
-            🔧 {showTools ? 'Visible' : 'Hidden'}
-          </button>
-
-          {/* Tool config gear button */}
-          <button
-            onClick={onToggleToolConfig}
-            style={{
-              padding: '6px 8px',
-              borderRadius: 8,
-              border: `1px solid ${toolConfigOpen ? 'var(--teal)' : 'var(--border)'}`,
-              background: toolConfigOpen ? 'rgba(45,212,191,0.1)' : 'transparent',
-              color: toolConfigOpen ? 'var(--teal)' : 'var(--muted)',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              transition: 'all 0.15s ease',
-              lineHeight: 1,
-            }}
-            title="Configure available tools"
-          >
-            ⚙️
-          </button>
-
-          {/* Tool config panel */}
-          <ToolConfigPanel
-            sessionKey={session?.key}
-            isOpen={toolConfigOpen}
-            onClose={onToggleToolConfig}
-          />
-        </div>
+        {/* Tool visibility toggle */}
+        <button
+          onClick={onToggleTools}
+          style={{
+            padding: '6px 12px',
+            borderRadius: 8,
+            border: `1px solid ${showTools ? 'var(--teal)' : 'var(--border)'}`,
+            background: showTools ? 'rgba(45,212,191,0.1)' : 'transparent',
+            color: showTools ? 'var(--teal)' : 'var(--muted)',
+            cursor: 'pointer',
+            fontSize: '0.78rem',
+            fontFamily: 'var(--mono)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            transition: 'all 0.15s ease',
+          }}
+          title={showTools ? 'Hide tool calls' : 'Show tool calls'}
+        >
+          🔧 {showTools ? 'Tools on' : 'Tools off'}
+        </button>
       </div>
 
       {/* Messages */}
@@ -861,32 +669,10 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
             ref={inputRef}
             type="text"
             value={input}
-            onChange={e => {
-              setInput(e.target.value);
-              const el = e.target;
-              el.style.height = 'auto';
-              el.style.height = Math.min(el.scrollHeight, 200) + 'px';
-            }}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-              if (e.key === 'Tab' && e.shiftKey) {
-                e.preventDefault();
-                const start = e.target.selectionStart;
-                const end = e.target.selectionEnd;
-                const val = input.slice(0, start) + '\n' + input.slice(end);
-                setInput(val);
-                requestAnimationFrame(() => {
-                  e.target.selectionStart = e.target.selectionEnd = start + 1;
-                  e.target.style.height = 'auto';
-                  e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-                });
-              }
-            }}
-            placeholder="Message Lobs..."
-            rows={1}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
+            placeholder={processing ? 'Lobs is working...' : 'Type a message...'}
+            disabled={processing}
             style={{
               flex: 1,
               padding: '12px 16px',
@@ -896,10 +682,6 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
               color: 'var(--text)',
               fontSize: '0.9rem',
               outline: 'none',
-              fontFamily: 'inherit',
-              minHeight: 44,
-              maxHeight: 200,
-              overflow: 'auto',
               transition: 'border 0.2s',
             }}
             onFocus={e => e.target.style.borderColor = 'var(--teal)'}
@@ -940,7 +722,6 @@ export default function ChatPage() {
   const [processingKeys, setProcessingKeys] = useState(new Set());
   const [error, setError] = useState(null);
   const [showTools, setShowTools] = useState(true);
-  const [toolConfigOpen, setToolConfigOpen] = useState(false);
   
   // Stream events — live tool calls from SSE
   const [streamEvents, setStreamEvents] = useState([]);
@@ -1335,8 +1116,6 @@ export default function ChatPage() {
         streamEvents={streamEvents}
         showTools={showTools}
         onToggleTools={() => setShowTools(prev => !prev)}
-        toolConfigOpen={toolConfigOpen}
-        onToggleToolConfig={() => setToolConfigOpen(prev => !prev)}
       />
 
       {/* CSS animations */}
