@@ -205,6 +205,16 @@ export default function Workers() {
                       <span style={{ fontSize: '13px', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
                         {run.model}
                       </span>
+                      {!run.succeeded && (run.failureType || run.failure_type) && (
+                        <span style={{
+                          fontSize: '11px', padding: '2px 6px', borderRadius: 3,
+                          background: (run.failureType || run.failure_type) === 'infra' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)',
+                          color: (run.failureType || run.failure_type) === 'infra' ? '#f59e0b' : '#ef4444',
+                          fontWeight: 600,
+                        }}>
+                          {run.failureType || run.failure_type}
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--muted)', fontFamily: 'var(--mono)', textAlign: 'right' }}>
                       {startTime.toLocaleDateString()} {startTime.toLocaleTimeString()}

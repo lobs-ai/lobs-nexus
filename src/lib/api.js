@@ -52,6 +52,8 @@ export const api = {
   unarchiveProject: (id) => req(`/api/projects/${id}/unarchive`, { method: 'POST' }),
   projectBraindump: (id, text) => req(`/api/projects/${id}/braindump`, { method: 'POST', body: { text } }),
 
+  taskRuns: (id, signal) => req(`/api/tasks/${id}/runs`, { signal }).then(d => d?.runs || []),
+
   agents: (signal) => req('/api/agents', { signal }),
   workerStatus: (signal) => req('/api/worker/status', { signal }),
   workerHistory: async (limit = 50, signal) => {
@@ -133,6 +135,18 @@ export const api = {
 
   // Daily Brief
   dailyBrief: (signal) => reqSafe('/api/daily-brief', { signal }, null),
+
+  // Training Data
+  trainingStats: (signal) => reqSafe('/api/training/stats', { signal }, { total: 0, byType: {}, reviewed: 0, pendingReview: 0 }),
+  trainingExamples: (taskType, signal) => {
+    const q = taskType ? '?task_type=' + encodeURIComponent(taskType) : '';
+    return reqSafe('/api/training/examples' + q, { signal }, { examples: [] });
+  },
+  rateTrainingExample: (id, rating, correction) => req(`/api/training/examples/${id}`, {
+    method: 'PATCH',
+    body: { quality_rating: rating, correction },
+  }),
+  exportTrainingUrl: (taskType) => '/api/training/export?task_type=' + encodeURIComponent(taskType) + '&format=jsonl',
 
   // Micro-Learning
   learningTopics: (signal) => reqSafe('/api/learning/topics', { signal }, []),

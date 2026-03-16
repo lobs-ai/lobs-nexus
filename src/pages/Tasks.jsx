@@ -455,6 +455,8 @@ function BrainDumpModal({ open, onClose, projects, onConfirmed }) {
 function TaskDetailModal({ selected, onClose }) {
   const [blockers, setBlockers] = useState([]);
   const [loadingBlockers, setLoadingBlockers] = useState(false);
+  const [runs, setRuns] = useState([]);
+  const [loadingRuns, setLoadingRuns] = useState(false);
 
   useEffect(() => {
     if (!selected) { setBlockers([]); return; }
@@ -473,6 +475,15 @@ function TaskDetailModal({ selected, onClose }) {
       })
       .catch(() => setBlockers([]))
       .finally(() => setLoadingBlockers(false));
+  }, [selected?.id]);
+
+  useEffect(() => {
+    if (!selected) { setRuns([]); return; }
+    setLoadingRuns(true);
+    api.taskRuns(selected.id)
+      .then(r => setRuns(Array.isArray(r) ? r : []))
+      .catch(() => setRuns([]))
+      .finally(() => setLoadingRuns(false));
   }, [selected?.id]);
 
   if (!selected) return null;
@@ -564,6 +575,62 @@ function TaskDetailModal({ selected, onClose }) {
             </div>
           );
         })()}
+
+        {/* Run History */}
+        {(runs.length > 0 || loadingRuns) && (
+          <div style={{ background: 'rgba(11,15,30,0.6)', borderRadius: 8, padding: 16 }}>
+            <div style={{ color: 'var(--muted)', fontSize: '0.78rem', marginBottom: 10 }}>
+              Run History {runs.length > 0 && <span style={{ color: 'var(--faint)' }}>({runs.length} run{runs.length !== 1 ? 's' : ''})</span>}
+            </div>
+            {loadingRuns ? (
+              <div style={{ color: 'var(--faint)', fontSize: '0.8rem' }}>Loading runs…</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {runs.map((run, i) => {
+                  const succeeded = run.succeeded ?? run.succeeded;
+                  const failType = run.failureType ?? run.failure_type;
+                  const duration = run.endedAt && run.startedAt
+                    ? Math.round((new Date(run.endedAt) - new Date(run.startedAt)) / 1000)
+                    : null;
+                  const startTime = run.startedAt ? new Date(run.startedAt).toLocaleString() : '—';
+                  return (
+                    <div key={run.id || i} style={{
+                      padding: '8px 10px', borderRadius: 6,
+                      background: succeeded ? 'rgba(20,184,166,0.06)' : 'rgba(239,68,68,0.06)',
+                      border: `1px solid ${succeeded ? 'rgba(20,184,166,0.2)' : 'rgba(239,68,68,0.2)'}`,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem' }}>
+                        <span style={{ color: succeeded ? 'var(--teal)' : '#ef4444', fontWeight: 600 }}>
+                          {succeeded ? '✓' : '✕'} Attempt #{runs.length - i}
+                        </span>
+                        {failType && (
+                          <span style={{
+                            padding: '1px 5px', borderRadius: 3, fontSize: '0.7rem',
+                            background: failType === 'infra' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)',
+                            color: failType === 'infra' ? '#f59e0b' : '#ef4444',
+                          }}>
+                            {failType}
+                          </span>
+                        )}
+                        <span style={{ color: 'var(--faint)', marginLeft: 'auto', fontSize: '0.72rem' }}>
+                          {startTime}{duration != null ? ` · ${duration}s` : ''}
+                        </span>
+                      </div>
+                      {run.summary && (
+                        <div style={{
+                          marginTop: 4, fontSize: '0.75rem', color: 'var(--muted)',
+                          whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 60, overflow: 'auto',
+                        }}>
+                          {run.summary.slice(0, 200)}{run.summary.length > 200 ? '…' : ''}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {selected.notes && (
           <div style={{ background: 'rgba(11,15,30,0.6)', borderRadius: 8, padding: 16 }}>
