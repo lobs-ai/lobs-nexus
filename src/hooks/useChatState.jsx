@@ -20,7 +20,36 @@ export function ChatProvider({ children }) {
     if (!loaded) {
       loadSessions();
     }
+
+    // Poll session list every 5s for unread counts + processing status
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/chat/sessions');
+        const data = await res.json();
+        const sessionList = data.sessions || [];
+        setSessions(sessionList);
+
+        // Sync processing status from backend for all sessions
+        setProcessingKeys(prev => {
+          const next = new Set(prev);
+          for (const s of sessionList) {
+            if (s.processing) {
+              next.add(s.key);
+            } else {
+              // Only clear if not the current SSE-connected session
+              // (SSE is more real-time; don't race with it)
+              next.delete(s.key);
+            }
+          }
+          return next;
+        });
+      } catch (err) {
+        // Silently ignore polling errors
+      }
+    }, 5000);
+
     return () => {
+      clearInterval(interval);
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
       }
@@ -114,12 +143,9 @@ export function ChatProvider({ children }) {
         }
 
         if (data.type === 'assistant_reply') {
+          // Don't clear processingKeys here — agent may continue with tool calls.
+          // Only 'done' and 'error' truly mean processing is finished.
           setStreamEvents([]);
-          setProcessingKeys(prev => {
-            const next = new Set(prev);
-            next.delete(sessionKey);
-            return next;
-          });
           reloadMessages(sessionKey);
           // Refresh sessions after a delay to pick up auto-generated titles
           setTimeout(() => loadSessions(), 4000);
