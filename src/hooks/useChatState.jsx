@@ -14,6 +14,10 @@ export function ChatProvider({ children }) {
 
   const eventSourceRef = useRef(null);
   const pollersRef = useRef(new Map());
+  const currentSessionRef = useRef(null);
+
+  // Keep ref in sync for polling closure
+  useEffect(() => { currentSessionRef.current = currentSession; }, [currentSession]);
 
   // Load sessions on mount (only once)
   useEffect(() => {
@@ -30,14 +34,16 @@ export function ChatProvider({ children }) {
         setSessions(sessionList);
 
         // Sync processing status from backend for all sessions
+        // Don't clear the SSE-connected session — SSE is more real-time
+        const sseKey = currentSessionRef.current?.key;
         setProcessingKeys(prev => {
           const next = new Set(prev);
           for (const s of sessionList) {
             if (s.processing) {
               next.add(s.key);
-            } else {
-              // Only clear if not the current SSE-connected session
-              // (SSE is more real-time; don't race with it)
+            } else if (s.key !== sseKey) {
+              // Only clear non-SSE sessions via polling
+              // SSE 'done' event handles the active session
               next.delete(s.key);
             }
           }

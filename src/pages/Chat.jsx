@@ -483,23 +483,14 @@ function SessionsSidebar({ sessions, currentSession, onSelectSession, onNewSessi
                         flexShrink: 0,
                       }} />
                     )}
-                    {session.unreadCount > 0 && session.id !== currentSession?.id && (
+                    {session.unreadCount > 0 && session.id !== currentSession?.id && !isProcessing && (
                       <span style={{
-                        minWidth: 18,
-                        height: 18,
-                        borderRadius: 9,
-                        background: 'var(--teal)',
-                        color: '#000',
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '0 5px',
+                        width: 8, height: 8,
+                        borderRadius: '50%',
+                        background: '#3b82f6',
+                        display: 'inline-block',
                         flexShrink: 0,
-                      }}>
-                        {session.unreadCount > 99 ? '99+' : session.unreadCount}
-                      </span>
+                      }} />
                     )}
                   </div>
                   <div style={{
