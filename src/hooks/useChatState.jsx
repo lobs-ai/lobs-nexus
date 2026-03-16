@@ -1,0 +1,384 @@
+import { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
+
+const ChatContext = createContext(null);
+
+export function ChatProvider({ children }) {
+  const [sessions, setSessions] = useState([]);
+  const [currentSession, setCurrentSession] = useState(null);
+  const [processingKeys, setProcessingKeys] = useState(new Set());
+  const [error, setError] = useState(null);
+  const [showTools, setShowTools] = useState(true);
+  const [toolConfigOpen, setToolConfigOpen] = useState(false);
+  const [streamEvents, setStreamEvents] = useState([]);
+  const [loaded, setLoaded] = useState(false);
+
+  const eventSourceRef = useRef(null);
+  const pollersRef = useRef(new Map());
+
+  // Load sessions on mount (only once)
+  useEffect(() => {
+    if (!loaded) {
+      loadSessions();
+    }
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+      }
+      for (const controller of pollersRef.current.values()) {
+        controller.abort();
+      }
+    };
+  }, []);
+
+  const loadSessions = async () => {
+    try {
+      const res = await fetch('/api/chat/sessions');
+      const data = await res.json();
+      const sessionList = data.sessions || [];
+      setSessions(sessionList);
+      setLoaded(true);
+
+      // Auto-select first session only if none selected
+      if (sessionList.length > 0) {
+        setCurrentSession(prev => {
+          if (prev) return prev;
+          // Schedule auto-select after state update
+          setTimeout(() => selectSession(sessionList[0]), 0);
+          return null;
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load sessions:', err);
+      setError('Failed to load chat sessions');
+    }
+  };
+
+  // Connect SSE stream for a session
+  const connectStream = useCallback((sessionKey) => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+
+    const es = new EventSource(`/api/chat/sessions/${sessionKey}/stream`);
+    eventSourceRef.current = es;
+
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'connected') return;
+
+        if (data.type === 'thinking') {
+          setProcessingKeys(prev => {
+            const next = new Set(prev);
+            next.add(sessionKey);
+            return next;
+          });
+          setStreamEvents(prev => {
+            const filtered = prev.filter(e => e.type !== 'thinking');
+            return [...filtered, data];
+          });
+          return;
+        }
+
+        if (data.type === 'tool_start') {
+          setProcessingKeys(prev => {
+            const next = new Set(prev);
+            next.add(sessionKey);
+            return next;
+          });
+          setStreamEvents(prev => {
+            const filtered = prev.filter(e => e.type !== 'thinking');
+            return [...filtered, data];
+          });
+          return;
+        }
+
+        if (data.type === 'tool_result') {
+          setStreamEvents(prev => {
+            return prev.map(e => {
+              if (e.type === 'tool_start' && e.toolUseId === data.toolUseId) {
+                return { ...e, type: 'tool_result_done', result: data.result, isError: data.isError };
+              }
+              return e;
+            });
+          });
+          return;
+        }
+
+        if (data.type === 'assistant_reply') {
+          setStreamEvents([]);
+          setProcessingKeys(prev => {
+            const next = new Set(prev);
+            next.delete(sessionKey);
+            return next;
+          });
+          reloadMessages(sessionKey);
+          return;
+        }
+
+        if (data.type === 'done') {
+          setStreamEvents([]);
+          setProcessingKeys(prev => {
+            const next = new Set(prev);
+            next.delete(sessionKey);
+            return next;
+          });
+          reloadMessages(sessionKey);
+          return;
+        }
+
+        if (data.type === 'error') {
+          setStreamEvents([]);
+          setProcessingKeys(prev => {
+            const next = new Set(prev);
+            next.delete(sessionKey);
+            return next;
+          });
+          reloadMessages(sessionKey);
+          return;
+        }
+      } catch (err) {
+        console.error('SSE parse error:', err);
+      }
+    };
+
+    es.onerror = () => {
+      console.warn('SSE connection error, will auto-reconnect');
+    };
+
+    return es;
+  }, []);
+
+  const reloadMessages = async (sessionKey) => {
+    try {
+      const res = await fetch(`/api/chat/sessions/${sessionKey}/messages`);
+      const data = await res.json();
+
+      setCurrentSession(prev => {
+        if (!prev || prev.key !== sessionKey) return prev;
+        return {
+          ...prev,
+          messages: (data.messages || []).map(m => ({
+            role: m.role,
+            content: m.content,
+            timestamp: m.timestamp,
+            metadata: m.metadata,
+          })),
+        };
+      });
+
+      // Mark as read since user is viewing this session
+      await fetch(`/api/chat/sessions/${sessionKey}/read`, { method: 'POST' });
+      setSessions(prev => prev.map(s =>
+        s.key === sessionKey ? { ...s, unreadCount: 0 } : s
+      ));
+    } catch (err) {
+      console.error('Failed to reload messages:', err);
+    }
+  };
+
+  const selectSession = async (session) => {
+    setCurrentSession(session);
+    setStreamEvents([]);
+
+    // Load messages
+    try {
+      const res = await fetch(`/api/chat/sessions/${session.key}/messages`);
+      const data = await res.json();
+
+      setCurrentSession(prev => ({
+        ...prev,
+        messages: (data.messages || []).map(m => ({
+          role: m.role,
+          content: m.content,
+          timestamp: m.timestamp,
+          metadata: m.metadata,
+        })),
+      }));
+    } catch (err) {
+      console.error('Failed to load messages:', err);
+    }
+
+    // Mark session as read and clear unread badge
+    try {
+      await fetch(`/api/chat/sessions/${session.key}/read`, { method: 'POST' });
+      setSessions(prev => prev.map(s =>
+        s.key === session.key ? { ...s, unreadCount: 0 } : s
+      ));
+    } catch (err) {
+      console.error('Failed to mark session as read:', err);
+    }
+
+    // Connect SSE stream
+    connectStream(session.key);
+  };
+
+  const createSession = async () => {
+    try {
+      const res = await fetch('/api/chat/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: `Chat ${sessions.length + 1}` }),
+      });
+      const data = await res.json();
+
+      const newSession = {
+        id: data.id,
+        key: data.key,
+        title: data.title || `Chat ${sessions.length + 1}`,
+        createdAt: data.createdAt,
+        messages: [],
+      };
+
+      setSessions(prev => [newSession, ...prev]);
+      selectSession(newSession);
+    } catch (err) {
+      console.error('Failed to create session:', err);
+      setError('Failed to create new chat');
+    }
+  };
+
+  const deleteSession = async (sessionId) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    if (currentSession?.id === sessionId && eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+
+    try {
+      await fetch(`/api/chat/sessions/${session.key}`, { method: 'DELETE' });
+
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+      setProcessingKeys(prev => {
+        const next = new Set(prev);
+        next.delete(session.key);
+        return next;
+      });
+
+      if (currentSession?.id === sessionId) {
+        setCurrentSession(null);
+        setStreamEvents([]);
+      }
+    } catch (err) {
+      console.error('Failed to delete session:', err);
+    }
+  };
+
+  const sendMessage = async (content) => {
+    if (!currentSession) return;
+
+    const userMsg = {
+      role: 'user',
+      content,
+      timestamp: new Date().toISOString(),
+    };
+
+    setCurrentSession(prev => ({
+      ...prev,
+      messages: [...(prev.messages || []), userMsg],
+    }));
+
+    setProcessingKeys(prev => {
+      const next = new Set(prev);
+      next.add(currentSession.key);
+      return next;
+    });
+
+    setStreamEvents([]);
+
+    try {
+      const res = await fetch(`/api/chat/sessions/${currentSession.key}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Send failed: ${res.status}`);
+      }
+
+      startFallbackPoller(currentSession.key);
+    } catch (err) {
+      console.error('Failed to send message:', err);
+      setProcessingKeys(prev => {
+        const next = new Set(prev);
+        next.delete(currentSession.key);
+        return next;
+      });
+    }
+  };
+
+  const startFallbackPoller = (sessionKey) => {
+    const existing = pollersRef.current.get(sessionKey);
+    if (existing) existing.abort();
+
+    const controller = new AbortController();
+    pollersRef.current.set(sessionKey, controller);
+
+    const poll = async () => {
+      let attempts = 0;
+      const maxAttempts = 1800;
+
+      while (!controller.signal.aborted && attempts < maxAttempts) {
+        attempts++;
+        await new Promise(r => setTimeout(r, 2000));
+
+        try {
+          const res = await fetch(`/api/chat/sessions/${sessionKey}/status`, {
+            signal: controller.signal,
+          });
+          const data = await res.json();
+
+          if (!data.processing) {
+            setProcessingKeys(prev => {
+              if (!prev.has(sessionKey)) return prev;
+              const next = new Set(prev);
+              next.delete(sessionKey);
+              return next;
+            });
+            reloadMessages(sessionKey);
+            setStreamEvents([]);
+            break;
+          }
+        } catch (err) {
+          if (controller.signal.aborted) break;
+          console.warn('Fallback poll error:', err);
+        }
+      }
+
+      pollersRef.current.delete(sessionKey);
+    };
+
+    poll();
+  };
+
+  const value = {
+    sessions,
+    currentSession,
+    processingKeys,
+    error,
+    showTools,
+    toolConfigOpen,
+    streamEvents,
+    setError,
+    setShowTools,
+    setToolConfigOpen,
+    selectSession,
+    createSession,
+    deleteSession,
+    sendMessage,
+    loadSessions,
+  };
+
+  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
+}
+
+export function useChatState() {
+  const ctx = useContext(ChatContext);
+  if (!ctx) throw new Error('useChatState must be used inside ChatProvider');
+  return ctx;
+}

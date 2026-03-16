@@ -22,6 +22,7 @@ import MicroLearning from './pages/MicroLearning';
 import GitHubFeed from './pages/GitHubFeed';
 import Workers from './pages/Workers';
 import Insights from './pages/Insights';
+import { ChatProvider } from './hooks/useChatState';
 import { api } from './lib/api';
 
 export default function App() {
@@ -50,31 +51,33 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<Layout systemStatus={systemStatus} theme={theme} onThemeToggle={toggleTheme} />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/team" element={<Team />} />
-          <Route path="/scheduler" element={<Scheduler />} />
-          <Route path="/explore" element={<Explore />} />
-          <Route path="/inbox" element={<Inbox />} />
-          <Route path="/reflections" element={<Reflections />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/knowledge" element={<Knowledge />} />
-          <Route path="/memory" element={<Memory />} />
-          <Route path="/usage" element={<Usage />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/meetings" element={<Meetings />} />
-          <Route path="/youtube" element={<YouTube />} />
-          <Route path="/learning" element={<LearningInsights />} />
-          <Route path="/daily-brief" element={<DailyBrief />} />
-          <Route path="/micro-learning" element={<MicroLearning />} />
-          <Route path="/github" element={<GitHubFeed />} />
-          <Route path="/workers" element={<Workers />} />
-          <Route path="/insights" element={<Insights />} />
-        </Route>
-      </Routes>
+      <ChatProvider>
+        <Routes>
+          <Route element={<Layout systemStatus={systemStatus} theme={theme} onThemeToggle={toggleTheme} />}>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/team" element={<Team />} />
+            <Route path="/scheduler" element={<Scheduler />} />
+            <Route path="/explore" element={<Explore />} />
+            <Route path="/inbox" element={<Inbox />} />
+            <Route path="/reflections" element={<Reflections />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/knowledge" element={<Knowledge />} />
+            <Route path="/memory" element={<Memory />} />
+            <Route path="/usage" element={<Usage />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/meetings" element={<Meetings />} />
+            <Route path="/youtube" element={<YouTube />} />
+            <Route path="/learning" element={<LearningInsights />} />
+            <Route path="/daily-brief" element={<DailyBrief />} />
+            <Route path="/micro-learning" element={<MicroLearning />} />
+            <Route path="/github" element={<GitHubFeed />} />
+            <Route path="/workers" element={<Workers />} />
+            <Route path="/insights" element={<Insights />} />
+          </Route>
+        </Routes>
+      </ChatProvider>
     </BrowserRouter>
   );
 }
