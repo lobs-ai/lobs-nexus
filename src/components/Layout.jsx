@@ -28,7 +28,7 @@ export default function Layout({ systemStatus, theme, onThemeToggle }) {
   }, []);
 
   return (
-    <div data-theme={theme} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', minHeight: '100vh', background: 'var(--navy)' }}>
+    <div data-theme={theme} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100vh', background: 'var(--navy)', overflow: 'hidden' }}>
       <NoiseOverlay />
       <Sidebar
         collapsed={isMobile ? true : collapsed}
@@ -57,7 +57,7 @@ export default function Layout({ systemStatus, theme, onThemeToggle }) {
           </svg>
         </button>
       )}
-      <main className={`main-content ${!isMobile && collapsed ? 'collapsed' : ''}`} style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+      <main className={`main-content ${!isMobile && collapsed ? 'collapsed' : ''}`} style={{ flex: 1, position: 'relative', overflow: 'hidden', height: '100vh', display: 'flex', flexDirection: 'column' }}>
         <Outlet />
       </main>
       <Toast />
