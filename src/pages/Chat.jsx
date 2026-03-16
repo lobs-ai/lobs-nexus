@@ -460,7 +460,14 @@ function SessionsSidebar({ sessions, currentSession, onSelectSession, onNewSessi
                     alignItems: 'center',
                     gap: 6,
                   }}>
-                    {session.title}
+                    <span style={{ 
+                      overflow: 'hidden', 
+                      textOverflow: 'ellipsis',
+                      fontWeight: (session.unreadCount > 0 && session.id !== currentSession?.id) ? 600 : 500,
+                      color: (session.unreadCount > 0 && session.id !== currentSession?.id) ? 'var(--text)' : undefined,
+                    }}>
+                      {session.title}
+                    </span>
                     {isProcessing && (
                       <span style={{
                         width: 8, height: 8,
@@ -470,6 +477,24 @@ function SessionsSidebar({ sessions, currentSession, onSelectSession, onNewSessi
                         animation: 'pulse 2s infinite',
                         flexShrink: 0,
                       }} />
+                    )}
+                    {session.unreadCount > 0 && session.id !== currentSession?.id && (
+                      <span style={{
+                        minWidth: 18,
+                        height: 18,
+                        borderRadius: 9,
+                        background: 'var(--teal)',
+                        color: '#000',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0 5px',
+                        flexShrink: 0,
+                      }}>
+                        {session.unreadCount > 99 ? '99+' : session.unreadCount}
+                      </span>
                     )}
                   </div>
                   <div style={{
@@ -1107,6 +1132,12 @@ export default function ChatPage() {
           })),
         };
       });
+
+      // Mark as read since user is viewing this session
+      await fetch(`/api/chat/sessions/${sessionKey}/read`, { method: 'POST' });
+      setSessions(prev => prev.map(s => 
+        s.key === sessionKey ? { ...s, unreadCount: 0 } : s
+      ));
     } catch (err) {
       console.error('Failed to reload messages:', err);
     }
@@ -1132,6 +1163,16 @@ export default function ChatPage() {
       }));
     } catch (err) {
       console.error('Failed to load messages:', err);
+    }
+
+    // Mark session as read and clear unread badge
+    try {
+      await fetch(`/api/chat/sessions/${session.key}/read`, { method: 'POST' });
+      setSessions(prev => prev.map(s => 
+        s.key === session.key ? { ...s, unreadCount: 0 } : s
+      ));
+    } catch (err) {
+      console.error('Failed to mark session as read:', err);
     }
 
     // Connect SSE stream
