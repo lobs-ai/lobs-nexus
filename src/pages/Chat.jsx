@@ -247,7 +247,7 @@ function ToolConfigPanel({ sessionKey, isOpen, onClose }) {
   const enabledCount = tools.filter(t => t.enabled).length;
 
   return (
-    <div style={{
+    <div className="chat-tool-config-panel" style={{
       position: 'absolute', top: 52, right: 16, width: 300,
       maxHeight: 'calc(100vh - 80px)', background: 'var(--card)',
       border: '1px solid var(--border)', borderRadius: 12,
@@ -358,16 +358,20 @@ function ThinkingIndicator({ isVisible }) {
 // Chat Sessions Sidebar
 // ---------------------------------------------------------------------------
 
-function SessionsSidebar({ sessions, currentSession, onSelectSession, onNewSession, onDeleteSession, processingSet }) {
+function SessionsSidebar({ sessions, currentSession, onSelectSession, onNewSession, onDeleteSession, processingSet, mobileOpen, onClose }) {
   return (
-    <div style={{
-      width: 280,
-      background: 'var(--card)',
-      borderRight: '1px solid var(--border)',
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh',
-    }}>
+    <div
+      className={`chat-sessions-sidebar${mobileOpen ? ' mobile-open' : ''}`}
+      style={{
+        width: 280,
+        flexShrink: 0,
+        background: 'var(--card)',
+        borderRight: '1px solid var(--border)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+      }}
+    >
       {/* Header */}
       <div style={{
         padding: '16px 20px',
@@ -565,7 +569,7 @@ function formatSessionTime(timestamp) {
 // Main Chat Interface — now with tool step streaming
 // ---------------------------------------------------------------------------
 
-function ChatInterface({ session, onSendMessage, processing, streamEvents, showTools, onToggleTools, toolConfigOpen, onToggleToolConfig }) {
+function ChatInterface({ session, onSendMessage, processing, streamEvents, showTools, onToggleTools, toolConfigOpen, onToggleToolConfig, onOpenSessions }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -617,7 +621,25 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
         justifyContent: 'center',
         flexDirection: 'column',
         background: 'var(--background)',
+        position: 'relative',
       }}>
+        {/* Mobile hamburger when no session selected */}
+        <button
+          className="chat-mobile-sessions-btn"
+          onClick={onOpenSessions}
+          style={{
+            display: 'none',
+            position: 'absolute', top: 16, left: 16,
+            width: 36, height: 36,
+            background: 'var(--card)', border: '1px solid var(--border)',
+            borderRadius: 8, color: 'var(--muted)', cursor: 'pointer',
+            alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
         <div style={{ fontSize: '2rem', marginBottom: 16 }}>💬</div>
         <div style={{ fontWeight: 600, marginBottom: 8, color: 'var(--text)' }}>
           Select a chat to get started
@@ -706,32 +728,52 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0 }}>
       {/* Chat header */}
       <div style={{
-        padding: '12px 24px',
+        padding: '12px 16px',
         borderBottom: '1px solid var(--border)',
         background: 'var(--card)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        gap: 8,
+        flexShrink: 0,
       }}>
-        <div>
-          <div style={{ fontWeight: 600, color: 'var(--text)' }}>{session.title}</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 2 }}>
-            {processing ? (
-              <span style={{ color: 'var(--teal)', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{
-                  display: 'inline-block',
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  background: 'var(--teal)',
-                  animation: 'pulse 2s infinite',
-                }} />
-                Working...
-              </span>
-            ) : '● Online'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          {/* Mobile hamburger to open sessions */}
+          <button
+            className="chat-mobile-sessions-btn"
+            onClick={onOpenSessions}
+            style={{
+              display: 'none',
+              width: 32, height: 32,
+              background: 'none', border: '1px solid var(--border)',
+              borderRadius: 6, color: 'var(--muted)', cursor: 'pointer',
+              alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}
+          >
+            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <div style={{ minWidth: 0 }}>
+            <div className="chat-header-title" style={{ fontWeight: 600, color: 'var(--text)' }}>{session.title}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginTop: 2 }}>
+              {processing ? (
+                <span style={{ color: 'var(--teal)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{
+                    display: 'inline-block',
+                    width: 6,
+                    height: 6,
+                    borderRadius: '50%',
+                    background: 'var(--teal)',
+                    animation: 'pulse 2s infinite',
+                  }} />
+                  Working...
+                </span>
+              ) : '● Online'}
+            </div>
           </div>
         </div>
 
@@ -756,7 +798,7 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
             }}
             title={showTools ? 'Hide tool calls' : 'Show tool calls'}
           >
-            🔧 {showTools ? 'Visible' : 'Hidden'}
+            🔧 <span className="chat-tool-label">{showTools ? 'Visible' : 'Hidden'}</span>
           </button>
 
           {/* Tool config gear button */}
@@ -778,7 +820,15 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
             ⚙️
           </button>
 
-          {/* Tool config panel */}
+          {/* Tool config panel + backdrop */}
+          {toolConfigOpen && (
+            <div
+              onClick={onToggleToolConfig}
+              style={{
+                position: 'fixed', inset: 0, zIndex: 99,
+              }}
+            />
+          )}
           <ToolConfigPanel
             sessionKey={session?.key}
             isOpen={toolConfigOpen}
@@ -791,6 +841,7 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
       <div
         ref={messagesContainerRef}
         onScroll={handleScroll}
+        className="chat-messages-area"
         style={{
           flex: 1, 
           overflowY: 'auto', 
@@ -873,13 +924,14 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
 
       {/* Input */}
       <div style={{
-        padding: '16px 24px',
+        padding: '12px 16px',
         borderTop: '1px solid var(--border)',
         background: 'var(--card)',
+        flexShrink: 0,
       }}>
         <div style={{
           display: 'flex',
-          gap: 12,
+          gap: 8,
           maxWidth: 900,
           margin: '0 auto',
         }}>
@@ -934,8 +986,9 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
           <button
             onClick={handleSend}
             disabled={!input.trim() || processing}
+            className="chat-send-btn"
             style={{
-              padding: '12px 24px',
+              padding: '12px 20px',
               borderRadius: 12,
               border: 'none',
               background: input.trim() && !processing
@@ -979,6 +1032,7 @@ export default function ChatPage() {
     sendMessage,
     loadSessions,
   } = useChatState();
+  const [mobileSessionsOpen, setMobileSessionsOpen] = useState(false);
 
   if (error) {
     return (
@@ -1012,14 +1066,27 @@ export default function ChatPage() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', position: 'relative' }}>
+      {/* Mobile overlay backdrop */}
+      {mobileSessionsOpen && (
+        <div
+          onClick={() => setMobileSessionsOpen(false)}
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            zIndex: 199, display: 'none',
+          }}
+          className="chat-mobile-backdrop"
+        />
+      )}
       <SessionsSidebar
         sessions={sessions}
         currentSession={currentSession}
-        onSelectSession={selectSession}
+        onSelectSession={(s) => { selectSession(s); setMobileSessionsOpen(false); }}
         onNewSession={createSession}
         onDeleteSession={deleteSession}
         processingSet={processingKeys}
+        mobileOpen={mobileSessionsOpen}
+        onClose={() => setMobileSessionsOpen(false)}
       />
       <ChatInterface
         session={currentSession}
@@ -1030,10 +1097,77 @@ export default function ChatPage() {
         onToggleTools={() => setShowTools(prev => !prev)}
         toolConfigOpen={toolConfigOpen}
         onToggleToolConfig={() => setToolConfigOpen(prev => !prev)}
+        onOpenSessions={() => setMobileSessionsOpen(true)}
       />
 
-      {/* CSS animations */}
+      {/* CSS animations + responsive */}
       <style>{`
+        @media (max-width: 768px) {
+          .chat-sessions-sidebar {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            z-index: 200 !important;
+            transform: translateX(-100%);
+            transition: transform 0.25s ease;
+            height: 100vh !important;
+            width: 280px !important;
+          }
+          .chat-sessions-sidebar.mobile-open {
+            transform: translateX(0);
+          }
+          .chat-mobile-backdrop {
+            display: block !important;
+          }
+          .chat-header-title {
+            max-width: 35vw;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .chat-tool-label {
+            display: none !important;
+          }
+          .chat-mobile-sessions-btn {
+            display: flex !important;
+          }
+          .chat-tool-config-panel {
+            position: fixed !important;
+            right: 8px !important;
+            left: 8px !important;
+            top: 60px !important;
+            width: auto !important;
+            max-height: calc(100vh - 100px) !important;
+          }
+          .chat-send-btn {
+            padding: 12px 14px !important;
+            font-size: 0 !important;
+          }
+          .chat-send-btn::after {
+            content: '↑';
+            font-size: 1.1rem;
+          }
+          .chat-messages-area {
+            padding: 12px 12px !important;
+          }
+        }
+        @media (min-width: 769px) and (max-width: 1024px) {
+          .chat-sessions-sidebar {
+            width: 220px !important;
+          }
+        }
+        @media (min-width: 769px) {
+          .chat-sessions-sidebar {
+            position: relative !important;
+            transform: none !important;
+          }
+          .chat-mobile-backdrop {
+            display: none !important;
+          }
+          .chat-mobile-sessions-btn {
+            display: none !important;
+          }
+        }
         @keyframes spin {
           to { transform: rotate(360deg); }
         }

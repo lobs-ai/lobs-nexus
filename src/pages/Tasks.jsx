@@ -20,6 +20,73 @@ const COLUMNS = [
   { id: 'cancelled', label: 'Cancelled', color: 'var(--muted)' },
 ];
 
+function getRetryInfo(task) {
+  const retryCount = task.retry_count ?? task.retryCount ?? 0;
+  const spawnCount = task.spawn_count ?? task.spawnCount ?? 0;
+  const crashCount = task.crash_count ?? task.crashCount ?? 0;
+  const workState = task.work_state ?? task.workState ?? 'not_started';
+  const failureReason = task.failure_reason ?? task.failureReason;
+  const lastRetryReason = task.last_retry_reason ?? task.lastRetryReason;
+  const escalationTier = task.escalation_tier ?? task.escalationTier ?? 0;
+  const isRetrying = workState === 'not_started' && spawnCount > 0;
+  const isFailed = workState === 'blocked' && failureReason;
+  const hasRetryHistory = spawnCount > 1 || crashCount > 0 || retryCount > 0;
+  return { retryCount, spawnCount, crashCount, workState, failureReason, lastRetryReason, escalationTier, isRetrying, isFailed, hasRetryHistory };
+}
+
+function WorkStateBadge({ task }) {
+  const { workState, spawnCount, crashCount, isRetrying, isFailed, hasRetryHistory } = getRetryInfo(task);
+  if (isFailed) {
+    return (
+      <span title={task.failure_reason ?? task.failureReason} style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '2px 7px', borderRadius: 4,
+        background: 'rgba(239,68,68,0.18)', border: '1px solid rgba(239,68,68,0.45)',
+        color: '#ef4444', fontSize: '0.72rem', fontWeight: 700, cursor: 'help',
+      }}>
+        ✕ failed {crashCount > 0 ? `(${crashCount} crash${crashCount > 1 ? 'es' : ''})` : ''}
+      </span>
+    );
+  }
+  if (isRetrying) {
+    return (
+      <span title={`Retrying — attempt ${spawnCount}`} style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '2px 7px', borderRadius: 4,
+        background: 'rgba(245,158,11,0.18)', border: '1px solid rgba(245,158,11,0.45)',
+        color: '#f59e0b', fontSize: '0.72rem', fontWeight: 700, cursor: 'help',
+      }}>
+        ↻ retry #{spawnCount}
+      </span>
+    );
+  }
+  if (workState === 'in_progress') {
+    return (
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '2px 7px', borderRadius: 4,
+        background: 'rgba(20,184,166,0.18)', border: '1px solid rgba(20,184,166,0.45)',
+        color: 'var(--teal)', fontSize: '0.72rem', fontWeight: 700,
+      }}>
+        ⚡ running{spawnCount > 1 ? ` (attempt ${spawnCount})` : ''}
+      </span>
+    );
+  }
+  if (hasRetryHistory && workState === 'not_started') {
+    return (
+      <span title={`${spawnCount} previous attempt${spawnCount !== 1 ? 's' : ''}`} style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '2px 7px', borderRadius: 4,
+        background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)',
+        color: '#f59e0b', fontSize: '0.72rem', fontWeight: 600, cursor: 'help',
+      }}>
+        ↻ queued (attempt {spawnCount + 1})
+      </span>
+    );
+  }
+  return null;
+}
+
 function TaskCard({ task, onClick }) {
   const blockers = task.blocked_by || task.blockedBy;
   const blockerCount = blockers && Array.isArray(blockers) ? blockers.length : 0;
@@ -62,6 +129,7 @@ function TaskCard({ task, onClick }) {
             ⛔ blocked ({blockerCount})
           </span>
         )}
+        <WorkStateBadge task={task} />
         {task.agent && <Badge label={task.agent} color={AGENT_COLORS[task.agent] || 'var(--blue)'} />}
         {task.model_tier && <Badge label={task.model_tier} color={TIER_COLORS[task.model_tier] || 'var(--muted)'} />}
         <span style={{ marginLeft: 'auto', color: 'var(--faint)', fontSize: '0.72rem' }}>{timeAgo(task.updated_at || task.updatedAt)}</span>
@@ -74,6 +142,7 @@ function TableView({ tasks, onRowClick, sortField, sortDir, onSort }) {
   const cols = [
     { id: 'title', label: 'Title' },
     { id: 'status', label: 'Status' },
+    { id: 'work_state', label: 'State' },
     { id: 'agent', label: 'Agent' },
     { id: 'model_tier', label: 'Tier' },
     { id: 'created_at', label: 'Created' },
@@ -145,6 +214,9 @@ function TableView({ tasks, onRowClick, sortField, sortDir, onSort }) {
                   />
                 </td>
                 <td style={{ padding: '10px 14px' }}>
+                  <WorkStateBadge task={task} />
+                </td>
+                <td style={{ padding: '10px 14px' }}>
                   {(() => {
                     const b = task.blocked_by || task.blockedBy;
                     const n = b && Array.isArray(b) ? b.length : 0;
@@ -186,7 +258,7 @@ function TableView({ tasks, onRowClick, sortField, sortDir, onSort }) {
           })}
           {sorted.length === 0 && (
             <tr>
-              <td colSpan={6} style={{ padding: '32px 14px', textAlign: 'center', color: 'var(--muted)', fontSize: '0.82rem' }}>
+              <td colSpan={7} style={{ padding: '32px 14px', textAlign: 'center', color: 'var(--muted)', fontSize: '0.82rem' }}>
                 No tasks found
               </td>
             </tr>
@@ -449,6 +521,49 @@ function TaskDetailModal({ selected, onClose }) {
             )}
           </div>
         )}
+
+        {(() => {
+          const ri = getRetryInfo(selected);
+          const show = ri.isFailed || ri.isRetrying || ri.hasRetryHistory || ri.workState === 'in_progress';
+          if (!show) return null;
+          const bg = ri.isFailed ? 'rgba(239,68,68,0.08)' : ri.isRetrying ? 'rgba(245,158,11,0.08)' : 'rgba(20,184,166,0.08)';
+          const border = ri.isFailed ? 'rgba(239,68,68,0.25)' : ri.isRetrying ? 'rgba(245,158,11,0.25)' : 'rgba(20,184,166,0.25)';
+          const labelColor = ri.isFailed ? '#ef4444' : ri.isRetrying ? '#f59e0b' : 'var(--teal)';
+          const label = ri.isFailed ? '✕ Failed' : ri.isRetrying ? '↻ Retrying' : ri.workState === 'in_progress' ? '⚡ Running' : '↻ Retry History';
+          return (
+            <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 8, padding: 14 }}>
+              <div style={{ color: labelColor, fontSize: '0.78rem', fontWeight: 600, marginBottom: 10 }}>{label}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '6px 16px', fontSize: '0.8rem' }}>
+                <span style={{ color: 'var(--muted)' }}>Work state</span>
+                <span style={{ color: 'var(--text)', fontFamily: 'var(--mono)' }}>{ri.workState}</span>
+                <span style={{ color: 'var(--muted)' }}>Spawn count</span>
+                <span style={{ color: 'var(--text)', fontFamily: 'var(--mono)' }}>{ri.spawnCount}</span>
+                {ri.crashCount > 0 && <>
+                  <span style={{ color: 'var(--muted)' }}>Crashes</span>
+                  <span style={{ color: '#ef4444', fontFamily: 'var(--mono)' }}>{ri.crashCount}</span>
+                </>}
+                {ri.retryCount > 0 && <>
+                  <span style={{ color: 'var(--muted)' }}>Retry count</span>
+                  <span style={{ color: 'var(--text)', fontFamily: 'var(--mono)' }}>{ri.retryCount}</span>
+                </>}
+                {ri.escalationTier > 0 && <>
+                  <span style={{ color: 'var(--muted)' }}>Escalation tier</span>
+                  <span style={{ color: '#f59e0b', fontFamily: 'var(--mono)' }}>{ri.escalationTier}</span>
+                </>}
+              </div>
+              {ri.failureReason && (
+                <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 6, background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.3)', fontSize: '0.78rem', color: '#ef4444', fontFamily: 'var(--mono)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  {ri.failureReason}
+                </div>
+              )}
+              {ri.lastRetryReason && !ri.failureReason && (
+                <div style={{ marginTop: 10, padding: '8px 10px', borderRadius: 6, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', fontSize: '0.78rem', color: '#f59e0b', fontFamily: 'var(--mono)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  {ri.lastRetryReason}
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {selected.notes && (
           <div style={{ background: 'rgba(11,15,30,0.6)', borderRadius: 8, padding: 16 }}>
