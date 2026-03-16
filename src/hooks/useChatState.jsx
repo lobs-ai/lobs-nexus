@@ -38,15 +38,21 @@ export function ChatProvider({ children }) {
       setSessions(sessionList);
       setLoaded(true);
 
-      // Auto-select first session only if none selected
-      if (sessionList.length > 0) {
-        setCurrentSession(prev => {
-          if (prev) return prev;
-          // Schedule auto-select after state update
-          setTimeout(() => selectSession(sessionList[0]), 0);
+      // Update current session's metadata (title, etc.) if it changed
+      setCurrentSession(prev => {
+        if (!prev) {
+          // Auto-select first session only if none selected
+          if (sessionList.length > 0) {
+            setTimeout(() => selectSession(sessionList[0]), 0);
+          }
           return null;
-        });
-      }
+        }
+        const updated = sessionList.find(s => s.key === prev.key);
+        if (updated && updated.title !== prev.title) {
+          return { ...prev, title: updated.title };
+        }
+        return prev;
+      });
     } catch (err) {
       console.error('Failed to load sessions:', err);
       setError('Failed to load chat sessions');
@@ -115,6 +121,8 @@ export function ChatProvider({ children }) {
             return next;
           });
           reloadMessages(sessionKey);
+          // Refresh sessions after a delay to pick up auto-generated titles
+          setTimeout(() => loadSessions(), 4000);
           return;
         }
 
@@ -126,6 +134,8 @@ export function ChatProvider({ children }) {
             return next;
           });
           reloadMessages(sessionKey);
+          // Refresh sessions after a delay to pick up auto-generated titles
+          setTimeout(() => loadSessions(), 4000);
           return;
         }
 
