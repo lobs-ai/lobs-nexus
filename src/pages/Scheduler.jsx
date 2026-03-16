@@ -1,10 +1,11 @@
 /**
- * Scheduler page — shows scheduled jobs with controls
+ * Scheduler page — shows scheduled cron + agent jobs with controls
  */
 
 import { useState, useEffect } from "react";
 import GlassCard from "../components/GlassCard";
 import Badge from "../components/Badge";
+import { api } from "../lib/api";
 
 export default function Scheduler() {
   const [jobs, setJobs] = useState([]);
@@ -14,9 +15,7 @@ export default function Scheduler() {
   const loadJobs = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/paw/api/scheduler");
-      if (!response.ok) throw new Error("Scheduler API not available");
-      const data = await response.json();
+      const data = await api.scheduler();
       setJobs(data.jobs || []);
       setError(null);
     } catch (err) {
@@ -32,25 +31,25 @@ export default function Scheduler() {
     return () => clearInterval(interval);
   }, []);
 
-  const toggleJob = async (jobName) => {
+  const toggleJob = async (jobId) => {
     try {
-      await fetch(`/paw/api/scheduler/${jobName}/toggle`, { method: "POST" });
+      await fetch(`/api/scheduler/${jobId}/toggle`, { method: "POST" });
       loadJobs();
     } catch (err) {
       console.error("Failed to toggle job:", err);
     }
   };
 
-  const runJobNow = async (jobName) => {
+  const runJobNow = async (jobId) => {
     try {
-      await fetch(`/paw/api/scheduler/${jobName}/run`, { method: "POST" });
+      await fetch(`/api/scheduler/${jobId}/run`, { method: "POST" });
       loadJobs();
     } catch (err) {
       console.error("Failed to run job:", err);
     }
   };
 
-  const formatLastRun = (timestamp) => {
+  const formatTimeAgo = (timestamp) => {
     if (!timestamp) return "Never";
     const date = new Date(timestamp);
     const now = new Date();
@@ -60,6 +59,21 @@ export default function Scheduler() {
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     return date.toLocaleDateString();
   };
+
+  const formatTimeUntil = (timestamp) => {
+    if (!timestamp) return null;
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = Math.floor((date - now) / 1000);
+    if (diff < 0) return "overdue";
+    if (diff < 60) return `in ${diff}s`;
+    if (diff < 3600) return `in ${Math.floor(diff / 60)}m`;
+    if (diff < 86400) return `in ${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
+    return `in ${Math.floor(diff / 86400)}d`;
+  };
+
+  const systemJobs = jobs.filter(j => j.kind === 'system');
+  const agentJobs = jobs.filter(j => j.kind === 'agent');
 
   return (
     <div style={{ padding: '28px 28px 40px', maxWidth: 900, margin: '0 auto' }}>
@@ -77,7 +91,7 @@ export default function Scheduler() {
             </div>
           )}
         </div>
-        <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.875rem' }}>Manage scheduled background jobs</p>
+        <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.875rem' }}>Manage system and agent scheduled jobs</p>
       </div>
 
       {error && (
@@ -121,59 +135,122 @@ export default function Scheduler() {
           <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>No scheduled jobs</div>
         </GlassCard>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {jobs.map((job) => (
-            <GlassCard key={job.name}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                    <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.95rem' }}>{job.name}</span>
-                    <Badge
-                      label={job.enabled ? "Enabled" : "Disabled"}
-                      color={job.enabled ? 'var(--green)' : 'var(--faint)'}
-                    />
-                  </div>
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: '0.78rem', color: 'var(--muted)' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/>
-                        <path d="M12 6v6l4 2"/>
-                      </svg>
-                      <span style={{ fontFamily: 'var(--mono)' }}>{job.cron}</span>
-                    </span>
-                    {job.last_run && <span>Last run: {formatLastRun(job.last_run)}</span>}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <button
-                    onClick={() => toggleJob(job.name)}
-                    style={{
-                      padding: '6px 14px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 600,
-                      cursor: 'pointer', border: '1px solid',
-                      background: job.enabled ? 'rgba(239,68,68,0.08)' : 'rgba(45,212,191,0.08)',
-                      borderColor: job.enabled ? 'rgba(239,68,68,0.2)' : 'rgba(45,212,191,0.2)',
-                      color: job.enabled ? '#f87171' : 'var(--teal)',
-                    }}
-                  >
-                    {job.enabled ? 'Disable' : 'Enable'}
-                  </button>
-                  <button
-                    onClick={() => runJobNow(job.name)}
-                    style={{
-                      padding: '6px 14px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 600,
-                      cursor: 'pointer', border: '1px solid rgba(96,165,250,0.2)',
-                      background: 'rgba(96,165,250,0.08)', color: '#60a5fa',
-                    }}
-                  >
-                    Run Now
-                  </button>
-                </div>
+        <>
+          {/* System Jobs */}
+          {systemJobs.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg width="14" height="14" fill="none" stroke="var(--blue)" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                System Jobs
+                <Badge label={`${systemJobs.length}`} color="var(--blue)" />
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {systemJobs.map((job) => (
+                  <JobCard key={job.id} job={job} formatTimeAgo={formatTimeAgo} formatTimeUntil={formatTimeUntil} onToggle={toggleJob} onRun={runJobNow} />
+                ))}
               </div>
-            </GlassCard>
-          ))}
-        </div>
+            </div>
+          )}
+
+          {/* Agent Jobs */}
+          {agentJobs.length > 0 && (
+            <div>
+              <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg width="14" height="14" fill="none" stroke="var(--purple)" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+                Agent Jobs
+                <Badge label={`${agentJobs.length}`} color="var(--purple)" />
+              </h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {agentJobs.map((job) => (
+                  <JobCard key={job.id} job={job} formatTimeAgo={formatTimeAgo} formatTimeUntil={formatTimeUntil} onToggle={toggleJob} onRun={runJobNow} />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
+  );
+}
+
+function JobCard({ job, formatTimeAgo, formatTimeUntil, onToggle, onRun }) {
+  const nextRunText = formatTimeUntil(job.nextRun);
+
+  return (
+    <GlassCard>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.95rem' }}>
+              {job.name || job.id}
+            </span>
+            <Badge
+              label={job.kind}
+              color={job.kind === 'system' ? 'var(--blue)' : 'var(--purple)'}
+            />
+            <Badge
+              label={job.enabled ? "Active" : "Disabled"}
+              color={job.enabled ? 'var(--green)' : 'var(--faint)'}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: '0.78rem', color: 'var(--muted)' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 6v6l4 2"/>
+              </svg>
+              <span style={{ fontFamily: 'var(--mono)' }}>{job.schedule}</span>
+            </span>
+            {job.lastRun && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <polyline points="1 4 1 10 7 10"/>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                </svg>
+                Last: {formatTimeAgo(job.lastRun)}
+              </span>
+            )}
+            {nextRunText && (
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: nextRunText === 'overdue' ? '#f87171' : 'var(--teal)' }}>
+                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+                Next: {nextRunText}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button
+            onClick={() => onToggle(job.id)}
+            style={{
+              padding: '6px 14px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 600,
+              cursor: 'pointer', border: '1px solid',
+              background: job.enabled ? 'rgba(239,68,68,0.08)' : 'rgba(45,212,191,0.08)',
+              borderColor: job.enabled ? 'rgba(239,68,68,0.2)' : 'rgba(45,212,191,0.2)',
+              color: job.enabled ? '#f87171' : 'var(--teal)',
+            }}
+          >
+            {job.enabled ? 'Disable' : 'Enable'}
+          </button>
+          <button
+            onClick={() => onRun(job.id)}
+            style={{
+              padding: '6px 14px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 600,
+              cursor: 'pointer', border: '1px solid rgba(96,165,250,0.2)',
+              background: 'rgba(96,165,250,0.08)', color: '#60a5fa',
+            }}
+          >
+            Run Now
+          </button>
+        </div>
+      </div>
+    </GlassCard>
   );
 }

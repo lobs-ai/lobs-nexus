@@ -170,6 +170,9 @@ export const api = {
   githubPRs: (signal) => reqSafe('/api/github/prs', { signal }, []),
   githubCI: (signal) => reqSafe('/api/github/ci', { signal }, []),
 
+  // Scheduler
+  scheduler: (signal) => reqSafe('/api/scheduler', { signal }, { jobs: [] }),
+
   // Focus Timer (endpoint not yet implemented — graceful stubs)
   startFocus: (body) => reqSafe('/api/focus/start', { method: 'POST', body }),
   stopFocus: (sessionId) => reqSafe('/api/focus/stop', { method: 'POST', body: { sessionId } }),
