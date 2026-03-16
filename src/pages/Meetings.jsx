@@ -428,7 +428,7 @@ ${format === 'markdown' ? '**Action Items:**' : 'Action Items:'}`;
   };
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', zIndex: showMenu ? 50 : 'auto' }}>
       <button onClick={() => setShowMenu(v => !v)} style={{
         background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
         borderRadius: 6, padding: '4px 10px', color: 'var(--muted)', fontSize: '0.75rem',

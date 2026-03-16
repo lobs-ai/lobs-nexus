@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 
 const NAV = [
   { to: '/', label: 'Home', icon: <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>, mobile: true },
@@ -21,14 +22,116 @@ const NAV = [
   { to: '/github', label: 'GitHub', icon: <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg> },
 ];
 
+// Primary mobile tabs (shown in bottom bar)
+const MOBILE_PRIMARY = ['/', '/projects', '/chat', '/inbox'];
+
 export default function Sidebar({ collapsed, onToggle, systemStatus, theme, onThemeToggle, isMobile }) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const location = useLocation();
   const statusColor = systemStatus === 'healthy' ? 'var(--green)' : systemStatus === 'degraded' ? 'var(--amber)' : 'var(--red)';
   const statusText = systemStatus || 'connecting';
-  const items = isMobile ? NAV.filter(n => n.mobile) : NAV;
 
+  // Check if current page is one of the non-primary pages (show its icon instead of one of the defaults)
+  const currentPath = location.pathname === '/' ? '/' : '/' + location.pathname.split('/')[1];
+  const isPrimaryActive = MOBILE_PRIMARY.includes(currentPath);
+  const activeNonPrimary = !isPrimaryActive ? NAV.find(n => n.to === currentPath) : null;
+
+  // Mobile: show 4 primary tabs + "More" button
+  if (isMobile) {
+    const primaryItems = NAV.filter(n => MOBILE_PRIMARY.includes(n.to));
+
+    return (
+      <>
+        {/* More menu overlay */}
+        {moreOpen && (
+          <div
+            className="mobile-more-backdrop"
+            onClick={() => setMoreOpen(false)}
+          >
+            <div
+              className="mobile-more-sheet"
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <span style={{ color: 'var(--teal)', fontFamily: 'var(--mono)', fontSize: '0.65rem', fontWeight: 800, letterSpacing: '3px' }}>
+                  ALL PAGES
+                </span>
+                <button
+                  onClick={() => setMoreOpen(false)}
+                  style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', padding: 4 }}
+                >
+                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+              <div className="mobile-more-grid">
+                {NAV.map(item => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === '/'}
+                    className={({ isActive }) => `mobile-more-item ${isActive ? 'active' : ''}`}
+                    onClick={() => setMoreOpen(false)}
+                  >
+                    <span className="mobile-more-icon">{item.icon}</span>
+                    <span className="mobile-more-label">{item.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+              <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 8, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                <span className="pulse-dot" style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor, flexShrink: 0 }} />
+                <span style={{ color: 'var(--muted)', fontSize: '0.7rem', fontFamily: 'var(--mono)' }}>{statusText}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bottom tab bar */}
+        <div className="sidebar mobile-bottom-bar">
+          {primaryItems.map(item => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              className={({ isActive }) => `mobile-tab ${isActive ? 'active' : ''}`}
+            >
+              <span className="mobile-tab-icon">{item.icon}</span>
+              <span className="mobile-tab-label">{item.label}</span>
+            </NavLink>
+          ))}
+
+          {/* If on a non-primary page, show that page's icon as active */}
+          {activeNonPrimary && (
+            <div className="mobile-tab active">
+              <span className="mobile-tab-icon">{activeNonPrimary.icon}</span>
+              <span className="mobile-tab-label">{activeNonPrimary.label}</span>
+            </div>
+          )}
+
+          {/* More button */}
+          <button
+            className={`mobile-tab ${moreOpen ? 'active' : ''}`}
+            onClick={() => setMoreOpen(o => !o)}
+          >
+            <span className="mobile-tab-icon">
+              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+                <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+              </svg>
+            </span>
+            <span className="mobile-tab-label">More</span>
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  // Desktop sidebar
   return (
     <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-      {/* Logo — hidden on mobile via CSS */}
+      {/* Logo */}
       <div style={{ padding: '22px 16px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{
           width: 34, height: 34, borderRadius: 9,
@@ -54,15 +157,15 @@ export default function Sidebar({ collapsed, onToggle, systemStatus, theme, onTh
       </div>
 
       {/* Section label */}
-      {!collapsed && !isMobile && (
+      {!collapsed && (
         <div style={{ padding: '14px 24px 4px', color: 'var(--faint)', fontSize: '0.6rem', fontWeight: 800, letterSpacing: '3px', fontFamily: 'var(--mono)' }}>
           NAVIGATION
         </div>
       )}
 
       {/* Nav */}
-      <nav style={{ flex: 1, padding: isMobile ? '0' : '8px 0', overflowY: isMobile ? 'hidden' : 'auto' }}>
-        {items.map(item => (
+      <nav style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
+        {NAV.map(item => (
           <NavLink
             key={item.to}
             to={item.to}
@@ -71,12 +174,12 @@ export default function Sidebar({ collapsed, onToggle, systemStatus, theme, onTh
             title={collapsed ? item.label : undefined}
           >
             <span style={{ flexShrink: 0 }}>{item.icon}</span>
-            {!isMobile && <span className="nav-label">{item.label}</span>}
+            <span className="nav-label">{item.label}</span>
           </NavLink>
         ))}
       </nav>
 
-      {/* Footer — hidden on mobile via CSS */}
+      {/* Footer */}
       <div style={{ padding: '14px 16px', borderTop: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span

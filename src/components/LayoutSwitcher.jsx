@@ -55,7 +55,7 @@ export default function LayoutSwitcher({ current = 'command-center', onChange })
   const currentLayout = LAYOUTS[current] || LAYOUTS['command-center'];
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={ref} style={{ position: 'relative', display: 'inline-block', zIndex: open ? 50 : 'auto' }}>
       <button
         onClick={() => setOpen(!open)}
         style={{
@@ -85,14 +85,13 @@ export default function LayoutSwitcher({ current = 'command-center', onChange })
           top: '100%',
           right: 0,
           marginTop: 6,
-          background: 'rgba(15,15,20,0.95)',
-          backdropFilter: 'blur(20px)',
+          background: 'rgba(9,13,26,0.98)',
           border: '1px solid var(--border)',
           borderRadius: 12,
           padding: 6,
           minWidth: 220,
-          zIndex: 100,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          zIndex: 500,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         }}>
           {Object.entries(LAYOUTS).map(([key, layout]) => (
             <button
