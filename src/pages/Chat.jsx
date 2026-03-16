@@ -719,7 +719,7 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, minWidth: 0 }}>
       {/* Chat header */}
       <div style={{
         padding: '12px 16px',
@@ -835,6 +835,7 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
         className="chat-messages-area"
         style={{
           flex: 1, 
+          minHeight: 0,
           overflowY: 'auto', 
           padding: '16px 24px',
           background: 'var(--background)',
@@ -1057,7 +1058,7 @@ export default function ChatPage() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', position: 'relative' }}>
+    <div style={{ display: 'flex', height: '100%', minHeight: 0, overflow: 'hidden', position: 'relative' }}>
       {/* Mobile overlay backdrop */}
       {mobileSessionsOpen && (
         <div

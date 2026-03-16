@@ -168,7 +168,7 @@ a:hover { opacity: 0.8; }
   border-left: 2px solid var(--teal); padding-left: 14px;
 }
 
-.main-content { margin-left: 240px; height: 100vh; transition: margin-left 0.25s ease; position: relative; z-index: 1; overflow: hidden; }
+.main-content { margin-left: 240px; height: 100%; transition: margin-left 0.25s ease; position: relative; z-index: 1; overflow: hidden; }
 .main-content.collapsed { margin-left: 64px; }
 
 @keyframes pulse-glow {
