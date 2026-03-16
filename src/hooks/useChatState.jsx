@@ -307,6 +307,8 @@ export function ChatProvider({ children }) {
   const sendMessage = async (content) => {
     if (!currentSession) return;
 
+    const alreadyProcessing = processingKeys.has(currentSession.key);
+
     const userMsg = {
       role: 'user',
       content,
@@ -318,13 +320,14 @@ export function ChatProvider({ children }) {
       messages: [...(prev.messages || []), userMsg],
     }));
 
-    setProcessingKeys(prev => {
-      const next = new Set(prev);
-      next.add(currentSession.key);
-      return next;
-    });
-
-    setStreamEvents([]);
+    if (!alreadyProcessing) {
+      setProcessingKeys(prev => {
+        const next = new Set(prev);
+        next.add(currentSession.key);
+        return next;
+      });
+      setStreamEvents([]);
+    }
 
     try {
       const res = await fetch(`/api/chat/sessions/${currentSession.key}/messages`, {
@@ -337,14 +340,18 @@ export function ChatProvider({ children }) {
         throw new Error(`Send failed: ${res.status}`);
       }
 
-      startFallbackPoller(currentSession.key);
+      if (!alreadyProcessing) {
+        startFallbackPoller(currentSession.key);
+      }
     } catch (err) {
       console.error('Failed to send message:', err);
-      setProcessingKeys(prev => {
-        const next = new Set(prev);
-        next.delete(currentSession.key);
-        return next;
-      });
+      if (!alreadyProcessing) {
+        setProcessingKeys(prev => {
+          const next = new Set(prev);
+          next.delete(currentSession.key);
+          return next;
+        });
+      }
     }
   };
 

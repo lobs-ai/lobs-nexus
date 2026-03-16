@@ -598,7 +598,7 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
 
   const handleSend = () => {
     const text = input.trim();
-    if (!text || processing) return;
+    if (!text) return;
     
     setInput('');
     if (inputRef.current) inputRef.current.style.height = 'auto';
@@ -985,18 +985,18 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || processing}
+            disabled={!input.trim()}
             className="chat-send-btn"
             style={{
               padding: '12px 20px',
               borderRadius: 12,
               border: 'none',
-              background: input.trim() && !processing
+              background: input.trim()
                 ? 'linear-gradient(135deg, var(--teal), var(--blue))'
                 : 'var(--surface)',
-              color: input.trim() && !processing ? 'white' : 'var(--muted)',
+              color: input.trim() ? 'white' : 'var(--muted)',
               fontWeight: 600,
-              cursor: input.trim() && !processing ? 'pointer' : 'not-allowed',
+              cursor: input.trim() ? 'pointer' : 'not-allowed',
               fontSize: '0.9rem',
               transition: 'all 0.2s',
             }}
