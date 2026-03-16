@@ -1251,7 +1251,7 @@ export default function ChatPage() {
 
     const poll = async () => {
       let attempts = 0;
-      const maxAttempts = 300; // 5 minutes at 1s intervals
+      const maxAttempts = 1800; // 1 hour at 2s intervals — agent work can take a long time
       
       while (!controller.signal.aborted && attempts < maxAttempts) {
         attempts++;
