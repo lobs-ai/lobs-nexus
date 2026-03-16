@@ -22,6 +22,7 @@ import MicroLearning from './pages/MicroLearning';
 import GitHubFeed from './pages/GitHubFeed';
 import Workers from './pages/Workers';
 import Insights from './pages/Insights';
+import Training from './pages/Training';
 import { ChatProvider } from './hooks/useChatState';
 import { api } from './lib/api';
 
@@ -75,6 +76,7 @@ export default function App() {
             <Route path="/github" element={<GitHubFeed />} />
             <Route path="/workers" element={<Workers />} />
             <Route path="/insights" element={<Insights />} />
+            <Route path="/training" element={<Training />} />
           </Route>
         </Routes>
       </ChatProvider>

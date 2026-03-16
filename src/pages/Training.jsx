@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import GlassCard from '../components/GlassCard';
 import Badge from '../components/Badge';
 import EmptyState from '../components/EmptyState';
+import LoadingSkeleton from '../components/LoadingSkeleton';
 import { api } from '../lib/api';
 
 // ─── colour palette for task types ────────────────────────────────────────────
