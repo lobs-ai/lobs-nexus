@@ -121,7 +121,7 @@ export default function Inbox() {
           <h1 style={{ fontSize: '2.2rem', fontWeight: 900 }}><span className="gradient-text">Inbox</span></h1>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 22 }}>
+        <div className="hud-tabs-row" style={{ marginBottom: 22 }}>
           <button className={`hud-tab ${view === 'needs-action' ? 'active' : ''}`} onClick={() => setView('needs-action')}>Needs Action ({needsAction.length})</button>
           <button className={`hud-tab ${view === 'all' ? 'active' : ''}`} onClick={() => setView('all')}>All Items ({items.length})</button>
         </div>

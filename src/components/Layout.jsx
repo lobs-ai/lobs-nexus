@@ -57,7 +57,7 @@ export default function Layout({ systemStatus, theme, onThemeToggle }) {
           </svg>
         </button>
       )}
-      <main className={`main-content ${!isMobile && collapsed ? 'collapsed' : ''}`} style={{ flex: 1, position: 'relative', overflow: 'hidden', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <main className={`main-content ${!isMobile && collapsed ? 'collapsed' : ''}`} style={{ flex: 1, position: 'relative', overflowX: 'hidden', overflowY: 'auto', minHeight: 0 }}>
         <Outlet />
       </main>
       <Toast />

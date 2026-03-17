@@ -259,14 +259,14 @@ export default function Reflections() {
         </div>
 
         {/* Agent filter */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+        <div className="hud-tabs-row" style={{ marginBottom: 10 }}>
           {AGENTS.map(a => (
             <button key={a} className={`hud-tab ${agent === a ? 'active' : ''}`} onClick={() => setAgent(a)}>{a}</button>
           ))}
         </div>
 
         {/* Status filter */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 22, flexWrap: 'wrap' }}>
+        <div className="hud-tabs-row" style={{ marginBottom: 22 }}>
           {STATUSES.map(s => (
             <button
               key={s}

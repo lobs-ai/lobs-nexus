@@ -171,7 +171,7 @@ export default function Usage() {
           <p style={{ color: 'var(--muted)', fontSize: '0.9rem', marginTop: 4 }}>Cost, token, and run analytics</p>
         </div>
 
-        <div style={{ display: 'flex', gap: 6, marginBottom: 28 }}>
+        <div className="hud-tabs-row" style={{ marginBottom: 28 }}>
           {['day', 'week', 'month'].map(w => (
             <button key={w} className={`hud-tab ${timeWindow === w ? 'active' : ''}`} onClick={() => setTimeWindow(w)}>{w.charAt(0).toUpperCase() + w.slice(1)}</button>
           ))}

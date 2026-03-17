@@ -95,7 +95,7 @@ export default function Knowledge() {
         </div>
 
         <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 28, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="hud-tabs-row">
             <button className={`hud-tab ${tab === 'browse' ? 'active' : ''}`} onClick={() => { setTab('browse'); setSearch(''); }}>Docs ({totalFiles})</button>
             <button className={`hud-tab ${tab === 'research' ? 'active' : ''}`} onClick={() => setTab('research')}>Research ({memos.length})</button>
           </div>
