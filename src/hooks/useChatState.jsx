@@ -149,9 +149,9 @@ export function ChatProvider({ children }) {
         }
 
         if (data.type === 'assistant_reply') {
-          // Don't clear processingKeys here — agent may continue with tool calls.
-          // Only 'done' and 'error' truly mean processing is finished.
-          setStreamEvents([]);
+          // Don't clear processingKeys or streamEvents here — agent may continue
+          // with more tool calls after emitting a text reply. Only 'done' and
+          // 'error' truly mean processing is finished.
           reloadMessages(sessionKey);
           // Refresh sessions after a delay to pick up auto-generated titles
           setTimeout(() => loadSessions(), 4000);

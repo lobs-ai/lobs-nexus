@@ -645,6 +645,9 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
   // Build the interleaved message list (messages + tool steps + streaming events)
   const renderItems = [];
   
+  // Track toolUseIds already persisted in the DB so we can dedup against stream events
+  const persistedToolIds = new Set();
+  
   // Add persisted messages (user, assistant, and tool)
   if (session.messages) {
     for (const msg of session.messages) {
@@ -654,6 +657,7 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
         try {
           meta = typeof msg.metadata === 'string' ? JSON.parse(msg.metadata) : (msg.metadata || {});
         } catch { /* ignore */ }
+        if (meta.toolUseId) persistedToolIds.add(meta.toolUseId);
         renderItems.push({
           type: 'tool',
           toolName: meta.toolName || 'tool',
@@ -674,8 +678,10 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
     }
   }
 
-  // Add active streaming events (tool steps not yet persisted)
+  // Add active streaming events (tool steps not yet persisted — skip if already in DB)
   for (const evt of streamEvents) {
+    // Dedup: skip tool events that are already persisted from reloadMessages
+    if (evt.toolUseId && persistedToolIds.has(evt.toolUseId)) continue;
     if (evt.type === 'tool_start') {
       renderItems.push({
         type: 'tool',
@@ -684,6 +690,18 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
         result: '',
         isError: false,
         status: 'running',
+        timestamp: evt.timestamp,
+        streamId: evt.toolUseId,
+      });
+    } else if (evt.type === 'tool_result_done') {
+      // Completed tool — useChatState transforms tool_start → tool_result_done on completion
+      renderItems.push({
+        type: 'tool',
+        toolName: evt.toolName,
+        toolInput: evt.toolInput || '',
+        result: evt.result || '',
+        isError: evt.isError || false,
+        status: 'complete',
         timestamp: evt.timestamp,
         streamId: evt.toolUseId,
       });
