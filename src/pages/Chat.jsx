@@ -7,13 +7,117 @@ import { useChatState } from '../hooks/useChatState';
 
 function renderMarkdown(text) {
   if (!text) return '';
+
+  // Extract fenced code blocks first to protect them from further processing
+  const codeBlocks = [];
+  let processed = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const idx = codeBlocks.length;
+    const escapedCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    codeBlocks.push(
+      `<pre class="chat-code">${lang ? `<div style="font-size:0.65rem;color:var(--muted);opacity:0.5;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em">${lang}</div>` : ''}${escapedCode.replace(/^\n|\n$/g, '')}</pre>`
+    );
+    return `\x00CB${idx}\x00`;
+  });
+
+  // Inline code (protect from further processing)
+  const inlineCode = [];
+  processed = processed.replace(/`([^`\n]+)`/g, (_, code) => {
+    const idx = inlineCode.length;
+    const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    inlineCode.push(
+      `<code style="background:rgba(45,212,191,0.08);border-radius:4px;padding:1px 5px;font-family:var(--mono);font-size:0.85em;color:var(--teal)">${escaped}</code>`
+    );
+    return `\x00IC${idx}\x00`;
+  });
+
+  // Process line-level formatting
+  const lines = processed.split('\n');
+  const output = [];
+  let inList = false;
+  let listType = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+
+    // Headers
+    const headerMatch = line.match(/^(#{1,4})\s+(.+)$/);
+    if (headerMatch) {
+      if (inList) { output.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
+      const level = headerMatch[1].length;
+      const sizes = { 1: '1.3em', 2: '1.15em', 3: '1em', 4: '0.9em' };
+      output.push(`<div style="font-size:${sizes[level]};font-weight:600;margin:8px 0 4px;color:var(--text)">${applyInline(headerMatch[2])}</div>`);
+      continue;
+    }
+
+    // Unordered list items
+    const ulMatch = line.match(/^(\s*)[-*]\s+(.+)$/);
+    if (ulMatch) {
+      if (!inList || listType !== 'ul') {
+        if (inList) output.push(listType === 'ul' ? '</ul>' : '</ol>');
+        output.push('<ul style="margin:4px 0;padding-left:20px">');
+        inList = true; listType = 'ul';
+      }
+      output.push(`<li style="margin:2px 0">${applyInline(ulMatch[2])}</li>`);
+      continue;
+    }
+
+    // Ordered list items
+    const olMatch = line.match(/^(\s*)\d+[.)]\s+(.+)$/);
+    if (olMatch) {
+      if (!inList || listType !== 'ol') {
+        if (inList) output.push(listType === 'ul' ? '</ul>' : '</ol>');
+        output.push('<ol style="margin:4px 0;padding-left:20px">');
+        inList = true; listType = 'ol';
+      }
+      output.push(`<li style="margin:2px 0">${applyInline(olMatch[2])}</li>`);
+      continue;
+    }
+
+    // Blockquotes
+    const bqMatch = line.match(/^>\s?(.*)$/);
+    if (bqMatch) {
+      if (inList) { output.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
+      output.push(`<div style="border-left:3px solid var(--teal);padding-left:12px;margin:4px 0;color:var(--muted);font-style:italic">${applyInline(bqMatch[1])}</div>`);
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^---+$/.test(line.trim())) {
+      if (inList) { output.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
+      output.push('<hr style="border:none;border-top:1px solid var(--border);margin:8px 0">');
+      continue;
+    }
+
+    // Close open list if we hit a non-list line
+    if (inList) { output.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
+
+    // Empty line → spacing
+    if (line.trim() === '') {
+      output.push('<div style="height:4px"></div>');
+      continue;
+    }
+
+    // Regular paragraph
+    output.push(applyInline(line) + '<br>');
+  }
+
+  if (inList) output.push(listType === 'ul' ? '</ul>' : '</ol>');
+
+  let result = output.join('\n');
+
+  // Restore code blocks and inline code
+  result = result.replace(/\x00CB(\d+)\x00/g, (_, idx) => codeBlocks[parseInt(idx)]);
+  result = result.replace(/\x00IC(\d+)\x00/g, (_, idx) => inlineCode[parseInt(idx)]);
+
+  return result;
+}
+
+function applyInline(text) {
   return text
-    .replace(/```([\s\S]*?)```/g, '<pre class="chat-code">$1</pre>')
-    .replace(/`([^`]+)`/g, '<code style="background:rgba(45,212,191,0.08);border-radius:4px;padding:1px 5px;font-family:var(--mono);font-size:0.85em;color:var(--teal)">$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--teal)">$1</a>')
-    .replace(/\n/g, '<br>');
+    .replace(/~~([^~]+)~~/g, '<del>$1</del>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--teal)">$1</a>');
 }
 
 // ---------------------------------------------------------------------------
@@ -95,7 +199,7 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
   };
 
   const summary = getSummary();
-  const resultPreview = result ? (result.length > 120 ? result.substring(0, 120) + '…' : result) : '';
+  const resultPreview = result ? (result.length > 160 ? result.substring(0, 160) + '…' : result) : '';
 
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start', margin: '2px 0' }}>
@@ -945,9 +1049,8 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
           maxWidth: 900,
           margin: '0 auto',
         }}>
-          <input
+          <textarea
             ref={inputRef}
-            type="text"
             value={input}
             onChange={e => {
               setInput(e.target.value);
@@ -959,18 +1062,6 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSend();
-              }
-              if (e.key === 'Tab' && e.shiftKey) {
-                e.preventDefault();
-                const start = e.target.selectionStart;
-                const end = e.target.selectionEnd;
-                const val = input.slice(0, start) + '\n' + input.slice(end);
-                setInput(val);
-                requestAnimationFrame(() => {
-                  e.target.selectionStart = e.target.selectionEnd = start + 1;
-                  e.target.style.height = 'auto';
-                  e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
-                });
               }
             }}
             placeholder="Message Lobs..."
@@ -987,8 +1078,10 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
               fontFamily: 'inherit',
               minHeight: 44,
               maxHeight: 200,
+              resize: 'none',
               overflow: 'auto',
               transition: 'border 0.2s',
+              lineHeight: 1.4,
             }}
             onFocus={e => e.target.style.borderColor = 'var(--teal)'}
             onBlur={e => e.target.style.borderColor = 'var(--border)'}
