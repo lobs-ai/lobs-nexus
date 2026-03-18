@@ -428,6 +428,139 @@ function ToolConfigPanel({ sessionKey, isOpen, onClose }) {
   );
 }
 
+function ModelPickerPanel({ session, isOpen, onClose, onModelChanged }) {
+  const [catalog, setCatalog] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [customModel, setCustomModel] = useState('');
+
+  useEffect(() => {
+    if (!isOpen || !session?.key) return;
+    setLoading(true);
+    fetch(`/api/chat/sessions/${session.key}/model`)
+      .then(r => r.json())
+      .then(data => {
+        setCatalog(data);
+        setCustomModel(data.overrideModel || '');
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, [isOpen, session?.key]);
+
+  if (!isOpen) return null;
+
+  const applyModel = async (model) => {
+    if (!session?.key) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/chat/sessions/${session.key}/model`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model }),
+      });
+      const data = await res.json();
+      setCatalog(prev => prev ? { ...prev, currentModel: data.currentModel, overrideModel: data.overrideModel } : prev);
+      onModelChanged?.(data);
+    } catch (err) {
+      console.error('Failed to update model:', err);
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{
+      position: 'absolute', top: 52, right: 16, width: 360,
+      maxHeight: 'calc(100vh - 80px)', background: 'var(--card)',
+      border: '1px solid var(--border)', borderRadius: 12,
+      boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 100,
+      overflow: 'hidden', display: 'flex', flexDirection: 'column',
+    }}>
+      <div style={{
+        padding: '12px 16px', borderBottom: '1px solid var(--border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <div>
+          <div style={{ fontWeight: 600, color: 'var(--text)' }}>Model</div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: 2 }}>
+            Current: {catalog?.currentModel || session?.currentModel || 'loading'}
+          </div>
+        </div>
+        <button onClick={onClose} style={{ border: 'none', background: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '1rem' }}>×</button>
+      </div>
+
+      <div style={{ padding: 16, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {loading ? (
+          <div style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>Loading models…</div>
+        ) : (
+          <>
+            <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+              LM Studio: {catalog?.lmstudio?.reachable ? 'reachable' : 'unreachable'} {catalog?.lmstudio?.baseUrl || ''}
+            </div>
+
+            <button
+              onClick={() => applyModel(null)}
+              disabled={saving}
+              style={{
+                padding: '10px 12px', borderRadius: 8, textAlign: 'left',
+                border: `1px solid ${!catalog?.overrideModel ? 'var(--teal)' : 'var(--border)'}`,
+                background: !catalog?.overrideModel ? 'rgba(45,212,191,0.08)' : 'transparent',
+                color: 'var(--text)', cursor: 'pointer',
+              }}
+            >
+              <div>Use Default</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--muted)', marginTop: 2 }}>{catalog?.defaultModel}</div>
+            </button>
+
+            {(catalog?.options || []).map(option => (
+              <button
+                key={option.id}
+                onClick={() => applyModel(option.id)}
+                disabled={saving}
+                style={{
+                  padding: '10px 12px', borderRadius: 8, textAlign: 'left',
+                  border: `1px solid ${catalog?.currentModel === option.id ? 'var(--teal)' : 'var(--border)'}`,
+                  background: catalog?.currentModel === option.id ? 'rgba(45,212,191,0.08)' : 'transparent',
+                  color: 'var(--text)', cursor: 'pointer',
+                }}
+              >
+                <div style={{ fontFamily: 'var(--mono)', fontSize: '0.75rem' }}>{option.id}</div>
+                <div style={{ fontSize: '0.68rem', color: 'var(--muted)', marginTop: 2 }}>
+                  {[option.tier, option.loaded ? 'loaded' : null, option.source].filter(Boolean).join(' · ')}
+                </div>
+              </button>
+            ))}
+
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--muted)', marginBottom: 8 }}>Custom model string</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  value={customModel}
+                  onChange={e => setCustomModel(e.target.value)}
+                  placeholder="openai/gpt-4o or lmstudio/qwen3"
+                  style={{
+                    flex: 1, padding: '10px 12px', borderRadius: 8,
+                    border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)',
+                  }}
+                />
+                <button
+                  onClick={() => applyModel(customModel.trim() || null)}
+                  disabled={saving}
+                  style={{
+                    padding: '10px 12px', borderRadius: 8, border: '1px solid var(--teal)',
+                    background: 'rgba(45,212,191,0.1)', color: 'var(--teal)', cursor: 'pointer',
+                  }}
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Thinking Indicator
 // ---------------------------------------------------------------------------
@@ -664,7 +797,7 @@ function formatSessionTime(timestamp) {
 // Main Chat Interface — now with tool step streaming
 // ---------------------------------------------------------------------------
 
-function ChatInterface({ session, onSendMessage, processing, streamEvents, showTools, onToggleTools, toolConfigOpen, onToggleToolConfig, onOpenSessions }) {
+function ChatInterface({ session, onSendMessage, processing, streamEvents, showTools, onToggleTools, toolConfigOpen, onToggleToolConfig, modelConfigOpen, onToggleModelConfig, onModelChanged, onOpenSessions }) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -886,12 +1019,32 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
                   Working...
                 </span>
               ) : '● Online'}
+              <span style={{ marginLeft: 8, fontFamily: 'var(--mono)' }}>
+                {session.currentModel || 'default'}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Tool controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, position: 'relative' }}>
+          <button
+            onClick={onToggleModelConfig}
+            style={{
+              padding: '6px 10px',
+              borderRadius: 8,
+              border: `1px solid ${modelConfigOpen ? 'var(--teal)' : 'var(--border)'}`,
+              background: modelConfigOpen ? 'rgba(45,212,191,0.1)' : 'transparent',
+              color: modelConfigOpen ? 'var(--teal)' : 'var(--muted)',
+              cursor: 'pointer',
+              fontSize: '0.78rem',
+              fontFamily: 'var(--mono)',
+            }}
+            title="Choose model"
+          >
+            Model
+          </button>
+
           {/* Show/hide tool calls toggle */}
           <button
             onClick={onToggleTools}
@@ -934,14 +1087,23 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
           </button>
 
           {/* Tool config panel + backdrop */}
-          {toolConfigOpen && (
+          {(toolConfigOpen || modelConfigOpen) && (
             <div
-              onClick={onToggleToolConfig}
+              onClick={() => {
+                if (toolConfigOpen) onToggleToolConfig();
+                if (modelConfigOpen) onToggleModelConfig();
+              }}
               style={{
                 position: 'fixed', inset: 0, zIndex: 99,
               }}
             />
           )}
+          <ModelPickerPanel
+            session={session}
+            isOpen={modelConfigOpen}
+            onClose={onToggleModelConfig}
+            onModelChanged={onModelChanged}
+          />
           <ToolConfigPanel
             sessionKey={session?.key}
             isOpen={toolConfigOpen}
@@ -1136,6 +1298,7 @@ export default function ChatPage() {
     loadSessions,
   } = useChatState();
   const [mobileSessionsOpen, setMobileSessionsOpen] = useState(false);
+  const [modelConfigOpen, setModelConfigOpen] = useState(false);
 
   if (error) {
     return (
@@ -1200,6 +1363,13 @@ export default function ChatPage() {
         onToggleTools={() => setShowTools(prev => !prev)}
         toolConfigOpen={toolConfigOpen}
         onToggleToolConfig={() => setToolConfigOpen(prev => !prev)}
+        modelConfigOpen={modelConfigOpen}
+        onToggleModelConfig={() => setModelConfigOpen(prev => !prev)}
+        onModelChanged={(update) => {
+          if (!currentSession?.key) return;
+          selectSession({ ...currentSession, currentModel: update.currentModel, overrideModel: update.overrideModel });
+          loadSessions();
+        }}
         onOpenSessions={() => setMobileSessionsOpen(true)}
       />
 

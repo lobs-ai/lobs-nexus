@@ -172,6 +172,9 @@ export const api = {
 
   // Scheduler
   scheduler: (signal) => reqSafe('/api/scheduler', { signal }, { jobs: [] }),
+  schedulerIntelligence: (signal) => reqSafe('/api/scheduler/intelligence', { signal }, null),
+  models: (signal) => reqSafe('/api/models', { signal }, null),
+  updateSchedulerModels: (scheduler) => req('/api/models', { method: 'PATCH', body: { scheduler } }),
 
   // Focus Timer (endpoint not yet implemented — graceful stubs)
   startFocus: (body) => reqSafe('/api/focus/start', { method: 'POST', body }),

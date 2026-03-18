@@ -83,8 +83,8 @@ export function ChatProvider({ children }) {
           return null;
         }
         const updated = sessionList.find(s => s.key === prev.key);
-        if (updated && updated.title !== prev.title) {
-          return { ...prev, title: updated.title };
+        if (updated) {
+          return { ...prev, ...updated, messages: prev.messages || updated.messages };
         }
         return prev;
       });
@@ -271,6 +271,8 @@ export function ChatProvider({ children }) {
         key: data.key,
         title: data.title || `Chat ${sessions.length + 1}`,
         createdAt: data.createdAt,
+        currentModel: data.currentModel,
+        overrideModel: data.overrideModel,
         messages: [],
       };
 

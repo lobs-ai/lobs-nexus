@@ -1,22 +1,57 @@
-/**
- * Scheduler page — shows scheduled cron + agent jobs with controls
- */
-
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import GlassCard from "../components/GlassCard";
 import Badge from "../components/Badge";
 import { api } from "../lib/api";
 
+const tierOptions = ["micro", "small", "medium", "standard", "strong"];
+
+function formatTimeAgo(timestamp) {
+  if (!timestamp) return "Never";
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diff = Math.floor((now - date) / 1000);
+  if (diff < 60) return `${diff}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return date.toLocaleDateString();
+}
+
+function formatTimeUntil(timestamp) {
+  if (!timestamp) return null;
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diff = Math.floor((date - now) / 1000);
+  if (diff < 0) return "overdue";
+  if (diff < 60) return `in ${diff}s`;
+  if (diff < 3600) return `in ${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `in ${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
+  return `in ${Math.floor(diff / 86400)}d`;
+}
+
+function formatClock(timestamp) {
+  if (!timestamp) return "TBD";
+  return new Date(timestamp).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
 export default function Scheduler() {
   const [jobs, setJobs] = useState([]);
+  const [intelligence, setIntelligence] = useState(null);
+  const [schedulerConfig, setSchedulerConfig] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  const loadJobs = async () => {
+  const load = async () => {
     try {
       setLoading(true);
-      const data = await api.scheduler();
-      setJobs(data.jobs || []);
+      const [jobsData, intelligenceData, modelsData] = await Promise.all([
+        api.scheduler(),
+        api.schedulerIntelligence(),
+        api.models(),
+      ]);
+      setJobs(jobsData?.jobs || []);
+      setIntelligence(intelligenceData || null);
+      setSchedulerConfig(modelsData?.scheduler || null);
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -26,231 +61,392 @@ export default function Scheduler() {
   };
 
   useEffect(() => {
-    loadJobs();
-    const interval = setInterval(loadJobs, 30000);
+    load();
+    const interval = setInterval(load, 30000);
     return () => clearInterval(interval);
   }, []);
 
   const toggleJob = async (jobId) => {
-    try {
-      await fetch(`/api/scheduler/${jobId}/toggle`, { method: "POST" });
-      loadJobs();
-    } catch (err) {
-      console.error("Failed to toggle job:", err);
-    }
+    await fetch(`/api/scheduler/${jobId}/toggle`, { method: "POST" });
+    load();
   };
 
   const runJobNow = async (jobId) => {
+    await fetch(`/api/scheduler/${jobId}/run`, { method: "POST" });
+    load();
+  };
+
+  const saveConfig = async (updates) => {
+    const next = { ...schedulerConfig, ...updates };
+    setSchedulerConfig(next);
+    setSaving(true);
     try {
-      await fetch(`/api/scheduler/${jobId}/run`, { method: "POST" });
-      loadJobs();
+      const result = await api.updateSchedulerModels(next);
+      setSchedulerConfig(result.scheduler);
+      const snapshot = await api.schedulerIntelligence();
+      setIntelligence(snapshot);
     } catch (err) {
-      console.error("Failed to run job:", err);
+      setError(err.message);
+      await load();
+    } finally {
+      setSaving(false);
     }
   };
 
-  const formatTimeAgo = (timestamp) => {
-    if (!timestamp) return "Never";
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diff = Math.floor((now - date) / 1000);
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    return date.toLocaleDateString();
-  };
-
-  const formatTimeUntil = (timestamp) => {
-    if (!timestamp) return null;
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diff = Math.floor((date - now) / 1000);
-    if (diff < 0) return "overdue";
-    if (diff < 60) return `in ${diff}s`;
-    if (diff < 3600) return `in ${Math.floor(diff / 60)}m`;
-    if (diff < 86400) return `in ${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}m`;
-    return `in ${Math.floor(diff / 86400)}d`;
-  };
-
-  const systemJobs = jobs.filter(j => j.kind === 'system');
-  const agentJobs = jobs.filter(j => j.kind === 'agent');
+  const systemJobs = jobs.filter((j) => j.kind === "system");
+  const agentJobs = jobs.filter((j) => j.kind === "agent");
 
   return (
-    <div style={{ padding: '28px 28px 40px', maxWidth: 900, margin: '0 auto' }}>
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-          <svg width="22" height="22" fill="none" stroke="var(--teal)" strokeWidth="2" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M12 6v6l4 2"/>
-          </svg>
-          <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>Scheduler</h1>
-          {!loading && !error && (
-            <div style={{ display: 'flex', gap: 8, marginLeft: 'auto' }}>
-              <Badge label={`${jobs.length} jobs`} color="var(--blue)" />
-              <Badge label={`${jobs.filter(j => j.enabled).length} active`} color="var(--green)" />
-            </div>
-          )}
+    <div style={{ padding: "28px 28px 40px", maxWidth: 1240, margin: "0 auto" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 20, flexWrap: "wrap", marginBottom: 24 }}>
+        <div style={{ flex: "1 1 520px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+            <svg width="22" height="22" fill="none" stroke="var(--teal)" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 6v6l4 2" />
+            </svg>
+            <h1 style={{ margin: 0, fontSize: "1.55rem", color: "var(--text)" }}>Scheduler Intelligence</h1>
+          </div>
+          <p style={{ margin: 0, color: "var(--muted)", maxWidth: 720 }}>
+            Local-first daily planning across calendar, deadlines, and cron jobs.
+          </p>
         </div>
-        <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.875rem' }}>Manage system and agent scheduled jobs</p>
+        {!loading && !error && intelligence && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Badge label={`${jobs.filter((j) => j.enabled).length} active jobs`} color="var(--blue)" />
+            <Badge label={`${intelligence.calendar.freeSlots.length} free slots`} color="var(--teal)" />
+            <Badge label={`${intelligence.conflicts.length} conflicts`} color={intelligence.conflicts.some((c) => c.severity === "high") ? "#f87171" : "var(--amber)"} />
+          </div>
+        )}
       </div>
 
       {error && (
-        <GlassCard style={{ marginBottom: 24, borderColor: 'rgba(239,68,68,0.2)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <svg width="16" height="16" fill="none" stroke="#f87171" strokeWidth="2" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            <span style={{ color: '#f87171', fontSize: '0.85rem' }}>{error}</span>
-            <button
-              onClick={loadJobs}
-              style={{
-                marginLeft: 'auto', padding: '4px 12px', borderRadius: 6,
-                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
-                color: '#f87171', fontSize: '0.78rem', cursor: 'pointer', fontWeight: 600,
-              }}
-            >
-              Retry
-            </button>
-          </div>
+        <GlassCard style={{ marginBottom: 18, borderColor: "rgba(248,113,113,0.35)" }}>
+          <div style={{ color: "#fca5a5", fontSize: "0.88rem" }}>{error}</div>
         </GlassCard>
       )}
 
       {loading ? (
-        <GlassCard style={{ textAlign: 'center', padding: '48px 24px' }}>
-          <svg width="24" height="24" fill="none" stroke="var(--muted)" strokeWidth="2" viewBox="0 0 24 24"
-            style={{ animation: 'spin 1s linear infinite', margin: '0 auto 12px', display: 'block' }}>
-            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-          </svg>
-          <div style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>Loading jobs...</div>
-        </GlassCard>
-      ) : jobs.length === 0 && !error ? (
-        <GlassCard style={{ textAlign: 'center', padding: '48px 24px' }}>
-          <svg width="40" height="40" fill="none" stroke="var(--faint)" strokeWidth="1.5" viewBox="0 0 24 24"
-            style={{ margin: '0 auto 16px', opacity: 0.5 }}>
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M12 6v6l4 2"/>
-          </svg>
-          <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>No scheduled jobs</div>
-        </GlassCard>
+        <GlassCard style={{ padding: 32, color: "var(--muted)" }}>Loading scheduler state...</GlassCard>
       ) : (
-        <>
-          {/* System Jobs */}
-          {systemJobs.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <svg width="14" height="14" fill="none" stroke="var(--blue)" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                </svg>
-                System Jobs
-                <Badge label={`${systemJobs.length}`} color="var(--blue)" />
-              </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {systemJobs.map((job) => (
-                  <JobCard key={job.id} job={job} formatTimeAgo={formatTimeAgo} formatTimeUntil={formatTimeUntil} onToggle={toggleJob} onRun={runJobNow} />
-                ))}
-              </div>
-            </div>
-          )}
+        <div style={{ display: "grid", gridTemplateColumns: "1.35fr 0.95fr", gap: 18, alignItems: "start" }}>
+          <div style={{ display: "grid", gap: 18 }}>
+            <BriefingCard intelligence={intelligence} />
+            <SuggestionsCard intelligence={intelligence} />
+            <JobSection title="System Jobs" jobs={systemJobs} onToggle={toggleJob} onRun={runJobNow} />
+            <JobSection title="Agent Jobs" jobs={agentJobs} onToggle={toggleJob} onRun={runJobNow} />
+          </div>
 
-          {/* Agent Jobs */}
-          {agentJobs.length > 0 && (
-            <div>
-              <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <svg width="14" height="14" fill="none" stroke="var(--purple)" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
-                Agent Jobs
-                <Badge label={`${agentJobs.length}`} color="var(--purple)" />
-              </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {agentJobs.map((job) => (
-                  <JobCard key={job.id} job={job} formatTimeAgo={formatTimeAgo} formatTimeUntil={formatTimeUntil} onToggle={toggleJob} onRun={runJobNow} />
-                ))}
-              </div>
-            </div>
-          )}
-        </>
+          <div style={{ display: "grid", gap: 18 }}>
+            <ModelControlCard
+              config={schedulerConfig}
+              saving={saving}
+              intelligence={intelligence}
+              onChange={saveConfig}
+            />
+            <CalendarCapacityCard intelligence={intelligence} />
+            <RankedTasksCard intelligence={intelligence} />
+            <ConflictsCard intelligence={intelligence} />
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-function JobCard({ job, formatTimeAgo, formatTimeUntil, onToggle, onRun }) {
-  const nextRunText = formatTimeUntil(job.nextRun);
+function BriefingCard({ intelligence }) {
+  if (!intelligence) return null;
+  return (
+    <GlassCard glow>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 14 }}>
+        <div>
+          <div style={{ fontSize: "0.78rem", color: "var(--teal)", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>
+            Today
+          </div>
+          <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--text)" }}>{intelligence.briefing.headline}</div>
+        </div>
+        <Badge label={intelligence.model.selectedModel} color="var(--blue)" />
+      </div>
+      <div style={{ fontSize: "0.94rem", color: "var(--text)", lineHeight: 1.7, marginBottom: 16 }}>
+        {intelligence.briefing.summary}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10 }}>
+        {intelligence.briefing.topActions.map((item, index) => (
+          <div key={index} style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(45,212,191,0.08)", border: "1px solid rgba(45,212,191,0.18)" }}>
+            <div style={{ color: "var(--teal)", fontSize: "0.72rem", marginBottom: 6 }}>Action {index + 1}</div>
+            <div style={{ color: "var(--text)", fontSize: "0.86rem", lineHeight: 1.5 }}>{item}</div>
+          </div>
+        ))}
+      </div>
+    </GlassCard>
+  );
+}
 
+function SuggestionsCard({ intelligence }) {
+  if (!intelligence) return null;
   return (
     <GlassCard>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.95rem' }}>
-              {job.name || job.id}
-            </span>
-            <Badge
-              label={job.kind}
-              color={job.kind === 'system' ? 'var(--blue)' : 'var(--purple)'}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text)" }}>Suggested Work Blocks</div>
+        <Badge label={`${intelligence.suggestions.length}`} color="var(--green)" />
+      </div>
+      {intelligence.suggestions.length === 0 ? (
+        <div style={{ color: "var(--muted)", fontSize: "0.86rem" }}>No workable blocks right now.</div>
+      ) : (
+        <div style={{ display: "grid", gap: 10 }}>
+          {intelligence.suggestions.map((item) => (
+            <div key={item.taskId} style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid var(--border)", background: "rgba(255,255,255,0.02)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6, flexWrap: "wrap" }}>
+                <div style={{ color: "var(--text)", fontWeight: 600 }}>{item.title}</div>
+                <Badge label={`${item.minutes}m`} color="var(--blue)" />
+                <Badge label={item.reason} color="var(--amber)" />
+              </div>
+              <div style={{ color: "var(--muted)", fontSize: "0.82rem", fontFamily: "var(--mono)" }}>
+                {formatClock(item.start)} - {formatClock(item.end)} · score {item.score}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </GlassCard>
+  );
+}
+
+function ModelControlCard({ config, saving, intelligence, onChange }) {
+  if (!config) return null;
+  return (
+    <GlassCard>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+        <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text)" }}>Planner Model</div>
+        <Badge label={intelligence?.model?.available ? "LM Studio up" : "Fallback mode"} color={intelligence?.model?.available ? "var(--green)" : "#f59e0b"} />
+      </div>
+
+      <div style={{ display: "grid", gap: 14 }}>
+        <ToggleRow
+          label="AI planner"
+          value={config.enabled}
+          disabled={saving}
+          onChange={(value) => onChange({ enabled: value })}
+        />
+        <ToggleRow
+          label="Local only"
+          value={config.localOnly}
+          disabled={saving}
+          onChange={(value) => onChange({ localOnly: value })}
+        />
+
+        <label style={{ display: "grid", gap: 6 }}>
+          <span style={{ color: "var(--muted)", fontSize: "0.8rem" }}>Tier</span>
+          <select
+            value={config.tier}
+            disabled={saving || config.localOnly}
+            onChange={(e) => onChange({ tier: e.target.value })}
+            style={inputStyle}
+          >
+            {tierOptions.map((tier) => <option key={tier} value={tier}>{tier}</option>)}
+          </select>
+        </label>
+
+        <label style={{ display: "grid", gap: 6 }}>
+          <span style={{ color: "var(--muted)", fontSize: "0.8rem" }}>Override model</span>
+          <input
+            value={config.overrideModel || ""}
+            disabled={saving}
+            onChange={(e) => onChange({ overrideModel: e.target.value || null })}
+            placeholder="Optional explicit model id"
+            style={inputStyle}
+          />
+        </label>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          <label style={{ display: "grid", gap: 6 }}>
+            <span style={{ color: "var(--muted)", fontSize: "0.8rem" }}>Temperature</span>
+            <input
+              type="number"
+              min="0"
+              max="1"
+              step="0.05"
+              value={config.temperature}
+              disabled={saving}
+              onChange={(e) => onChange({ temperature: Number(e.target.value) })}
+              style={inputStyle}
             />
-            <Badge
-              label={job.enabled ? "Active" : "Disabled"}
-              color={job.enabled ? 'var(--green)' : 'var(--faint)'}
+          </label>
+          <label style={{ display: "grid", gap: 6 }}>
+            <span style={{ color: "var(--muted)", fontSize: "0.8rem" }}>Max tokens</span>
+            <input
+              type="number"
+              min="128"
+              max="4096"
+              step="64"
+              value={config.maxTokens}
+              disabled={saving}
+              onChange={(e) => onChange({ maxTokens: Number(e.target.value) })}
+              style={inputStyle}
             />
-          </div>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: '0.78rem', color: 'var(--muted)' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M12 6v6l4 2"/>
-              </svg>
-              <span style={{ fontFamily: 'var(--mono)' }}>{job.schedule}</span>
-            </span>
-            {job.lastRun && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <polyline points="1 4 1 10 7 10"/>
-                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
-                </svg>
-                Last: {formatTimeAgo(job.lastRun)}
-              </span>
-            )}
-            {nextRunText && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: nextRunText === 'overdue' ? '#f87171' : 'var(--teal)' }}>
-                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <path d="M5 12h14M12 5l7 7-7 7"/>
-                </svg>
-                Next: {nextRunText}
-              </span>
-            )}
-          </div>
+          </label>
         </div>
 
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          <button
-            onClick={() => onToggle(job.id)}
-            style={{
-              padding: '6px 14px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 600,
-              cursor: 'pointer', border: '1px solid',
-              background: job.enabled ? 'rgba(239,68,68,0.08)' : 'rgba(45,212,191,0.08)',
-              borderColor: job.enabled ? 'rgba(239,68,68,0.2)' : 'rgba(45,212,191,0.2)',
-              color: job.enabled ? '#f87171' : 'var(--teal)',
-            }}
-          >
-            {job.enabled ? 'Disable' : 'Enable'}
-          </button>
-          <button
-            onClick={() => onRun(job.id)}
-            style={{
-              padding: '6px 14px', borderRadius: 6, fontSize: '0.78rem', fontWeight: 600,
-              cursor: 'pointer', border: '1px solid rgba(96,165,250,0.2)',
-              background: 'rgba(96,165,250,0.08)', color: '#60a5fa',
-            }}
-          >
-            Run Now
-          </button>
+        <div style={{ color: "var(--muted)", fontSize: "0.78rem", lineHeight: 1.6 }}>
+          Active route: <span style={{ color: "var(--text)" }}>{intelligence?.model?.selectedModel || "unknown"}</span>
+          {" · "}
+          {saving ? "saving..." : intelligence?.model?.source || "local"}
         </div>
       </div>
     </GlassCard>
   );
+}
+
+function CalendarCapacityCard({ intelligence }) {
+  if (!intelligence) return null;
+  return (
+    <GlassCard>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text)" }}>Calendar Capacity</div>
+        <Badge label={`${intelligence.calendar.events.length} events`} color="var(--blue)" />
+      </div>
+      <div style={{ display: "grid", gap: 10 }}>
+        {intelligence.calendar.freeSlots.slice(0, 5).map((slot, index) => (
+          <div key={index} style={{ display: "flex", justifyContent: "space-between", gap: 10, fontSize: "0.82rem", color: "var(--text)" }}>
+            <span>{formatClock(slot.start)} - {formatClock(slot.end)}</span>
+            <span style={{ color: "var(--teal)", fontFamily: "var(--mono)" }}>{slot.minutes}m</span>
+          </div>
+        ))}
+        {intelligence.calendar.freeSlots.length === 0 && (
+          <div style={{ color: "var(--muted)", fontSize: "0.84rem" }}>No free slots inside the 8am-11pm planning window.</div>
+        )}
+      </div>
+    </GlassCard>
+  );
+}
+
+function RankedTasksCard({ intelligence }) {
+  if (!intelligence) return null;
+  return (
+    <GlassCard>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text)" }}>Ranked Tasks</div>
+        <Badge label={`${intelligence.tasks.overdueCount} overdue`} color={intelligence.tasks.overdueCount ? "#f87171" : "var(--faint)"} />
+      </div>
+      <div style={{ display: "grid", gap: 10 }}>
+        {intelligence.tasks.ranked.slice(0, 6).map((task) => (
+          <div key={task.id} style={{ paddingBottom: 10, borderBottom: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
+              <span style={{ color: "var(--text)", fontSize: "0.86rem", fontWeight: 600 }}>{task.title}</span>
+              <Badge label={task.priority || "medium"} color="var(--amber)" />
+              <Badge label={`${task.estimatedMinutes}m`} color="var(--blue)" />
+            </div>
+            <div style={{ color: "var(--muted)", fontSize: "0.77rem", fontFamily: "var(--mono)" }}>
+              score {task.score} · {task.status}{task.dueDate ? ` · due ${task.dueDate.slice(0, 10)}` : ""}
+            </div>
+          </div>
+        ))}
+      </div>
+    </GlassCard>
+  );
+}
+
+function ConflictsCard({ intelligence }) {
+  if (!intelligence) return null;
+  return (
+    <GlassCard>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text)" }}>Conflicts</div>
+        <Badge label={`${intelligence.conflicts.length}`} color={intelligence.conflicts.some((c) => c.severity === "high") ? "#f87171" : "var(--amber)"} />
+      </div>
+      {intelligence.conflicts.length === 0 ? (
+        <div style={{ color: "var(--muted)", fontSize: "0.84rem" }}>No conflicts detected.</div>
+      ) : (
+        <div style={{ display: "grid", gap: 10 }}>
+          {intelligence.conflicts.map((conflict, index) => (
+            <div key={index} style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.18)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <span style={{ color: "var(--text)", fontSize: "0.85rem", fontWeight: 600 }}>{conflict.title}</span>
+                <Badge label={conflict.severity} color={conflict.severity === "high" ? "#f87171" : "var(--amber)"} />
+              </div>
+              <div style={{ color: "var(--muted)", fontSize: "0.78rem", lineHeight: 1.5 }}>{conflict.description}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </GlassCard>
+  );
+}
+
+function JobSection({ title, jobs, onToggle, onRun }) {
+  if (!jobs.length) return null;
+  return (
+    <GlassCard>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text)" }}>{title}</div>
+        <Badge label={`${jobs.length}`} color="var(--purple)" />
+      </div>
+      <div style={{ display: "grid", gap: 10 }}>
+        {jobs.map((job) => (
+          <div key={job.id} style={{ padding: "12px 14px", borderRadius: 10, border: "1px solid var(--border)", background: "rgba(255,255,255,0.02)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start" }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+                  <span style={{ color: "var(--text)", fontSize: "0.88rem", fontWeight: 600 }}>{job.name || job.id}</span>
+                  <Badge label={job.enabled ? "active" : "disabled"} color={job.enabled ? "var(--green)" : "var(--faint)"} />
+                </div>
+                <div style={{ color: "var(--muted)", fontSize: "0.77rem", fontFamily: "var(--mono)", marginBottom: 4 }}>{job.schedule}</div>
+                <div style={{ color: "var(--muted)", fontSize: "0.76rem" }}>
+                  last {formatTimeAgo(job.lastRun)}{job.nextRun ? ` · next ${formatTimeUntil(job.nextRun)}` : ""}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={() => onToggle(job.id)} style={buttonStyle(job.enabled ? "rgba(248,113,113,0.12)" : "rgba(45,212,191,0.12)")}>
+                  {job.enabled ? "Disable" : "Enable"}
+                </button>
+                <button onClick={() => onRun(job.id)} style={buttonStyle("rgba(96,165,250,0.12)")}>Run</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </GlassCard>
+  );
+}
+
+function ToggleRow({ label, value, onChange, disabled }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+      <span style={{ color: "var(--text)", fontSize: "0.84rem" }}>{label}</span>
+      <button
+        disabled={disabled}
+        onClick={() => onChange(!value)}
+        style={{
+          ...buttonStyle(value ? "rgba(45,212,191,0.14)" : "rgba(148,163,184,0.12)"),
+          color: value ? "var(--teal)" : "var(--muted)",
+          minWidth: 78,
+        }}
+      >
+        {value ? "On" : "Off"}
+      </button>
+    </div>
+  );
+}
+
+const inputStyle = {
+  width: "100%",
+  background: "rgba(15,23,42,0.35)",
+  color: "var(--text)",
+  border: "1px solid var(--border)",
+  borderRadius: 8,
+  padding: "10px 12px",
+  fontSize: "0.84rem",
+};
+
+function buttonStyle(background) {
+  return {
+    padding: "7px 12px",
+    borderRadius: 8,
+    border: "1px solid var(--border)",
+    background,
+    color: "var(--text)",
+    cursor: "pointer",
+    fontSize: "0.78rem",
+    fontWeight: 600,
+  };
 }
