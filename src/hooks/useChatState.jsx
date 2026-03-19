@@ -4,6 +4,8 @@ const ChatContext = createContext(null);
 
 export function ChatProvider({ children }) {
   const [sessions, setSessions] = useState([]);
+  const [archivedSessions, setArchivedSessions] = useState([]);
+  const [showArchived, setShowArchived] = useState(false);
   const [currentSession, setCurrentSession] = useState(null);
   const [processingKeys, setProcessingKeys] = useState(new Set());
   const [error, setError] = useState(null);
@@ -284,7 +286,7 @@ export function ChatProvider({ children }) {
     }
   };
 
-  const deleteSession = async (sessionId) => {
+  const archiveSession = async (sessionId) => {
     const session = sessions.find(s => s.id === sessionId);
     if (!session) return;
 
@@ -297,6 +299,7 @@ export function ChatProvider({ children }) {
       await fetch(`/api/chat/sessions/${session.key}`, { method: 'DELETE' });
 
       setSessions(prev => prev.filter(s => s.id !== sessionId));
+      setArchivedSessions(prev => [{ ...session, archivedAt: new Date().toISOString() }, ...prev]);
       setProcessingKeys(prev => {
         const next = new Set(prev);
         next.delete(session.key);
@@ -308,9 +311,50 @@ export function ChatProvider({ children }) {
         setStreamEvents([]);
       }
     } catch (err) {
-      console.error('Failed to delete session:', err);
+      console.error('Failed to archive session:', err);
     }
   };
+
+  const unarchiveSession = async (sessionId) => {
+    const session = archivedSessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    try {
+      await fetch(`/api/chat/sessions/${session.key}/unarchive`, { method: 'POST' });
+
+      setArchivedSessions(prev => prev.filter(s => s.id !== sessionId));
+      const restored = { ...session };
+      delete restored.archivedAt;
+      setSessions(prev => [restored, ...prev]);
+    } catch (err) {
+      console.error('Failed to unarchive session:', err);
+    }
+  };
+
+  const permanentDeleteSession = async (sessionId) => {
+    const session = archivedSessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    try {
+      await fetch(`/api/chat/sessions/${session.key}?permanent=true`, { method: 'DELETE' });
+      setArchivedSessions(prev => prev.filter(s => s.id !== sessionId));
+    } catch (err) {
+      console.error('Failed to permanently delete session:', err);
+    }
+  };
+
+  const loadArchivedSessions = async () => {
+    try {
+      const res = await fetch('/api/chat/sessions?archived=true');
+      const data = await res.json();
+      setArchivedSessions(data.sessions || []);
+    } catch (err) {
+      console.error('Failed to load archived sessions:', err);
+    }
+  };
+
+  // Alias for backward compat — "delete" now archives
+  const deleteSession = archiveSession;
 
   const sendMessage = async (content, images) => {
     if (!currentSession) return;
@@ -412,6 +456,8 @@ export function ChatProvider({ children }) {
 
   const value = {
     sessions,
+    archivedSessions,
+    showArchived,
     currentSession,
     processingKeys,
     error,
@@ -420,10 +466,15 @@ export function ChatProvider({ children }) {
     streamEvents,
     setError,
     setShowTools,
+    setShowArchived,
     setToolConfigOpen,
     selectSession,
     createSession,
     deleteSession,
+    archiveSession,
+    unarchiveSession,
+    permanentDeleteSession,
+    loadArchivedSessions,
     sendMessage,
     loadSessions,
   };

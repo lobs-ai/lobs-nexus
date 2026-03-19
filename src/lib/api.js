@@ -90,7 +90,11 @@ export const api = {
   reflectionFeedback: (id, feedback, author = 'lobs') => req(`/api/reflections/${id}/feedback`, { method: 'POST', body: { feedback, author } }),
 
   chatSessions: (signal) => req('/api/chat/sessions', { signal }),
+  archivedChatSessions: (signal) => req('/api/chat/sessions?archived=true', { signal }),
   chatMessages: (key, signal) => req(`/api/chat/sessions/${key}/messages`, { signal }),
+  archiveChatSession: (key) => req(`/api/chat/sessions/${key}`, { method: 'DELETE' }),
+  unarchiveChatSession: (key) => req(`/api/chat/sessions/${key}/unarchive`, { method: 'POST' }),
+  permanentDeleteChatSession: (key) => req(`/api/chat/sessions/${key}?permanent=true`, { method: 'DELETE' }),
 
   knowledge: (params = {}, signal) => {
     const q = new URLSearchParams(params).toString();

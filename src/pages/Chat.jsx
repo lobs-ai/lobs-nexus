@@ -595,7 +595,9 @@ function ThinkingIndicator({ isVisible }) {
 // Chat Sessions Sidebar
 // ---------------------------------------------------------------------------
 
-function SessionsSidebar({ sessions, currentSession, onSelectSession, onNewSession, onDeleteSession, processingSet, mobileOpen, onClose }) {
+function SessionsSidebar({ sessions, archivedSessions, showArchived, currentSession, onSelectSession, onNewSession, onArchiveSession, onUnarchiveSession, onPermanentDeleteSession, onToggleArchived, processingSet, mobileOpen, onClose }) {
+  const displaySessions = showArchived ? archivedSessions : sessions;
+
   return (
     <div
       className={`chat-sessions-sidebar${mobileOpen ? ' mobile-open' : ''}`}
@@ -624,68 +626,94 @@ function SessionsSidebar({ sessions, currentSession, onSelectSession, onNewSessi
         }}>
           <div style={{
             width: 32, height: 32, borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--teal), var(--purple))',
+            background: showArchived
+              ? 'linear-gradient(135deg, #6b7280, #9ca3af)'
+              : 'linear-gradient(135deg, var(--teal), var(--purple))',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '1rem', fontWeight: 700, color: 'white',
-          }}>L</div>
+          }}>{showArchived ? '📦' : 'L'}</div>
           <div>
-            <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.95rem' }}>Lobs Chat</div>
+            <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.95rem' }}>
+              {showArchived ? 'Archived' : 'Lobs Chat'}
+            </div>
           </div>
         </div>
-        <button
-          onClick={onNewSession}
-          style={{
-            width: 32, height: 32,
-            background: 'var(--teal)',
-            border: 'none',
-            borderRadius: '50%',
-            color: 'white',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1.2rem',
-          }}
-          title="New chat"
-        >+</button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button
+            onClick={onToggleArchived}
+            style={{
+              width: 32, height: 32,
+              background: showArchived ? 'rgba(45,212,191,0.15)' : 'transparent',
+              border: `1px solid ${showArchived ? 'var(--teal)' : 'var(--border)'}`,
+              borderRadius: '50%',
+              color: showArchived ? 'var(--teal)' : 'var(--muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '0.85rem',
+              transition: 'all 0.15s ease',
+            }}
+            title={showArchived ? 'Show active chats' : 'Show archived chats'}
+          >📦</button>
+          {!showArchived && (
+            <button
+              onClick={onNewSession}
+              style={{
+                width: 32, height: 32,
+                background: 'var(--teal)',
+                border: 'none',
+                borderRadius: '50%',
+                color: 'white',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.2rem',
+              }}
+              title="New chat"
+            >+</button>
+          )}
+        </div>
       </div>
 
       {/* Sessions list */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
-        {sessions.length === 0 ? (
+        {displaySessions.length === 0 ? (
           <div style={{ 
             padding: '40px 20px', 
             textAlign: 'center', 
             color: 'var(--muted)', 
             fontSize: '0.85rem' 
           }}>
-            No chats yet
+            {showArchived ? 'No archived chats' : 'No chats yet'}
           </div>
         ) : (
-          sessions.map(session => {
+          displaySessions.map(session => {
             const isProcessing = processingSet.has(session.key);
             return (
               <div
                 key={session.id}
-                onClick={() => onSelectSession(session)}
+                onClick={() => !showArchived && onSelectSession(session)}
                 style={{
                   padding: '12px 16px',
                   margin: '2px 0',
                   borderRadius: 8,
-                  cursor: 'pointer',
+                  cursor: showArchived ? 'default' : 'pointer',
                   background: session.id === currentSession?.id ? 'rgba(45, 212, 191, 0.1)' : 'transparent',
                   border: session.id === currentSession?.id ? '1px solid var(--teal)' : '1px solid transparent',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  opacity: showArchived ? 0.7 : 1,
                 }}
                 onMouseEnter={e => {
-                  if (session.id !== currentSession?.id) {
+                  if (!showArchived && session.id !== currentSession?.id) {
                     e.currentTarget.style.background = 'rgba(45, 212, 191, 0.05)';
                   }
                 }}
                 onMouseLeave={e => {
-                  if (session.id !== currentSession?.id) {
+                  if (!showArchived && session.id !== currentSession?.id) {
                     e.currentTarget.style.background = 'transparent';
                   }
                 }}
@@ -705,12 +733,12 @@ function SessionsSidebar({ sessions, currentSession, onSelectSession, onNewSessi
                     <span style={{ 
                       overflow: 'hidden', 
                       textOverflow: 'ellipsis',
-                      fontWeight: (session.unreadCount > 0 && session.id !== currentSession?.id) ? 600 : 500,
-                      color: (session.unreadCount > 0 && session.id !== currentSession?.id) ? 'var(--text)' : undefined,
+                      fontWeight: (!showArchived && session.unreadCount > 0 && session.id !== currentSession?.id) ? 600 : 500,
+                      color: (!showArchived && session.unreadCount > 0 && session.id !== currentSession?.id) ? 'var(--text)' : undefined,
                     }}>
                       {session.title}
                     </span>
-                    {isProcessing && (
+                    {!showArchived && isProcessing && (
                       <span style={{
                         width: 8, height: 8,
                         borderRadius: '50%',
@@ -720,7 +748,7 @@ function SessionsSidebar({ sessions, currentSession, onSelectSession, onNewSessi
                         flexShrink: 0,
                       }} />
                     )}
-                    {session.unreadCount > 0 && session.id !== currentSession?.id && !isProcessing && (
+                    {!showArchived && session.unreadCount > 0 && session.id !== currentSession?.id && !isProcessing && (
                       <span style={{
                         width: 8, height: 8,
                         borderRadius: '50%',
@@ -735,37 +763,105 @@ function SessionsSidebar({ sessions, currentSession, onSelectSession, onNewSessi
                     fontSize: '0.75rem',
                     marginTop: 2,
                   }}>
-                    {formatSessionTime(session.updatedAt || session.createdAt)}
+                    {showArchived
+                      ? `Archived ${formatSessionTime(session.archivedAt || session.updatedAt)}`
+                      : formatSessionTime(session.updatedAt || session.createdAt)}
                   </div>
                 </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteSession(session.id);
-                  }}
-                  style={{
-                    width: 24, height: 24,
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--muted)',
-                    cursor: 'pointer',
-                    borderRadius: 4,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: 0,
-                    transition: 'opacity 0.2s',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.opacity = '1';
-                    e.currentTarget.style.color = '#ef4444';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.opacity = '0';
-                    e.currentTarget.style.color = 'var(--muted)';
-                  }}
-                  title="Delete chat"
-                >×</button>
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                  {showArchived ? (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUnarchiveSession(session.id);
+                        }}
+                        style={{
+                          width: 24, height: 24,
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--muted)',
+                          cursor: 'pointer',
+                          borderRadius: 4,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '0.8rem',
+                          opacity: 0.6,
+                          transition: 'opacity 0.2s',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.opacity = '1';
+                          e.currentTarget.style.color = 'var(--teal)';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.opacity = '0.6';
+                          e.currentTarget.style.color = 'var(--muted)';
+                        }}
+                        title="Restore chat"
+                      >↩</button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm('Permanently delete this chat? This cannot be undone.')) {
+                            onPermanentDeleteSession(session.id);
+                          }
+                        }}
+                        style={{
+                          width: 24, height: 24,
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--muted)',
+                          cursor: 'pointer',
+                          borderRadius: 4,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          opacity: 0,
+                          transition: 'opacity 0.2s',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.opacity = '1';
+                          e.currentTarget.style.color = '#ef4444';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.opacity = '0';
+                          e.currentTarget.style.color = 'var(--muted)';
+                        }}
+                        title="Permanently delete"
+                      >🗑</button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onArchiveSession(session.id);
+                      }}
+                      style={{
+                        width: 24, height: 24,
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--muted)',
+                        cursor: 'pointer',
+                        borderRadius: 4,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: 0,
+                        transition: 'opacity 0.2s',
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.opacity = '1';
+                        e.currentTarget.style.color = '#ef4444';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.opacity = '0';
+                        e.currentTarget.style.color = 'var(--muted)';
+                      }}
+                      title="Archive chat"
+                    >×</button>
+                  )}
+                </div>
               </div>
             );
           })
@@ -1453,6 +1549,9 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
 export default function ChatPage() {
   const {
     sessions,
+    archivedSessions,
+    showArchived,
+    setShowArchived,
     currentSession,
     processingKeys,
     error,
@@ -1465,6 +1564,10 @@ export default function ChatPage() {
     selectSession,
     createSession,
     deleteSession,
+    archiveSession,
+    unarchiveSession,
+    permanentDeleteSession,
+    loadArchivedSessions,
     sendMessage,
     loadSessions,
   } = useChatState();
@@ -1517,10 +1620,19 @@ export default function ChatPage() {
       )}
       <SessionsSidebar
         sessions={sessions}
+        archivedSessions={archivedSessions}
+        showArchived={showArchived}
         currentSession={currentSession}
         onSelectSession={(s) => { selectSession(s); setMobileSessionsOpen(false); }}
         onNewSession={createSession}
-        onDeleteSession={deleteSession}
+        onArchiveSession={archiveSession}
+        onUnarchiveSession={unarchiveSession}
+        onPermanentDeleteSession={permanentDeleteSession}
+        onToggleArchived={() => {
+          const next = !showArchived;
+          setShowArchived(next);
+          if (next) loadArchivedSessions();
+        }}
         processingSet={processingKeys}
         mobileOpen={mobileSessionsOpen}
         onClose={() => setMobileSessionsOpen(false)}
