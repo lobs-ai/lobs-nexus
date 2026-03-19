@@ -799,8 +799,10 @@ function formatSessionTime(timestamp) {
 
 function ChatInterface({ session, onSendMessage, processing, streamEvents, showTools, onToggleTools, toolConfigOpen, onToggleToolConfig, modelConfigOpen, onToggleModelConfig, onModelChanged, onOpenSessions }) {
   const [input, setInput] = useState('');
+  const [pendingImages, setPendingImages] = useState([]);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const autoScrollRef = useRef(true);
 
@@ -824,13 +826,56 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
     inputRef.current?.focus();
   }, [session?.id]);
 
+  // Process files into base64 image objects
+  const processFiles = useCallback((files) => {
+    const validTypes = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
+    const imageFiles = Array.from(files).filter(f => validTypes.includes(f.type));
+    if (!imageFiles.length) return;
+
+    imageFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        const base64 = dataUrl.split(',')[1];
+        const mediaType = file.type;
+        setPendingImages(prev => [...prev, { base64, mediaType, preview: dataUrl }]);
+      };
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  // Paste handler for images
+  useEffect(() => {
+    const handlePaste = (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const imageItems = Array.from(items).filter(item => item.type.startsWith('image/'));
+      if (imageItems.length) {
+        e.preventDefault();
+        const files = imageItems.map(item => item.getAsFile()).filter(Boolean);
+        processFiles(files);
+      }
+    };
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [processFiles]);
+
+  const removePendingImage = (index) => {
+    setPendingImages(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSend = () => {
     const text = input.trim();
-    if (!text) return;
-    
+    if (!text && !pendingImages.length) return;
+
+    const images = pendingImages.length
+      ? pendingImages.map(({ base64, mediaType }) => ({ base64, mediaType }))
+      : undefined;
+
     setInput('');
+    setPendingImages([]);
     if (inputRef.current) inputRef.current.style.height = 'auto';
-    onSendMessage(text);
+    onSendMessage(text || '', images);
   };
 
   const formatTime = (ts) => {
@@ -1158,6 +1203,18 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
           }
 
           // Regular message
+          // Check for images (optimistic local msgs have .images with preview/base64, DB msgs have metadata)
+          const msgImages = item.images || (() => {
+            try {
+              const raw = item.messageMetadata || item.metadata;
+              if (!raw) return null;
+              const meta = typeof raw === 'string' ? JSON.parse(raw) : raw;
+              return meta?.images;
+            } catch { return null; }
+          })();
+          const hasImages = msgImages?.length > 0;
+          const isImageOnly = hasImages && (!item.content || item.content === '(image)');
+
           return (
             <div key={`msg-${i}`} style={{
               display: 'flex',
@@ -1174,14 +1231,55 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
                 border: item.role === 'user' ? 'none' : '1px solid var(--border)',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
               }}>
-                <div
-                  style={{ 
-                    fontSize: '0.9rem', 
-                    lineHeight: 1.6, 
-                    wordBreak: 'break-word',
-                  }}
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(item.content) }}
-                />
+                {/* Attached images */}
+                {hasImages && (
+                  <div style={{
+                    display: 'flex',
+                    gap: 6,
+                    flexWrap: 'wrap',
+                    marginBottom: isImageOnly ? 0 : 8,
+                  }}>
+                    {msgImages.map((img, j) => {
+                      const src = img.preview || (img.base64 ? `data:${img.mediaType};base64,${img.base64}` : null);
+                      return src ? (
+                        <img
+                          key={j}
+                          src={src}
+                          alt=""
+                          style={{
+                            maxWidth: 280,
+                            maxHeight: 200,
+                            borderRadius: 8,
+                            objectFit: 'contain',
+                            cursor: 'pointer',
+                          }}
+                          onClick={() => window.open(src, '_blank')}
+                        />
+                      ) : (
+                        <div key={j} style={{
+                          width: 80, height: 60,
+                          borderRadius: 8,
+                          background: 'rgba(255,255,255,0.15)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '1.2rem',
+                        }}>🖼️</div>
+                      );
+                    })}
+                  </div>
+                )}
+                {/* Text content */}
+                {!isImageOnly && (
+                  <div
+                    style={{ 
+                      fontSize: '0.9rem', 
+                      lineHeight: 1.6, 
+                      wordBreak: 'break-word',
+                    }}
+                    dangerouslySetInnerHTML={{ __html: renderMarkdown(item.content) }}
+                  />
+                )}
                 <div style={{
                   fontSize: '0.7rem',
                   color: item.role === 'user' ? 'rgba(255,255,255,0.7)' : 'var(--muted)',
@@ -1204,70 +1302,143 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
         borderTop: '1px solid var(--border)',
         background: 'var(--card)',
         flexShrink: 0,
-      }}>
-        <div style={{
-          display: 'flex',
-          gap: 8,
-          maxWidth: 900,
-          margin: '0 auto',
-        }}>
-          <textarea
-            ref={inputRef}
-            value={input}
-            onChange={e => {
-              setInput(e.target.value);
-              const el = e.target;
-              el.style.height = 'auto';
-              el.style.height = Math.min(el.scrollHeight, 200) + 'px';
-            }}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder="Message Lobs..."
-            rows={1}
-            style={{
-              flex: 1,
-              padding: '12px 16px',
-              borderRadius: 12,
-              border: '1px solid var(--border)',
-              background: 'var(--surface)',
-              color: 'var(--text)',
-              fontSize: '0.9rem',
-              outline: 'none',
-              fontFamily: 'inherit',
-              minHeight: 44,
-              maxHeight: 200,
-              resize: 'none',
-              overflow: 'auto',
-              transition: 'border 0.2s',
-              lineHeight: 1.4,
-            }}
-            onFocus={e => e.target.style.borderColor = 'var(--teal)'}
-            onBlur={e => e.target.style.borderColor = 'var(--border)'}
-          />
-          <button
-            onClick={handleSend}
-            disabled={!input.trim()}
-            className="chat-send-btn"
-            style={{
-              padding: '12px 20px',
-              borderRadius: 12,
-              border: 'none',
-              background: input.trim()
-                ? 'linear-gradient(135deg, var(--teal), var(--blue))'
-                : 'var(--surface)',
-              color: input.trim() ? 'white' : 'var(--muted)',
-              fontWeight: 600,
-              cursor: input.trim() ? 'pointer' : 'not-allowed',
-              fontSize: '0.9rem',
-              transition: 'all 0.2s',
-            }}
-          >
-            Send
-          </button>
+      }}
+        onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+        onDrop={e => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (e.dataTransfer?.files?.length) processFiles(e.dataTransfer.files);
+        }}
+      >
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          {/* Pending image previews */}
+          {pendingImages.length > 0 && (
+            <div style={{
+              display: 'flex',
+              gap: 8,
+              marginBottom: 8,
+              flexWrap: 'wrap',
+            }}>
+              {pendingImages.map((img, i) => (
+                <div key={i} style={{
+                  position: 'relative',
+                  width: 64, height: 64,
+                  borderRadius: 8,
+                  overflow: 'hidden',
+                  border: '1px solid var(--border)',
+                  flexShrink: 0,
+                }}>
+                  <img src={img.preview} alt="" style={{
+                    width: '100%', height: '100%',
+                    objectFit: 'cover',
+                  }} />
+                  <button onClick={() => removePendingImage(i)} style={{
+                    position: 'absolute', top: 2, right: 2,
+                    width: 18, height: 18,
+                    borderRadius: '50%',
+                    border: 'none',
+                    background: 'rgba(0,0,0,0.6)',
+                    color: 'white',
+                    fontSize: '0.65rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1,
+                  }}>✕</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8 }}>
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              multiple
+              style={{ display: 'none' }}
+              onChange={e => {
+                if (e.target.files?.length) processFiles(e.target.files);
+                e.target.value = '';
+              }}
+            />
+            {/* Attach button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach image"
+              style={{
+                padding: '0 12px',
+                borderRadius: 12,
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
+                color: 'var(--muted)',
+                fontSize: '1.1rem',
+                cursor: 'pointer',
+                minHeight: 44,
+                display: 'flex',
+                alignItems: 'center',
+                transition: 'all 0.2s',
+              }}
+            >📎</button>
+            <textarea
+              ref={inputRef}
+              value={input}
+              onChange={e => {
+                setInput(e.target.value);
+                const el = e.target;
+                el.style.height = 'auto';
+                el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+              placeholder={pendingImages.length ? "Add a message or just send..." : "Message Lobs..."}
+              rows={1}
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                borderRadius: 12,
+                border: '1px solid var(--border)',
+                background: 'var(--surface)',
+                color: 'var(--text)',
+                fontSize: '0.9rem',
+                outline: 'none',
+                fontFamily: 'inherit',
+                minHeight: 44,
+                maxHeight: 200,
+                resize: 'none',
+                overflow: 'auto',
+                transition: 'border 0.2s',
+                lineHeight: 1.4,
+              }}
+              onFocus={e => e.target.style.borderColor = 'var(--teal)'}
+              onBlur={e => e.target.style.borderColor = 'var(--border)'}
+            />
+            <button
+              onClick={handleSend}
+              disabled={!input.trim() && !pendingImages.length}
+              className="chat-send-btn"
+              style={{
+                padding: '12px 20px',
+                borderRadius: 12,
+                border: 'none',
+                background: (input.trim() || pendingImages.length)
+                  ? 'linear-gradient(135deg, var(--teal), var(--blue))'
+                  : 'var(--surface)',
+                color: (input.trim() || pendingImages.length) ? 'white' : 'var(--muted)',
+                fontWeight: 600,
+                cursor: (input.trim() || pendingImages.length) ? 'pointer' : 'not-allowed',
+                fontSize: '0.9rem',
+                transition: 'all 0.2s',
+              }}
+            >
+              Send
+            </button>
+          </div>
         </div>
       </div>
     </div>

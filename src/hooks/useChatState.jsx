@@ -312,7 +312,7 @@ export function ChatProvider({ children }) {
     }
   };
 
-  const sendMessage = async (content) => {
+  const sendMessage = async (content, images) => {
     if (!currentSession) return;
 
     const alreadyProcessing = processingKeys.has(currentSession.key);
@@ -321,6 +321,7 @@ export function ChatProvider({ children }) {
       role: 'user',
       content,
       timestamp: new Date().toISOString(),
+      ...(images?.length ? { images } : {}),
     };
 
     setCurrentSession(prev => ({
@@ -338,10 +339,12 @@ export function ChatProvider({ children }) {
     }
 
     try {
+      const payload = { content };
+      if (images?.length) payload.images = images;
       const res = await fetch(`/api/chat/sessions/${currentSession.key}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
