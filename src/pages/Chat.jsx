@@ -186,10 +186,7 @@ function Lightbox({ src, alt, onClose }) {
 }
 
 function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
-  // Auto-expand imagine tool when completed with an image
-  const hasImage = toolName === 'imagine' && result && /!\[[^\]]*\]\(\/api\/media\//.test(result);
   const [expanded, setExpanded] = useState(false);
-  const [lightboxSrc, setLightboxSrc] = useState(null);
 
   if (!isVisible) return null;
 
@@ -267,10 +264,7 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
   };
 
   const summary = getSummary();
-  const cleanResult = hasImage
-    ? result.replace(/!\[[^\]]*\]\([^)]+\)/g, '').replace(/\n{2,}/g, '\n').trim()
-    : result;
-  const resultPreview = cleanResult ? (cleanResult.length > 160 ? cleanResult.substring(0, 160) + '…' : cleanResult) : '';
+  const resultPreview = result ? (result.length > 160 ? result.substring(0, 160) + '…' : result) : '';
 
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start', margin: '2px 0' }}>
@@ -356,28 +350,13 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
                   maxHeight: 300, overflowY: 'auto',
                   whiteSpace: 'pre-wrap', wordBreak: 'break-all',
                 }}>{result}</pre>
-                {/* Image preview for imagine tool */}
-                {hasImage && (() => {
-                  const mediaMatch = result.match(/!\[[^\]]*\]\((\/api\/media\/[^\)]+)\)/);
-                  return mediaMatch ? (
-                    <img
-                      src={mediaMatch[1]}
-                      alt="Generated"
-                      style={{
-                        maxWidth: '100%', maxHeight: 400, borderRadius: 8,
-                        marginTop: 8, cursor: 'zoom-in',
-                      }}
-                      onClick={(e) => { e.stopPropagation(); setLightboxSrc(mediaMatch[1]); }}
-                    />
-                  ) : null;
-                })()}
               </div>
             )}
           </div>
         )}
 
-        {/* Collapsed result preview for completed tool calls (skip for imagine with image) */}
-        {!expanded && !isRunning && resultPreview && !hasImage && (
+        {/* Collapsed result preview for completed tool calls */}
+        {!expanded && !isRunning && resultPreview && (
           <div style={{
             marginTop: 4, fontFamily: 'var(--mono)', fontSize: '0.68rem',
             color: isError ? 'rgba(239,68,68,0.6)' : 'var(--muted)',
@@ -386,36 +365,6 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
             → {resultPreview}
           </div>
         )}
-
-        {/* Collapsed image thumbnail for imagine tool */}
-        {!expanded && !isRunning && hasImage && (() => {
-          const mediaMatch = result.match(/!\[[^\]]*\]\((\/api\/media\/[^\)]+)\)/);
-          const timeMatch = result.match(/Time:\s*([\d.]+)s/);
-          const sizeMatch = result.match(/Size:\s*(\d+x\d+)/);
-          return mediaMatch ? (
-            <div style={{ marginTop: 8 }}>
-              <img
-                src={mediaMatch[1]}
-                alt="Generated"
-                style={{
-                  maxWidth: 280, maxHeight: 200, borderRadius: 8,
-                  cursor: 'zoom-in', display: 'block',
-                }}
-                onClick={(e) => { e.stopPropagation(); setLightboxSrc(mediaMatch[1]); }}
-              />
-              {(timeMatch || sizeMatch) && (
-                <div style={{
-                  marginTop: 4, fontFamily: 'var(--mono)', fontSize: '0.65rem',
-                  color: 'var(--muted)', opacity: 0.5,
-                }}>
-                  {sizeMatch && sizeMatch[1]}{timeMatch && sizeMatch && ' · '}{timeMatch && `${timeMatch[1]}s`}
-                </div>
-              )}
-            </div>
-          ) : null;
-        })()}
-
-        {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       </div>
     </div>
   );
@@ -1397,16 +1346,63 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
 
         {filteredItems.map((item, i) => {
           if (item.type === 'tool') {
+            // For imagine tool with completed image, render image prominently in chat flow
+            const isImagineWithImage = item.toolName === 'imagine' && item.status !== 'running' && 
+              item.result && /!\[[^\]]*\]\(\/api\/media\//.test(item.result);
+            const imageSrc = isImagineWithImage 
+              ? item.result.match(/!\[[^\]]*\]\((\/api\/media\/[^\)]+)\)/)?.[1] 
+              : null;
+            const timeMatch = isImagineWithImage ? item.result.match(/Time:\s*([\d.]+)s/) : null;
+            const sizeMatch = isImagineWithImage ? item.result.match(/Size:\s*(\d+x\d+)/) : null;
+            const seedMatch = isImagineWithImage ? item.result.match(/Seed:\s*(\d+)/) : null;
+
             return (
-              <ToolStep
-                key={`tool-${item.streamId || i}`}
-                toolName={item.toolName}
-                toolInput={item.toolInput}
-                result={item.result}
-                isError={item.isError}
-                status={item.status}
-                isVisible={showTools}
-              />
+              <React.Fragment key={`tool-${item.streamId || i}`}>
+                <ToolStep
+                  toolName={item.toolName}
+                  toolInput={item.toolInput}
+                  result={item.result}
+                  isError={item.isError}
+                  status={item.status}
+                  isVisible={showTools}
+                />
+                {imageSrc && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-start', margin: '4px 0' }}>
+                    <div style={{
+                      maxWidth: '75%',
+                      padding: 8,
+                      borderRadius: 12,
+                      background: 'var(--card)',
+                      border: '1px solid var(--border)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                    }}>
+                      <img
+                        src={imageSrc}
+                        alt="Generated image"
+                        data-lightbox="true"
+                        style={{
+                          maxWidth: '100%',
+                          maxHeight: 480,
+                          borderRadius: 8,
+                          display: 'block',
+                          cursor: 'zoom-in',
+                        }}
+                      />
+                      {(timeMatch || sizeMatch || seedMatch) && (
+                        <div style={{
+                          marginTop: 6, fontFamily: 'var(--mono)', fontSize: '0.65rem',
+                          color: 'var(--muted)', opacity: 0.5,
+                          display: 'flex', gap: 8,
+                        }}>
+                          {sizeMatch && <span>{sizeMatch[1]}</span>}
+                          {timeMatch && <span>{timeMatch[1]}s</span>}
+                          {seedMatch && <span>seed {seedMatch[1]}</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </React.Fragment>
             );
           }
 
