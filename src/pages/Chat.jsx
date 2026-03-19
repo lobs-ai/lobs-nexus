@@ -97,6 +97,12 @@ function renderMarkdown(text) {
       continue;
     }
 
+    // Image-only line (no trailing <br>)
+    if (/^!\[[^\]]*\]\([^)]+\)$/.test(line.trim())) {
+      output.push(applyInline(line));
+      continue;
+    }
+
     // Regular paragraph
     output.push(applyInline(line) + '<br>');
   }
@@ -117,6 +123,8 @@ function applyInline(text) {
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/~~([^~]+)~~/g, '<del>$1</del>')
+    // Images: ![alt](url) — must come before link replacement
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:8px 0;cursor:pointer" onclick="window.open(this.src,\'_blank\')" />')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--teal)">$1</a>');
 }
 
@@ -163,6 +171,10 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
         return parsedInput.agent_type ? `${parsedInput.agent_type}${parsedInput.task ? ': ' + parsedInput.task.substring(0, 50) + '…' : ''}` : '';
       case 'process':
         return parsedInput.action ? `${parsedInput.action}${parsedInput.command ? ': ' + parsedInput.command : ''}` : '';
+      case 'imagine':
+        return parsedInput.prompt ? `"${parsedInput.prompt.substring(0, 60)}${parsedInput.prompt.length > 60 ? '…' : ''}"` : '';
+      case 'humanize':
+        return parsedInput.path || (parsedInput.text ? parsedInput.text.substring(0, 50) + '…' : '');
       default: {
         const firstVal = Object.values(parsedInput).find(v => typeof v === 'string');
         return firstVal ? (firstVal.length > 80 ? firstVal.substring(0, 80) + '…' : firstVal) : '';
@@ -285,6 +297,21 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
                   maxHeight: 300, overflowY: 'auto',
                   whiteSpace: 'pre-wrap', wordBreak: 'break-all',
                 }}>{result}</pre>
+                {/* Image preview for imagine tool */}
+                {toolName === 'imagine' && result && (() => {
+                  const mediaMatch = result.match(/!\[[^\]]*\]\((\/api\/media\/[^\)]+)\)/);
+                  return mediaMatch ? (
+                    <img
+                      src={mediaMatch[1]}
+                      alt="Generated"
+                      style={{
+                        maxWidth: '100%', maxHeight: 300, borderRadius: 8,
+                        marginTop: 8, cursor: 'pointer',
+                      }}
+                      onClick={() => window.open(mediaMatch[1], '_blank')}
+                    />
+                  ) : null;
+                })()}
               </div>
             )}
           </div>
@@ -300,6 +327,22 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
             → {resultPreview}
           </div>
         )}
+
+        {/* Collapsed image thumbnail for imagine tool */}
+        {!expanded && !isRunning && toolName === 'imagine' && result && (() => {
+          const mediaMatch = result.match(/!\[[^\]]*\]\((\/api\/media\/[^\)]+)\)/);
+          return mediaMatch ? (
+            <img
+              src={mediaMatch[1]}
+              alt="Generated"
+              style={{
+                maxWidth: 200, maxHeight: 150, borderRadius: 6,
+                marginTop: 6, cursor: 'pointer', opacity: 0.85,
+              }}
+              onClick={(e) => { e.stopPropagation(); window.open(mediaMatch[1], '_blank'); }}
+            />
+          ) : null;
+        })()}
       </div>
     </div>
   );
