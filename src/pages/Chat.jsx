@@ -267,7 +267,10 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
   };
 
   const summary = getSummary();
-  const resultPreview = result ? (result.length > 160 ? result.substring(0, 160) + '…' : result) : '';
+  const cleanResult = hasImage
+    ? result.replace(/!\[[^\]]*\]\([^)]+\)/g, '').replace(/\n{2,}/g, '\n').trim()
+    : result;
+  const resultPreview = cleanResult ? (cleanResult.length > 160 ? cleanResult.substring(0, 160) + '…' : cleanResult) : '';
 
   return (
     <div style={{ display: 'flex', justifyContent: 'flex-start', margin: '2px 0' }}>
@@ -373,8 +376,8 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
           </div>
         )}
 
-        {/* Collapsed result preview for completed tool calls */}
-        {!expanded && !isRunning && resultPreview && (
+        {/* Collapsed result preview for completed tool calls (skip for imagine with image) */}
+        {!expanded && !isRunning && resultPreview && !hasImage && (
           <div style={{
             marginTop: 4, fontFamily: 'var(--mono)', fontSize: '0.68rem',
             color: isError ? 'rgba(239,68,68,0.6)' : 'var(--muted)',
@@ -387,16 +390,28 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
         {/* Collapsed image thumbnail for imagine tool */}
         {!expanded && !isRunning && hasImage && (() => {
           const mediaMatch = result.match(/!\[[^\]]*\]\((\/api\/media\/[^\)]+)\)/);
+          const timeMatch = result.match(/Time:\s*([\d.]+)s/);
+          const sizeMatch = result.match(/Size:\s*(\d+x\d+)/);
           return mediaMatch ? (
-            <img
-              src={mediaMatch[1]}
-              alt="Generated"
-              style={{
-                maxWidth: 280, maxHeight: 200, borderRadius: 8,
-                marginTop: 8, cursor: 'zoom-in',
-              }}
-              onClick={(e) => { e.stopPropagation(); setLightboxSrc(mediaMatch[1]); }}
-            />
+            <div style={{ marginTop: 8 }}>
+              <img
+                src={mediaMatch[1]}
+                alt="Generated"
+                style={{
+                  maxWidth: 280, maxHeight: 200, borderRadius: 8,
+                  cursor: 'zoom-in', display: 'block',
+                }}
+                onClick={(e) => { e.stopPropagation(); setLightboxSrc(mediaMatch[1]); }}
+              />
+              {(timeMatch || sizeMatch) && (
+                <div style={{
+                  marginTop: 4, fontFamily: 'var(--mono)', fontSize: '0.65rem',
+                  color: 'var(--muted)', opacity: 0.5,
+                }}>
+                  {sizeMatch && sizeMatch[1]}{timeMatch && sizeMatch && ' · '}{timeMatch && `${timeMatch[1]}s`}
+                </div>
+              )}
+            </div>
           ) : null;
         })()}
 
