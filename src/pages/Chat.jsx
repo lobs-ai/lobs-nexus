@@ -124,7 +124,7 @@ function applyInline(text) {
     .replace(/\*([^*]+)\*/g, '<em>$1</em>')
     .replace(/~~([^~]+)~~/g, '<del>$1</del>')
     // Images: ![alt](url) — must come before link replacement
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:8px 0;cursor:pointer" onclick="window.open(this.src,\'_blank\')" />')
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" data-lightbox="true" style="max-width:100%;border-radius:8px;margin:8px 0;cursor:zoom-in" />')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--teal)">$1</a>');
 }
 
@@ -132,8 +132,64 @@ function applyInline(text) {
 // Tool Step Component — clickable, expandable tool call display
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Lightbox Component — fullscreen image viewer
+// ---------------------------------------------------------------------------
+
+function Lightbox({ src, alt, onClose }) {
+  useEffect(() => {
+    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 10000,
+        background: 'rgba(0,0,0,0.85)', display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
+        cursor: 'zoom-out', backdropFilter: 'blur(8px)',
+      }}
+    >
+      <img
+        src={src} alt={alt || 'Image'}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          maxWidth: '90vw', maxHeight: '90vh', borderRadius: 12,
+          boxShadow: '0 20px 60px rgba(0,0,0,0.5)', cursor: 'default',
+        }}
+      />
+      <button
+        onClick={onClose}
+        style={{
+          position: 'absolute', top: 20, right: 20,
+          background: 'rgba(255,255,255,0.15)', border: 'none',
+          color: 'white', fontSize: 24, width: 40, height: 40,
+          borderRadius: '50%', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+      >×</button>
+      <a
+        href={src} download target="_blank" rel="noopener"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'absolute', bottom: 20, right: 20,
+          background: 'rgba(255,255,255,0.15)', border: 'none',
+          color: 'white', fontSize: '0.8rem', padding: '8px 16px',
+          borderRadius: 8, cursor: 'pointer', textDecoration: 'none',
+        }}
+      >⬇ Download</a>
+    </div>
+  );
+}
+
 function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
+  // Auto-expand imagine tool when completed with an image
+  const hasImage = toolName === 'imagine' && result && /!\[[^\]]*\]\(\/api\/media\//.test(result);
   const [expanded, setExpanded] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState(null);
 
   if (!isVisible) return null;
 
@@ -298,17 +354,17 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
                   whiteSpace: 'pre-wrap', wordBreak: 'break-all',
                 }}>{result}</pre>
                 {/* Image preview for imagine tool */}
-                {toolName === 'imagine' && result && (() => {
+                {hasImage && (() => {
                   const mediaMatch = result.match(/!\[[^\]]*\]\((\/api\/media\/[^\)]+)\)/);
                   return mediaMatch ? (
                     <img
                       src={mediaMatch[1]}
                       alt="Generated"
                       style={{
-                        maxWidth: '100%', maxHeight: 300, borderRadius: 8,
-                        marginTop: 8, cursor: 'pointer',
+                        maxWidth: '100%', maxHeight: 400, borderRadius: 8,
+                        marginTop: 8, cursor: 'zoom-in',
                       }}
-                      onClick={() => window.open(mediaMatch[1], '_blank')}
+                      onClick={(e) => { e.stopPropagation(); setLightboxSrc(mediaMatch[1]); }}
                     />
                   ) : null;
                 })()}
@@ -329,20 +385,22 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
         )}
 
         {/* Collapsed image thumbnail for imagine tool */}
-        {!expanded && !isRunning && toolName === 'imagine' && result && (() => {
+        {!expanded && !isRunning && hasImage && (() => {
           const mediaMatch = result.match(/!\[[^\]]*\]\((\/api\/media\/[^\)]+)\)/);
           return mediaMatch ? (
             <img
               src={mediaMatch[1]}
               alt="Generated"
               style={{
-                maxWidth: 200, maxHeight: 150, borderRadius: 6,
-                marginTop: 6, cursor: 'pointer', opacity: 0.85,
+                maxWidth: 280, maxHeight: 200, borderRadius: 8,
+                marginTop: 8, cursor: 'zoom-in',
               }}
-              onClick={(e) => { e.stopPropagation(); window.open(mediaMatch[1], '_blank'); }}
+              onClick={(e) => { e.stopPropagation(); setLightboxSrc(mediaMatch[1]); }}
             />
           ) : null;
         })()}
+
+        {lightboxSrc && <Lightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
       </div>
     </div>
   );
@@ -1616,6 +1674,21 @@ export default function ChatPage() {
   } = useChatState();
   const [mobileSessionsOpen, setMobileSessionsOpen] = useState(false);
   const [modelConfigOpen, setModelConfigOpen] = useState(false);
+  const [pageLightbox, setPageLightbox] = useState(null);
+
+  // Global click handler for markdown-rendered images (from dangerouslySetInnerHTML)
+  useEffect(() => {
+    const handleClick = (e) => {
+      const img = e.target.closest('img[data-lightbox]');
+      if (img) {
+        e.preventDefault();
+        e.stopPropagation();
+        setPageLightbox(img.src);
+      }
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
 
   if (error) {
     return (
@@ -1698,6 +1771,9 @@ export default function ChatPage() {
         }}
         onOpenSessions={() => setMobileSessionsOpen(true)}
       />
+
+      {/* Page-level lightbox for markdown images */}
+      {pageLightbox && <Lightbox src={pageLightbox} onClose={() => setPageLightbox(null)} />}
 
       {/* CSS animations + responsive */}
       <style>{`
