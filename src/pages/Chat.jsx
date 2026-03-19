@@ -1443,14 +1443,14 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
                           key={j}
                           src={src}
                           alt=""
+                          data-lightbox="true"
                           style={{
                             maxWidth: 280,
                             maxHeight: 200,
                             borderRadius: 8,
                             objectFit: 'contain',
-                            cursor: 'pointer',
+                            cursor: 'zoom-in',
                           }}
-                          onClick={() => window.open(src, '_blank')}
                         />
                       ) : (
                         <div key={j} style={{
