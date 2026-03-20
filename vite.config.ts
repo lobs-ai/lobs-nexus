@@ -18,7 +18,7 @@ const proxy = {
 }
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react({ jsxRuntime: 'automatic' }), tailwindcss()],
   build: {
     assetsDir: 'static',
   },
