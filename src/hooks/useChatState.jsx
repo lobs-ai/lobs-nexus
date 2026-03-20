@@ -9,7 +9,12 @@ export function ChatProvider({ children }) {
   const [currentSession, setCurrentSession] = useState(null);
   const [processingKeys, setProcessingKeys] = useState(new Set());
   const [error, setError] = useState(null);
-  const [showTools, setShowTools] = useState(true);
+  const [showTools, setShowTools] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nexus-show-tools');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch { return true; }
+  });
   const [toolConfigOpen, setToolConfigOpen] = useState(false);
   const [streamEvents, setStreamEvents] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -20,6 +25,11 @@ export function ChatProvider({ children }) {
 
   // Keep ref in sync for polling closure
   useEffect(() => { currentSessionRef.current = currentSession; }, [currentSession]);
+
+  // Persist showTools preference to localStorage
+  useEffect(() => {
+    try { localStorage.setItem('nexus-show-tools', JSON.stringify(showTools)); } catch {}
+  }, [showTools]);
 
   // Load sessions on mount (only once)
   useEffect(() => {

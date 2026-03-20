@@ -1,5 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import * as React from 'react';
 import { useChatState } from '../hooks/useChatState';
+
+const { useState, useEffect, useRef, useCallback } = React;
+const ReactGroup = React.Fragment;
 
 // ---------------------------------------------------------------------------
 // Markdown renderer (simple)
@@ -1407,7 +1410,7 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
           }
 
           if (item.type === 'thinking') {
-            return <ThinkingIndicator key={`thinking-${i}`} isVisible={showTools} />;
+            return <ThinkingIndicator key={`thinking-${i}`} isVisible={true} />;
           }
 
           // Regular message

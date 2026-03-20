@@ -132,6 +132,7 @@ export default function Scheduler() {
         <div style={{ display: "grid", gridTemplateColumns: "1.35fr 0.95fr", gap: 18, alignItems: "start" }}>
           <div style={{ display: "grid", gap: 18 }}>
             <BriefingCard intelligence={intelligence} />
+            <ChangeAnalysisCard intelligence={intelligence} />
             <SuggestionsCard intelligence={intelligence} />
             <JobSection title="System Jobs" jobs={systemJobs} onToggle={toggleJob} onRun={runJobNow} />
             <JobSection title="Agent Jobs" jobs={agentJobs} onToggle={toggleJob} onRun={runJobNow} />
@@ -151,6 +152,138 @@ export default function Scheduler() {
         </div>
       )}
     </div>
+  );
+}
+
+const CHANGE_TYPE_COLOR = {
+  NEW: "rgba(45,212,191,0.18)",
+  REMOVED: "rgba(248,113,113,0.18)",
+  MODIFIED: "rgba(251,191,36,0.18)",
+};
+
+const CHANGE_TYPE_TEXT_COLOR = {
+  NEW: "var(--teal)",
+  REMOVED: "#f87171",
+  MODIFIED: "#fbbf24",
+};
+
+function ChangeAnalysisCard({ intelligence }) {
+  if (!intelligence?.changeAnalysis) return null;
+  const { changes, analysis, actionItems, rescheduleSuggestions, detectedAt } = intelligence.changeAnalysis;
+
+  return (
+    <GlassCard style={{ borderColor: "rgba(251,191,36,0.3)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text)" }}>Schedule Changes Detected</div>
+        <Badge label={`${changes.length} change${changes.length !== 1 ? "s" : ""}`} color="#fbbf24" />
+        {detectedAt && (
+          <span style={{ marginLeft: "auto", color: "var(--muted)", fontSize: "0.75rem" }}>
+            {new Date(detectedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+          </span>
+        )}
+      </div>
+
+      {/* Change list */}
+      <div style={{ display: "grid", gap: 6, marginBottom: 14 }}>
+        {changes.map((change, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "8px 12px",
+              borderRadius: 8,
+              background: CHANGE_TYPE_COLOR[change.type] ?? "rgba(255,255,255,0.04)",
+              fontSize: "0.84rem",
+            }}
+          >
+            <span
+              style={{
+                fontWeight: 700,
+                fontSize: "0.72rem",
+                letterSpacing: "0.06em",
+                color: CHANGE_TYPE_TEXT_COLOR[change.type] ?? "var(--muted)",
+                minWidth: 64,
+              }}
+            >
+              {change.type}
+            </span>
+            <span style={{ color: "var(--text)", flex: 1 }}>{change.description}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* AI analysis narrative */}
+      {analysis && (
+        <div style={{
+          fontSize: "0.88rem",
+          color: "var(--text)",
+          lineHeight: 1.65,
+          padding: "10px 14px",
+          borderRadius: 8,
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid var(--border)",
+          marginBottom: actionItems.length || rescheduleSuggestions.length ? 14 : 0,
+        }}>
+          {analysis}
+        </div>
+      )}
+
+      {/* Action items */}
+      {actionItems.length > 0 && (
+        <div style={{ marginBottom: rescheduleSuggestions.length ? 14 : 0 }}>
+          <div style={{ fontSize: "0.76rem", color: "var(--teal)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>
+            Action Items
+          </div>
+          <div style={{ display: "grid", gap: 6 }}>
+            {actionItems.map((item, i) => (
+              <div
+                key={i}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  background: "rgba(45,212,191,0.07)",
+                  border: "1px solid rgba(45,212,191,0.15)",
+                  color: "var(--text)",
+                  fontSize: "0.84rem",
+                  lineHeight: 1.5,
+                }}
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Reschedule suggestions */}
+      {rescheduleSuggestions.length > 0 && (
+        <div>
+          <div style={{ fontSize: "0.76rem", color: "#fbbf24", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>
+            Reschedule Suggestions
+          </div>
+          <div style={{ display: "grid", gap: 6 }}>
+            {rescheduleSuggestions.map((item, i) => (
+              <div
+                key={i}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  background: "rgba(251,191,36,0.07)",
+                  border: "1px solid rgba(251,191,36,0.15)",
+                  color: "var(--text)",
+                  fontSize: "0.84rem",
+                  lineHeight: 1.5,
+                }}
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </GlassCard>
   );
 }
 
