@@ -564,6 +564,12 @@ pre { background: rgba(8,12,24,0.9); border: 1px solid var(--border); border-rad
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   DASHBOARD
+   ═══════════════════════════════════════════════════════════════ */
+/* Attention chips hover */
+.attention-chip:hover { filter: brightness(1.2); transform: translateY(-1px); }
+
+/* ═══════════════════════════════════════════════════════════════
    MOBILE RESPONSIVE — max-width: 768px
    ═══════════════════════════════════════════════════════════════ */
 

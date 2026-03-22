@@ -27,9 +27,9 @@ export default function QuickActionsWidget() {
       try {
         const inbox = await api.inbox(controller.signal);
         const list = inbox?.items || inbox || [];
-        const unread = list.filter(i => !i.read && !i.read_at);
-        if (unread.length > 0) {
-          items.push({ label: `${unread.length} unread inbox`, icon: '📬', color: 'var(--blue)', to: '/inbox' });
+        const actionable = list.filter(i => (i.requiresAction || i.requires_action) && (i.actionStatus || i.action_status) === 'pending');
+        if (actionable.length > 0) {
+          items.push({ label: `${actionable.length} need${actionable.length === 1 ? 's' : ''} action`, icon: '📬', color: 'var(--blue)', to: '/inbox' });
         }
       } catch {}
       setPills(items.slice(0, 5));

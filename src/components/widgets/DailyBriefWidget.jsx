@@ -91,8 +91,8 @@ export default function DailyBriefWidget() {
         </div>
       )}
 
-      <Link to="/daily-brief" style={{ fontSize: '0.75rem', color: 'var(--teal)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-        View full brief →
+      <Link to="/scheduler" style={{ fontSize: '0.75rem', color: 'var(--teal)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        View scheduler →
       </Link>
     </GlassCard>
   );

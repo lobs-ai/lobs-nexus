@@ -41,11 +41,11 @@ export default function StaleItemsWidget() {
         const inbox = await api.inbox(controller.signal);
         const list = inbox?.items || inbox || [];
         list
-          .filter(i => !i.read && !i.read_at && hoursAgo(i.created_at) >= 48)
+          .filter(i => (i.requiresAction || i.requires_action) && (i.actionStatus || i.action_status) === 'pending' && hoursAgo(i.created_at) >= 48)
           .forEach(i => items.push({
             title: i.title || i.subject || 'Inbox item',
             age: hoursAgo(i.created_at),
-            type: 'unread-inbox',
+            type: 'stale-inbox',
             icon: '📬',
             color: 'var(--blue)',
             to: '/inbox',

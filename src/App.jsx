@@ -17,7 +17,7 @@ import Settings from './pages/Settings';
 import Meetings from './pages/Meetings';
 import YouTube from './pages/YouTube';
 import LearningInsights from './pages/LearningInsights';
-import DailyBrief from './pages/DailyBrief';
+// DailyBrief merged into Scheduler page
 import MicroLearning from './pages/MicroLearning';
 import GitHubFeed from './pages/GitHubFeed';
 import Workers from './pages/Workers';
@@ -77,7 +77,7 @@ export default function App() {
             <Route path="/meetings" element={<Meetings />} />
             <Route path="/youtube" element={<YouTube />} />
             <Route path="/learning" element={<LearningInsights />} />
-            <Route path="/daily-brief" element={<DailyBrief />} />
+
             <Route path="/micro-learning" element={<MicroLearning />} />
             <Route path="/github" element={<GitHubFeed />} />
             <Route path="/workers" element={<Workers />} />
