@@ -25,11 +25,13 @@ const NAV = [
 // Primary mobile tabs (shown in bottom bar)
 const MOBILE_PRIMARY = ['/', '/projects', '/chat', '/inbox'];
 
-export default function Sidebar({ collapsed, onToggle, systemStatus, theme, onThemeToggle, isMobile }) {
+export default function Sidebar({ collapsed, onToggle, systemStatus, isMobile }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const location = useLocation();
-  const statusColor = systemStatus === 'healthy' ? 'var(--green)' : systemStatus === 'degraded' ? 'var(--amber)' : 'var(--red)';
-  const statusText = systemStatus || 'connecting';
+  const serverStatus = systemStatus?.status || 'connecting';
+  const statusColor = serverStatus === 'healthy' ? 'var(--green)' : serverStatus === 'degraded' ? 'var(--amber)' : 'var(--red)';
+  const statusText = serverStatus;
+  const keys = systemStatus?.keys || {};
 
   // Check if current page is one of the non-primary pages (show its icon instead of one of the defaults)
   const currentPath = location.pathname === '/' ? '/' : '/' + location.pathname.split('/')[1];
@@ -179,7 +181,7 @@ export default function Sidebar({ collapsed, onToggle, systemStatus, theme, onTh
         ))}
       </nav>
 
-      {/* Footer */}
+      {/* Footer — key pool status */}
       <div style={{ padding: '14px 16px', borderTop: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span
@@ -189,18 +191,30 @@ export default function Sidebar({ collapsed, onToggle, systemStatus, theme, onTh
           <span className="status-label" style={{ color: 'var(--muted)', fontSize: '0.75rem', flex: 1, fontFamily: 'var(--mono)' }}>
             {statusText}
           </span>
-          <button
-            onClick={onThemeToggle}
-            className="status-label"
-            style={{ background: 'none', border: 'none', color: 'var(--faint)', cursor: 'pointer', padding: 2, fontSize: '0.85rem', transition: 'color 0.2s' }}
-            title="Toggle theme"
-          >
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
         </div>
+        {!collapsed && Object.keys(keys).length > 0 && (
+          <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {Object.entries(keys).map(([provider, info]) => {
+              const allHealthy = info.healthy === info.total;
+              const noneHealthy = info.healthy === 0 && info.total > 0;
+              const dotColor = noneHealthy ? 'var(--red)' : allHealthy ? 'var(--green)' : 'var(--amber)';
+              return (
+                <div key={provider} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                  <span style={{ color: 'var(--muted)', fontSize: '0.65rem', fontFamily: 'var(--mono)', textTransform: 'capitalize', flex: 1 }}>
+                    {provider}
+                  </span>
+                  <span style={{ color: allHealthy ? 'var(--faint)' : 'var(--amber)', fontSize: '0.6rem', fontFamily: 'var(--mono)' }}>
+                    {info.healthy}/{info.total}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
         {!collapsed && (
           <div style={{ marginTop: 8, fontFamily: 'var(--mono)', fontSize: '0.6rem', color: 'var(--faint)', letterSpacing: '1px' }}>
-            PAW MULTI-AGENT v1
+            LOBS NEXUS v1
           </div>
         )}
       </div>

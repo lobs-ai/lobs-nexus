@@ -27,16 +27,28 @@ import { ChatProvider } from './hooks/useChatState';
 import { api } from './lib/api';
 
 export default function App() {
-  const [systemStatus, setSystemStatus] = useState(null);
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+  const [systemStatus, setSystemStatus] = useState({ status: null, keys: null });
 
   useEffect(() => {
     const poll = async () => {
       try {
         const s = await api.status();
-        setSystemStatus(s?.server?.status || 'healthy');
+        const serverStatus = s?.server?.status || 'healthy';
+        const keys = s?.keys?.providers || {};
+
+        // Derive effective status from key health
+        let effectiveStatus = serverStatus;
+        const totalKeys = Object.values(keys).reduce((sum, p) => sum + (p.total || 0), 0);
+        const healthyKeys = Object.values(keys).reduce((sum, p) => sum + (p.healthy || 0), 0);
+        if (totalKeys > 0 && healthyKeys === 0) {
+          effectiveStatus = 'error';
+        } else if (totalKeys > 0 && healthyKeys < totalKeys) {
+          effectiveStatus = 'degraded';
+        }
+
+        setSystemStatus({ status: effectiveStatus, keys });
       } catch {
-        setSystemStatus('error');
+        setSystemStatus({ status: 'error', keys: null });
       }
     };
     poll();
@@ -44,17 +56,11 @@ export default function App() {
     return () => clearInterval(id);
   }, []);
 
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    localStorage.setItem('theme', next);
-  };
-
   return (
     <BrowserRouter>
       <ChatProvider>
         <Routes>
-          <Route element={<Layout systemStatus={systemStatus} theme={theme} onThemeToggle={toggleTheme} />}>
+          <Route element={<Layout systemStatus={systemStatus} />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/tasks" element={<Tasks />} />

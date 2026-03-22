@@ -1,8 +1,5 @@
-import * as React from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useChatState } from '../hooks/useChatState';
-
-const { useState, useEffect, useRef, useCallback } = React;
-const ReactGroup = React.Fragment;
 
 // ---------------------------------------------------------------------------
 // Markdown renderer (simple)
@@ -121,6 +118,20 @@ function renderMarkdown(text) {
   return result;
 }
 
+// File extensions that should render as download cards instead of inline
+const DOWNLOAD_EXTENSIONS = /\.(pdf|zip|csv|json|html?|md|txt|docx?|xlsx?|pptx?|tar|gz|mp3|mp4|webm)$/i;
+
+function renderFileCard(filename, url) {
+  const ext = filename.match(/\.(\w+)$/)?.[1]?.toUpperCase() || 'FILE';
+  const icons = {
+    PDF: '📄', ZIP: '📦', CSV: '📊', JSON: '{ }', HTML: '🌐', HTM: '🌐',
+    MD: '📝', TXT: '📝', MP3: '🎵', MP4: '🎬', WEBM: '🎬',
+  };
+  const icon = icons[ext] || '📎';
+  const downloadUrl = url.includes('?') ? `${url}&download=${encodeURIComponent(filename)}` : `${url}?download=${encodeURIComponent(filename)}`;
+  return `<a href="${downloadUrl}" download="${filename}" class="file-download-card" style="display:inline-flex;align-items:center;gap:10px;padding:10px 14px;margin:4px 0;border-radius:10px;background:rgba(45,212,191,0.06);border:1px solid rgba(45,212,191,0.15);text-decoration:none;color:var(--text);max-width:100%;transition:all 0.15s ease;cursor:pointer" onmouseover="this.style.background='rgba(45,212,191,0.12)';this.style.borderColor='var(--teal)'" onmouseout="this.style.background='rgba(45,212,191,0.06)';this.style.borderColor='rgba(45,212,191,0.15)'"><span style="font-size:1.4rem;flex-shrink:0">${icon}</span><span style="flex:1;min-width:0;overflow:hidden"><span style="display:block;font-weight:600;font-size:0.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${filename}</span><span style="display:block;font-size:0.7rem;color:var(--muted)">${ext} file · Click to download</span></span><span style="font-size:1.1rem;color:var(--teal);flex-shrink:0">⬇</span></a>`;
+}
+
 function applyInline(text) {
   return text
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
@@ -128,7 +139,13 @@ function applyInline(text) {
     .replace(/~~([^~]+)~~/g, '<del>$1</del>')
     // Images: ![alt](url) — must come before link replacement
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" data-lightbox="true" style="max-width:100%;border-radius:8px;margin:8px 0;cursor:zoom-in" />')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--teal)">$1</a>');
+    // File download links: [filename](url) where filename has a downloadable extension
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, url) => {
+      if (DOWNLOAD_EXTENSIONS.test(label) || DOWNLOAD_EXTENSIONS.test(url)) {
+        return renderFileCard(label, url);
+      }
+      return `<a href="${url}" target="_blank" style="color:var(--teal)">${label}</a>`;
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -664,7 +681,14 @@ function ThinkingIndicator({ isVisible }) {
 // ---------------------------------------------------------------------------
 
 function SessionsSidebar({ sessions, archivedSessions, showArchived, currentSession, onSelectSession, onNewSession, onArchiveSession, onUnarchiveSession, onPermanentDeleteSession, onToggleArchived, processingSet, mobileOpen, onClose }) {
-  const displaySessions = showArchived ? archivedSessions : sessions;
+  const [searchQuery, setSearchQuery] = useState('');
+  const allSessions = showArchived ? archivedSessions : sessions;
+  const displaySessions = searchQuery.trim()
+    ? allSessions.filter(s => {
+        const q = searchQuery.toLowerCase();
+        return (s.title?.toLowerCase().includes(q)) || (s.summary?.toLowerCase().includes(q));
+      })
+    : allSessions;
 
   return (
     <div
@@ -741,6 +765,61 @@ function SessionsSidebar({ sessions, archivedSessions, showArchived, currentSess
               }}
               title="New chat"
             >+</button>
+          )}
+        </div>
+      </div>
+
+      {/* Search */}
+      <div style={{ padding: '8px 12px 0' }}>
+        <div style={{ position: 'relative' }}>
+          <input
+            type="text"
+            placeholder="Search chats…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '8px 32px 8px 12px',
+              background: 'var(--bg)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              color: 'var(--text)',
+              fontSize: '0.85rem',
+              outline: 'none',
+              boxSizing: 'border-box',
+              transition: 'border-color 0.15s ease',
+            }}
+            onFocus={e => e.target.style.borderColor = 'var(--teal)'}
+            onBlur={e => e.target.style.borderColor = 'var(--border)'}
+          />
+          {searchQuery ? (
+            <button
+              onClick={() => setSearchQuery('')}
+              style={{
+                position: 'absolute',
+                right: 6,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'none',
+                border: 'none',
+                color: 'var(--muted)',
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                padding: '2px 4px',
+                lineHeight: 1,
+              }}
+              title="Clear search"
+            >×</button>
+          ) : (
+            <span style={{
+              position: 'absolute',
+              right: 10,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--muted)',
+              fontSize: '0.75rem',
+              pointerEvents: 'none',
+            }}>🔍</span>
           )}
         </div>
       </div>
@@ -964,23 +1043,99 @@ function formatSessionTime(timestamp) {
 function ChatInterface({ session, onSendMessage, processing, streamEvents, showTools, onToggleTools, toolConfigOpen, onToggleToolConfig, modelConfigOpen, onToggleModelConfig, onModelChanged, onOpenSessions }) {
   const [input, setInput] = useState('');
   const [pendingImages, setPendingImages] = useState([]);
+  const [showJumpToBottom, setShowJumpToBottom] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const fileInputRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const autoScrollRef = useRef(true);
+  const scrollPositionsRef = useRef({});
+  const prevSessionKeyRef = useRef(null);
+  const isRestoringScrollRef = useRef(false);
 
-  // Track if user has scrolled up
+  // Threshold for "far from bottom" — show jump button
+  const JUMP_THRESHOLD = 300;
+
+  // Track if user has scrolled up + show/hide jump button
   const handleScroll = useCallback(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
-    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 50;
+    const distFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const isAtBottom = distFromBottom < 50;
     autoScrollRef.current = isAtBottom;
+    setShowJumpToBottom(distFromBottom > JUMP_THRESHOLD);
+    
+    // Cache scroll position for current session (debounced via animation frame)
+    if (!isRestoringScrollRef.current && session?.key) {
+      scrollPositionsRef.current[session.key] = container.scrollTop;
+    }
+  }, [session?.key]);
+
+  // Jump to bottom handler
+  const scrollToBottom = useCallback((smooth = true) => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: smooth ? 'smooth' : 'instant',
+    });
+    autoScrollRef.current = true;
+    setShowJumpToBottom(false);
   }, []);
+
+  // Suppress smooth auto-scroll right after a session swap so new-message
+  // loading doesn't trigger a jarring animated scroll from top → bottom.
+  const suppressSmoothRef = useRef(false);
+
+  // On session swap: save old scroll pos, then snap to bottom (or restore cached pos)
+  useEffect(() => {
+    const prevKey = prevSessionKeyRef.current;
+    const newKey = session?.key;
+
+    // Save scroll position for the session we're leaving
+    if (prevKey && messagesContainerRef.current && prevKey !== newKey) {
+      scrollPositionsRef.current[prevKey] = messagesContainerRef.current.scrollTop;
+    }
+
+    prevSessionKeyRef.current = newKey;
+
+    if (!newKey) return;
+
+    // Suppress smooth scrolling until the session's messages have rendered
+    suppressSmoothRef.current = true;
+
+    // Use requestAnimationFrame to wait for the DOM to render the new messages
+    requestAnimationFrame(() => {
+      const container = messagesContainerRef.current;
+      if (!container) return;
+
+      isRestoringScrollRef.current = true;
+
+      // Always snap to bottom instantly on session switch — no animation
+      container.scrollTo({ top: container.scrollHeight, behavior: 'instant' });
+      autoScrollRef.current = true;
+      setShowJumpToBottom(false);
+
+      // Allow scroll handler to cache positions again after restore
+      requestAnimationFrame(() => {
+        isRestoringScrollRef.current = false;
+        suppressSmoothRef.current = false;
+      });
+    });
+  }, [session?.key]);
 
   // Auto-scroll to bottom when new messages arrive (only if user is at bottom)
   useEffect(() => {
-    if (autoScrollRef.current) {
+    if (!autoScrollRef.current) return;
+
+    if (suppressSmoothRef.current) {
+      // Session just switched — messages are loading for the first time.
+      // Snap instantly instead of smooth-scrolling from the top.
+      const container = messagesContainerRef.current;
+      if (container) {
+        container.scrollTo({ top: container.scrollHeight, behavior: 'instant' });
+      }
+    } else {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [session?.messages, streamEvents]);
@@ -1183,7 +1338,7 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, minWidth: 0 }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, minWidth: 0, position: 'relative' }}>
       {/* Chat header */}
       <div style={{
         padding: '12px 16px',
@@ -1410,7 +1565,7 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
           }
 
           if (item.type === 'thinking') {
-            return <ThinkingIndicator key={`thinking-${i}`} isVisible={true} />;
+            return <ThinkingIndicator key={`thinking-${i}`} isVisible={showTools} />;
           }
 
           // Regular message
@@ -1506,6 +1661,47 @@ function ChatInterface({ session, onSendMessage, processing, streamEvents, showT
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Jump to bottom button */}
+      {showJumpToBottom && (
+        <div style={{
+          position: 'absolute',
+          bottom: 90,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 50,
+        }}>
+          <button
+            onClick={() => scrollToBottom(true)}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 20,
+              border: '1px solid var(--border)',
+              background: 'var(--card)',
+              color: 'var(--muted)',
+              cursor: 'pointer',
+              fontSize: '0.78rem',
+              fontWeight: 500,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              transition: 'all 0.15s ease',
+              backdropFilter: 'blur(8px)',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'var(--teal)';
+              e.currentTarget.style.color = 'var(--teal)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'var(--border)';
+              e.currentTarget.style.color = 'var(--muted)';
+            }}
+          >
+            ↓ Jump to bottom
+          </button>
+        </div>
+      )}
 
       {/* Input */}
       <div style={{

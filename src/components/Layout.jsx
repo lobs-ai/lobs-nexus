@@ -5,7 +5,7 @@ import NoiseOverlay from './NoiseOverlay';
 import Toast from './Toast';
 import CommandPalette from './CommandPalette';
 
-export default function Layout({ systemStatus, theme, onThemeToggle }) {
+export default function Layout({ systemStatus }) {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -28,14 +28,12 @@ export default function Layout({ systemStatus, theme, onThemeToggle }) {
   }, []);
 
   return (
-    <div data-theme={theme} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100vh', background: 'var(--navy)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', height: '100vh', background: 'var(--navy)', overflow: 'hidden' }}>
       <NoiseOverlay />
       <Sidebar
         collapsed={isMobile ? true : collapsed}
         onToggle={() => setCollapsed(c => !c)}
         systemStatus={systemStatus}
-        theme={theme}
-        onThemeToggle={onThemeToggle}
         isMobile={isMobile}
         onPaletteOpen={() => setPaletteOpen(true)}
       />

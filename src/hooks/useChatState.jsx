@@ -9,12 +9,7 @@ export function ChatProvider({ children }) {
   const [currentSession, setCurrentSession] = useState(null);
   const [processingKeys, setProcessingKeys] = useState(new Set());
   const [error, setError] = useState(null);
-  const [showTools, setShowTools] = useState(() => {
-    try {
-      const saved = localStorage.getItem('nexus-show-tools');
-      return saved !== null ? JSON.parse(saved) : true;
-    } catch { return true; }
-  });
+  const [showTools, setShowTools] = useState(true);
   const [toolConfigOpen, setToolConfigOpen] = useState(false);
   const [streamEvents, setStreamEvents] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -26,10 +21,12 @@ export function ChatProvider({ children }) {
   // Keep ref in sync for polling closure
   useEffect(() => { currentSessionRef.current = currentSession; }, [currentSession]);
 
-  // Persist showTools preference to localStorage
+  // Persist selected session key to localStorage
   useEffect(() => {
-    try { localStorage.setItem('nexus-show-tools', JSON.stringify(showTools)); } catch {}
-  }, [showTools]);
+    if (currentSession?.key) {
+      localStorage.setItem('nexus-chat-session-key', currentSession.key);
+    }
+  }, [currentSession?.key]);
 
   // Load sessions on mount (only once)
   useEffect(() => {
@@ -88,9 +85,12 @@ export function ChatProvider({ children }) {
       // Update current session's metadata (title, etc.) if it changed
       setCurrentSession(prev => {
         if (!prev) {
-          // Auto-select first session only if none selected
-          if (sessionList.length > 0) {
-            setTimeout(() => selectSession(sessionList[0]), 0);
+          // Try to restore persisted session from localStorage
+          const savedKey = localStorage.getItem('nexus-chat-session-key');
+          const savedSession = savedKey ? sessionList.find(s => s.key === savedKey) : null;
+          const target = savedSession || sessionList[0];
+          if (target) {
+            setTimeout(() => selectSession(target), 0);
           }
           return null;
         }
@@ -165,8 +165,12 @@ export function ChatProvider({ children }) {
           // with more tool calls after emitting a text reply. Only 'done' and
           // 'error' truly mean processing is finished.
           reloadMessages(sessionKey);
-          // Refresh sessions after a delay to pick up auto-generated titles
-          setTimeout(() => loadSessions(), 4000);
+          return;
+        }
+
+        if (data.type === 'title_update') {
+          // Immediately refresh sessions to show new title
+          loadSessions();
           return;
         }
 
@@ -178,8 +182,6 @@ export function ChatProvider({ children }) {
             return next;
           });
           reloadMessages(sessionKey);
-          // Refresh sessions after a delay to pick up auto-generated titles
-          setTimeout(() => loadSessions(), 4000);
           return;
         }
 
