@@ -38,31 +38,37 @@ export default function Scheduler() {
   const [intelligence, setIntelligence] = useState(null);
   const [schedulerConfig, setSchedulerConfig] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [intelligenceLoading, setIntelligenceLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
   const load = async () => {
     try {
-      setLoading(true);
-      const [jobsData, intelligenceData, modelsData] = await Promise.all([
+      // Load jobs + config fast (< 10ms), show immediately
+      const [jobsData, modelsData] = await Promise.all([
         api.scheduler(),
-        api.schedulerIntelligence(),
         api.models(),
       ]);
       setJobs(jobsData?.jobs || []);
-      setIntelligence(intelligenceData || null);
       setSchedulerConfig(modelsData?.scheduler || null);
+      setLoading(false);
       setError(null);
+
+      // Load intelligence in background (can take 10-20s on first call)
+      setIntelligenceLoading(true);
+      const intelligenceData = await api.schedulerIntelligence();
+      setIntelligence(intelligenceData || null);
     } catch (err) {
       setError(err.message);
-    } finally {
       setLoading(false);
+    } finally {
+      setIntelligenceLoading(false);
     }
   };
 
   useEffect(() => {
     load();
-    const interval = setInterval(load, 30000);
+    const interval = setInterval(load, 60000); // 60s since intelligence is cached for 5min
     return () => clearInterval(interval);
   }, []);
 
@@ -131,9 +137,20 @@ export default function Scheduler() {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "1.35fr 0.95fr", gap: 18, alignItems: "start" }}>
           <div style={{ display: "grid", gap: 18 }}>
-            <BriefingCard intelligence={intelligence} />
-            <ChangeAnalysisCard intelligence={intelligence} />
-            <SuggestionsCard intelligence={intelligence} />
+            {intelligenceLoading && !intelligence ? (
+              <GlassCard glow style={{ padding: 24 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, color: "var(--muted)", fontSize: "0.9rem" }}>
+                  <div style={{ width: 16, height: 16, border: "2px solid var(--teal)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
+                  Loading intelligence briefing...
+                </div>
+              </GlassCard>
+            ) : (
+              <>
+                <BriefingCard intelligence={intelligence} />
+                <ChangeAnalysisCard intelligence={intelligence} />
+                <SuggestionsCard intelligence={intelligence} />
+              </>
+            )}
             <JobSection title="System Jobs" jobs={systemJobs} onToggle={toggleJob} onRun={runJobNow} />
             <JobSection title="Agent Jobs" jobs={agentJobs} onToggle={toggleJob} onRun={runJobNow} />
           </div>
@@ -145,9 +162,13 @@ export default function Scheduler() {
               intelligence={intelligence}
               onChange={saveConfig}
             />
-            <CalendarCapacityCard intelligence={intelligence} />
-            <RankedTasksCard intelligence={intelligence} />
-            <ConflictsCard intelligence={intelligence} />
+            {intelligenceLoading && !intelligence ? null : (
+              <>
+                <CalendarCapacityCard intelligence={intelligence} />
+                <RankedTasksCard intelligence={intelligence} />
+                <ConflictsCard intelligence={intelligence} />
+              </>
+            )}
           </div>
         </div>
       )}
