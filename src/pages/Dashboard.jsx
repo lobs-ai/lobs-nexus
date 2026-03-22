@@ -120,6 +120,9 @@ export default function Dashboard() {
   const [githubFeed, setGithubFeed] = useState(null);
   useEffect(() => { api.githubFeed?.(8).then(setGithubFeed).catch(() => {}); }, []);
 
+  const [serviceHealth, setServiceHealth] = useState(null);
+  useEffect(() => { api.serviceHealth?.().then(setServiceHealth).catch(() => {}); }, []);
+
   // Derived data
   const taskArr = Array.isArray(tasksData?.tasks) ? tasksData.tasks : Array.isArray(tasksData) ? tasksData : [];
   const taskMap = {};
@@ -215,6 +218,54 @@ export default function Dashboard() {
             </div>
           ))}
         </div>
+
+        {/* ── Service Warnings ─────────────────────────────────────── */}
+        {serviceHealth?.services?.length > 0 && (() => {
+          const SEVERITY_META = {
+            error: { icon: '✗', color: 'var(--red)', bg: 'rgba(248,113,113,0.06)', border: 'rgba(248,113,113,0.2)' },
+            warning: { icon: '⚠', color: 'var(--amber)', bg: 'rgba(251,191,36,0.06)', border: 'rgba(251,191,36,0.2)' },
+            info: { icon: 'ℹ', color: 'var(--blue)', bg: 'rgba(56,189,248,0.06)', border: 'rgba(56,189,248,0.15)' },
+          };
+          const errors = serviceHealth.services.filter(s => s.severity === 'error');
+          const warnings = serviceHealth.services.filter(s => s.severity === 'warning');
+          const headerColor = errors.length > 0 ? 'var(--red)' : warnings.length > 0 ? 'var(--amber)' : 'var(--blue)';
+          const headerLabel = errors.length > 0 ? `${errors.length} Service${errors.length > 1 ? 's' : ''} Down` : `${serviceHealth.services.length} Warning${serviceHealth.services.length > 1 ? 's' : ''}`;
+
+          return (
+            <div className="fade-in-up-2" style={{ marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <span style={{ fontSize: '0.75rem', color: headerColor }}>●</span>
+                <span className="section-label" style={{ marginBottom: 0, color: headerColor }}>{headerLabel}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {serviceHealth.services.map(svc => {
+                  const meta = SEVERITY_META[svc.severity] || SEVERITY_META.info;
+                  return (
+                    <div key={svc.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 14px', borderRadius: 10,
+                      background: meta.bg, border: `1px solid ${meta.border}`,
+                    }}>
+                      <span style={{
+                        width: 24, height: 24, borderRadius: 6,
+                        background: `${meta.color}18`, color: meta.color,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.65rem', fontWeight: 700, flexShrink: 0,
+                      }}>{meta.icon}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                          <span style={{ color: meta.color, fontWeight: 700, fontSize: '0.8rem' }}>{svc.name}</span>
+                          <span style={{ color: 'var(--muted)', fontSize: '0.72rem' }}>{svc.message}</span>
+                        </div>
+                        {svc.fix && <div style={{ color: 'var(--faint)', fontSize: '0.68rem', fontFamily: 'var(--mono)', marginTop: 2 }}>{svc.fix}</div>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── Active Work (workers + chat sessions) ────────────────── */}
         {(workers.length > 0 || activeChats.length > 0) && (

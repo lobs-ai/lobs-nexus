@@ -137,6 +137,9 @@ export const api = {
   initiativeReply: (id, text) => fetch(`/api/orchestrator/intelligence/initiatives/` + id + `/thread`, { method: `POST`, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, author: `user` }) }).then(r => r.json()),
   inboxReadState: (ids, is_read) => req(`/api/inbox/read-state`, { method: `POST`, body: { ids, is_read } }),
 
+  // Service Health
+  serviceHealth: (signal) => reqSafe('/api/health/services', { signal }, { services: [], hasWarnings: false }),
+
   // Daily Brief
   dailyBrief: (signal) => reqSafe('/api/daily-brief', { signal }, null),
 
