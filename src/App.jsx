@@ -23,6 +23,7 @@ import GitHubFeed from './pages/GitHubFeed';
 import Workers from './pages/Workers';
 import Insights from './pages/Insights';
 import Training from './pages/Training';
+import MyTasks from './pages/MyTasks';
 import { ChatProvider } from './hooks/useChatState';
 import { api } from './lib/api';
 
@@ -83,6 +84,7 @@ export default function App() {
             <Route path="/workers" element={<Workers />} />
             <Route path="/insights" element={<Insights />} />
             <Route path="/training" element={<Training />} />
+            <Route path="/my-tasks" element={<MyTasks />} />
           </Route>
         </Routes>
       </ChatProvider>

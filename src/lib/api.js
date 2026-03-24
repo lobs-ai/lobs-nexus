@@ -48,6 +48,7 @@ export const api = {
   project: (id, signal) => req(`/api/projects/${id}`, { signal }),
   createProject: (body) => req('/api/projects', { method: 'POST', body }),
   updateProject: (id, body) => req(`/api/projects/${id}`, { method: 'PATCH', body }),
+  deleteProject: (id) => req(`/api/projects/${id}`, { method: 'DELETE' }),
   archiveProject: (id) => req(`/api/projects/${id}/archive`, { method: 'POST' }),
   unarchiveProject: (id) => req(`/api/projects/${id}/unarchive`, { method: 'POST' }),
   projectBraindump: (id, text) => req(`/api/projects/${id}/braindump`, { method: 'POST', body: { text } }),

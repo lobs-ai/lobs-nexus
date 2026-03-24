@@ -23,6 +23,7 @@ const COLUMNS = [
   { id: 'cancelled', label: 'Cancelled', color: 'var(--muted)' },
 ];
 const PROJECT_COLORS = ['var(--teal)', 'var(--blue)', 'var(--purple)', 'var(--amber)', 'var(--green)', 'var(--red)'];
+const PROJECT_TYPES = ['project', 'engineering', 'personal', 'work', 'research', 'general', 'other'];
 const PROJECTS_VIEW_STATE_KEY = 'nexus.projects.viewState';
 
 function getViewStateFromUrl(searchParams) {
@@ -223,6 +224,9 @@ export default function Projects() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [projForm, setProjForm] = useState({ title: '', type: 'project', notes: '' });
   const [taskForm, setTaskForm] = useState({ title: '', agent: 'programmer', model_tier: 'standard', project_id: '', notes: '' });
+  const [editProject, setEditProject] = useState(null);
+  const [editForm, setEditForm] = useState({ title: '', type: 'project', notes: '', repo_path: '', github_repo: '' });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const projectAffordances = useAffordances('project-card');
 
@@ -270,6 +274,52 @@ export default function Projects() {
       await api.createTask(body); showToast('Task created', 'success'); setShowCreateTask(false);
       setTaskForm({ title: '', agent: 'programmer', model_tier: 'standard', project_id: '', notes: '' }); reloadTasks();
     } catch { showToast('Failed', 'error'); }
+  };
+
+  const openEditProject = (project) => {
+    setEditProject(project);
+    setEditForm({
+      title: project.title || '',
+      type: project.type || 'project',
+      notes: project.notes || '',
+      repo_path: project.repoPath || project.repo_path || '',
+      github_repo: project.githubRepo || project.github_repo || '',
+    });
+    setShowDeleteConfirm(false);
+  };
+
+  const saveEditProject = async () => {
+    if (!editProject || !editForm.title.trim()) return;
+    try {
+      await api.updateProject(editProject.id, {
+        title: editForm.title.trim(),
+        type: editForm.type,
+        notes: editForm.notes.trim() || null,
+        repo_path: editForm.repo_path.trim() || null,
+        github_repo: editForm.github_repo.trim() || null,
+      });
+      showToast('Project updated', 'success');
+      setEditProject(null);
+      reloadProjects();
+    } catch {
+      showToast('Failed to update project', 'error');
+    }
+  };
+
+  const deleteProject = async () => {
+    if (!editProject) return;
+    try {
+      await api.deleteProject(editProject.id);
+      showToast('Project deleted', 'success');
+      setEditProject(null);
+      setShowDeleteConfirm(false);
+      if (selectedProjectId === editProject.id) {
+        openProjectsView();
+      }
+      reloadProjects();
+    } catch {
+      showToast('Failed to delete project', 'error');
+    }
   };
 
   const kanbanTasks = showAllTasks ? taskArr : selectedProject ? getProjectTasks(selectedProject.id) : taskArr;
@@ -372,6 +422,12 @@ export default function Projects() {
                     onSelect={openProjectView}
                   />
                 )}
+                {selectedProject && !showAllTasks && (
+                  <button className="btn-ghost" onClick={() => openEditProject(selectedProject)} style={{ display: 'flex', alignItems: 'center', gap: 6 }} title="Edit project settings">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Edit
+                  </button>
+                )}
                 <button className="btn-ghost" onClick={() => setShowBraindump(true)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 3C7.03 3 3 7.03 3 12s4.03 9 9 9 9-4.03 9-9-4.03-9-9-9z"/><path d="M12 8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/><path d="M8.5 13.5c-.83.83-.83 2.17 0 3M15.5 13.5c.83.83.83 2.17 0 3"/></svg>
                   Brain Dump
@@ -455,7 +511,12 @@ export default function Projects() {
                           {done.length > 0 && <span style={{ color: 'var(--green)', fontSize: '0.72rem', fontFamily: 'var(--mono)' }}>{done.length} done</span>}
                         </div>
                         <span style={{ color: 'var(--faint)', fontSize: '0.7rem' }}>{timeAgo(p.updated_at || p.updatedAt)}</span>
-                        <button onClick={async (e) => { e.stopPropagation(); p.archived ? await api.unarchiveProject(p.id) : await api.archiveProject(p.id); reloadProjects(); }} className="btn-ghost" style={{ padding: '2px 8px', fontSize: '0.68rem', marginLeft: 8 }}>{p.archived ? 'Unarchive' : 'Archive'}</button>
+                        <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
+                          <button onClick={(e) => { e.stopPropagation(); openEditProject(p); }} className="btn-ghost" style={{ padding: '2px 8px', fontSize: '0.68rem' }} title="Edit project">
+                            <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </button>
+                          <button onClick={async (e) => { e.stopPropagation(); p.archived ? await api.unarchiveProject(p.id) : await api.archiveProject(p.id); reloadProjects(); }} className="btn-ghost" style={{ padding: '2px 8px', fontSize: '0.68rem' }}>{p.archived ? 'Unarchive' : 'Archive'}</button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -580,6 +641,90 @@ export default function Projects() {
               {selectedTask.status !== 'cancelled' && (
                 <button className="btn-danger" onClick={async () => { await api.updateTask(selectedTask.id, { status: 'cancelled' }); reloadTasks(); setSelectedTask(null); }} style={{ flex: 1 }}>✗ Cancel</button>
               )}
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Edit Project Modal */}
+      <Modal open={!!editProject} onClose={() => { setEditProject(null); setShowDeleteConfirm(false); }} title="Edit Project">
+        {editProject && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div>
+              <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.78rem', marginBottom: 6 }}>Name</label>
+              <input
+                className="input"
+                value={editForm.title}
+                onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+                placeholder="Project name"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.78rem', marginBottom: 6 }}>Type</label>
+              <select
+                className="input"
+                value={editForm.type}
+                onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))}
+              >
+                {PROJECT_TYPES.map(t => (
+                  <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.78rem', marginBottom: 6 }}>Description</label>
+              <textarea
+                className="input"
+                value={editForm.notes}
+                onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                placeholder="Project description / notes"
+                rows={3}
+                style={{ resize: 'vertical' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.78rem', marginBottom: 6 }}>Repo Path</label>
+              <input
+                className="input"
+                value={editForm.repo_path}
+                onChange={e => setEditForm(f => ({ ...f, repo_path: e.target.value }))}
+                placeholder="~/path/to/repo"
+                style={{ fontFamily: 'var(--mono)', fontSize: '0.85rem' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--muted)', fontSize: '0.78rem', marginBottom: 6 }}>GitHub Repo</label>
+              <input
+                className="input"
+                value={editForm.github_repo}
+                onChange={e => setEditForm(f => ({ ...f, github_repo: e.target.value }))}
+                placeholder="org/repo-name"
+                style={{ fontFamily: 'var(--mono)', fontSize: '0.85rem' }}
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+              <div>
+                {!showDeleteConfirm ? (
+                  <button
+                    className="btn-ghost"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    style={{ color: 'var(--red)', fontSize: '0.78rem' }}
+                  >
+                    Delete Project
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ color: 'var(--red)', fontSize: '0.78rem' }}>Are you sure?</span>
+                    <button className="btn-danger" onClick={deleteProject} style={{ padding: '4px 12px', fontSize: '0.75rem' }}>Yes, Delete</button>
+                    <button className="btn-ghost" onClick={() => setShowDeleteConfirm(false)} style={{ padding: '4px 12px', fontSize: '0.75rem' }}>No</button>
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="btn-ghost" onClick={() => { setEditProject(null); setShowDeleteConfirm(false); }}>Cancel</button>
+                <button className="btn-primary" onClick={saveEditProject} disabled={!editForm.title.trim()}>Save Changes</button>
+              </div>
             </div>
           </div>
         )}
