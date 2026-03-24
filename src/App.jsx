@@ -24,6 +24,7 @@ import Workers from './pages/Workers';
 import Insights from './pages/Insights';
 import Training from './pages/Training';
 import MyTasks from './pages/MyTasks';
+import IntelSweep from './pages/IntelSweep';
 import { ChatProvider } from './hooks/useChatState';
 import { api } from './lib/api';
 
@@ -85,6 +86,7 @@ export default function App() {
             <Route path="/insights" element={<Insights />} />
             <Route path="/training" element={<Training />} />
             <Route path="/my-tasks" element={<MyTasks />} />
+            <Route path="/intel" element={<IntelSweep />} />
           </Route>
         </Routes>
       </ChatProvider>

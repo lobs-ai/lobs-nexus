@@ -138,6 +138,22 @@ export const api = {
   initiativeReply: (id, text) => fetch(`/api/orchestrator/intelligence/initiatives/` + id + `/thread`, { method: `POST`, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text, author: `user` }) }).then(r => r.json()),
   inboxReadState: (ids, is_read) => req(`/api/inbox/read-state`, { method: `POST`, body: { ids, is_read } }),
 
+  // Intel Sweep
+  intelFeeds: (signal) => reqSafe('/api/intel/feeds', { signal }, { feeds: [] }),
+  intelStats: (signal) => reqSafe('/api/intel/stats', { signal }, {}),
+  intelSources: (params = {}, signal) => {
+    const q = new URLSearchParams(params).toString();
+    return reqSafe(`/api/intel/sources${q ? '?' + q : ''}`, { signal }, { sources: [], total: 0 });
+  },
+  intelInsights: (params = {}, signal) => {
+    const q = new URLSearchParams(params).toString();
+    return reqSafe(`/api/intel/insights${q ? '?' + q : ''}`, { signal }, { insights: [] });
+  },
+  createIntelFeed: (body) => req('/api/intel/feeds', { method: 'POST', body }),
+  updateIntelFeed: (id, body) => req(`/api/intel/feeds/${id}`, { method: 'PUT', body }),
+  deleteIntelFeed: (id) => req(`/api/intel/feeds/${id}`, { method: 'DELETE' }),
+  triggerIntelSweep: () => req('/api/intel/sweep', { method: 'POST' }),
+
   // Service Health
   serviceHealth: (signal) => reqSafe('/api/health/services', { signal }, { services: [], hasWarnings: false }),
 
