@@ -278,7 +278,7 @@ export default function Dashboard() {
               {activeChats.map(chat => {
                 const color = 'var(--purple)';
                 return (
-                  <div key={chat.sessionKey} onClick={() => navigate(`/chat/${chat.sessionKey}`)} style={{
+                  <div key={chat.sessionKey} onClick={() => { localStorage.setItem('nexus-chat-session-key', chat.sessionKey); navigate('/chat'); }} style={{
                     display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
                     padding: '14px 16px', borderRadius: 12,
                     background: `rgba(167,139,250,0.04)`, border: `1px solid rgba(167,139,250,0.15)`,
