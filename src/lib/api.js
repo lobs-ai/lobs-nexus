@@ -154,6 +154,13 @@ export const api = {
   deleteIntelFeed: (id) => req(`/api/intel/feeds/${id}`, { method: 'DELETE' }),
   triggerIntelSweep: () => req('/api/intel/sweep', { method: 'POST' }),
 
+  // Research Radar
+  researchRadarList: (query, signal) => reqSafe(`/api/research-radar${query ? '?' + query : ''}`, { signal }, []),
+  researchRadarStats: (signal) => reqSafe('/api/research-radar/stats', { signal }, {}),
+  researchRadarGet: (id, signal) => reqSafe(`/api/research-radar/${id}`, { signal }, null),
+  researchRadarCreate: (body) => req('/api/research-radar', { method: 'POST', body }),
+  researchRadarUpdate: (id, body) => req(`/api/research-radar/${id}`, { method: 'PUT', body }),
+
   // Service Health
   serviceHealth: (signal) => reqSafe('/api/health/services', { signal }, { services: [], hasWarnings: false }),
 
