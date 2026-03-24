@@ -1,0 +1,357 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Actions component > snapshot: approve / reject actions 1`] = `
+<div
+  style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; margin-bottom: 8px;"
+>
+  <button
+    style="background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; font-family: var(--font); transition: all 0.15s;"
+  >
+    Approve
+  </button>
+  <button
+    style="background: transparent; color: var(--muted); border: 1px solid var(--border); padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; cursor: pointer; font-family: var(--font); transition: all 0.15s;"
+  >
+    Reject
+  </button>
+</div>
+`;
+
+exports[`Alert component > snapshot: error alert with title 1`] = `
+<div
+  style="background: rgba(248, 113, 113, 0.08); border: 1px solid rgba(248, 113, 113, 0.25); border-radius: var(--radius); padding: 12px 16px; margin-top: 8px; margin-bottom: 8px; display: flex; gap: 10px; align-items: flex-start;"
+>
+  <span
+    style="font-size: 1rem; flex-shrink: 0; line-height: 1.4;"
+  >
+    ✕
+  </span>
+  <div>
+    <div
+      style="font-size: 0.85rem; font-weight: 700; color: var(--red); margin-bottom: 2px;"
+    >
+      Build Failed
+    </div>
+    <div
+      style="font-size: 0.82rem; color: var(--text); line-height: 1.5;"
+    >
+      Check the CI logs for details.
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Collapsible component > snapshot: open collapsible 1`] = `
+<div
+  style="background: rgba(20, 28, 44, 0.7); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: var(--radius); margin-top: 8px; margin-bottom: 8px; overflow: hidden;"
+>
+  <div
+    style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; user-select: none; transition: background 0.15s;"
+  >
+    <span
+      style="font-size: 0.7rem; color: var(--teal); transition: transform 0.2s; transform: rotate(90deg); display: inline-block;"
+    >
+      ▶
+    </span>
+    <span
+      style="font-size: 0.85rem; font-weight: 600; color: var(--text);"
+    >
+      AI Analysis
+    </span>
+  </div>
+  <div
+    style="padding: 0px 16px 14px; border-top: 1px solid rgba(255, 255, 255, 0.04);"
+  >
+    <div
+      style="font-size: 0.82rem; color: var(--muted); line-height: 1.6; padding-top: 10px;"
+    >
+      The model ran 
+      <code
+        style="background:rgba(45,212,191,0.08);border-radius:4px;padding:1px 5px;font-family:var(--mono);font-size:0.85em;color:var(--teal)"
+      >
+        3 jobs
+      </code>
+       successfully.\\n
+      <strong>
+        All clear.
+      </strong>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Metric component > snapshot: metrics row 1`] = `
+<div
+  style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; margin-bottom: 8px;"
+>
+  <div
+    style="flex: 1 1 120px; background: rgba(20, 28, 44, 0.7); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; min-width: 120px;"
+  >
+    <div
+      style="font-size: 0.68rem; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;"
+    >
+      Tasks Done
+    </div>
+    <div
+      style="font-size: 1.4rem; font-weight: 800; color: var(--text); line-height: 1;"
+    >
+      14
+    </div>
+    <div
+      style="display: flex; align-items: center; gap: 4px; margin-top: 6px;"
+    >
+      <span
+        style="font-size: 0.75rem; color: var(--green);"
+      >
+        ↑
+      </span>
+      <span
+        style="font-size: 0.75rem; color: var(--green); font-family: var(--mono);"
+      >
+        +3
+      </span>
+    </div>
+  </div>
+  <div
+    style="flex: 1 1 120px; background: rgba(20, 28, 44, 0.7); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; min-width: 120px;"
+  >
+    <div
+      style="font-size: 0.68rem; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;"
+    >
+      Errors
+    </div>
+    <div
+      style="font-size: 1.4rem; font-weight: 800; color: var(--text); line-height: 1;"
+    >
+      2
+    </div>
+    <div
+      style="display: flex; align-items: center; gap: 4px; margin-top: 6px;"
+    >
+      <span
+        style="font-size: 0.75rem; color: var(--red);"
+      >
+        ↓
+      </span>
+      <span
+        style="font-size: 0.75rem; color: var(--red); font-family: var(--mono);"
+      >
+        +1
+      </span>
+    </div>
+  </div>
+  <div
+    style="flex: 1 1 120px; background: rgba(20, 28, 44, 0.7); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; min-width: 120px;"
+  >
+    <div
+      style="font-size: 0.68rem; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;"
+    >
+      Uptime
+    </div>
+    <div
+      style="font-size: 1.4rem; font-weight: 800; color: var(--text); line-height: 1;"
+    >
+      99.8%
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Progress component > snapshot: 3-step pipeline 1`] = `
+<div
+  style="background: rgba(20, 28, 44, 0.7); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-top: 8px; margin-bottom: 8px;"
+>
+  <div
+    style="font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; color: var(--teal); font-family: var(--mono); margin-bottom: 14px; text-transform: uppercase;"
+  >
+    Deployment Pipeline
+  </div>
+  <div
+    style="display: flex; flex-direction: column; gap: 0px;"
+  >
+    <div
+      style="display: flex; align-items: flex-start; gap: 12px;"
+    >
+      <div
+        style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 20px;"
+      >
+        <div
+          style="width: 18px; height: 18px; border-radius: 50%; background: var(--green); display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: rgb(0, 0, 0); font-weight: 700;"
+        >
+          ✓
+        </div>
+        <div
+          style="width: 2px; height: 20px; background: var(--green);"
+        />
+      </div>
+      <div
+        style="font-size: 0.85rem; color: var(--text); font-weight: 400; padding-top: 1px;"
+      >
+        Plan
+      </div>
+    </div>
+    <div
+      style="display: flex; align-items: flex-start; gap: 12px;"
+    >
+      <div
+        style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 20px;"
+      >
+        <div
+          style="width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--teal); display: flex; align-items: center; justify-content: center;"
+        >
+          <div
+            style="width: 8px; height: 8px; border-radius: 50%; background: var(--teal);"
+          />
+        </div>
+        <div
+          style="width: 2px; height: 20px; background: rgba(255, 255, 255, 0.06);"
+        />
+      </div>
+      <div
+        style="font-size: 0.85rem; color: var(--text); font-weight: 600; padding-top: 1px;"
+      >
+        Build
+      </div>
+    </div>
+    <div
+      style="display: flex; align-items: flex-start; gap: 12px;"
+    >
+      <div
+        style="display: flex; flex-direction: column; align-items: center; flex-shrink: 0; width: 20px;"
+      >
+        <div
+          style="width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--faint);"
+        />
+      </div>
+      <div
+        style="font-size: 0.85rem; color: var(--faint); font-weight: 400; padding-top: 1px;"
+      >
+        Deploy
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`RichMessage component > snapshot: mixed markdown + rich-ui message 1`] = `
+<div>
+  <div
+    style="color: var(--text); font-size: 0.88rem; line-height: 1.6;"
+  >
+    <strong>
+      Status Update
+    </strong>
+  </div>
+  <div
+    style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: var(--radius); padding: 12px 16px; margin-top: 8px; margin-bottom: 8px; display: flex; gap: 10px; align-items: flex-start;"
+  >
+    <span
+      style="font-size: 1rem; flex-shrink: 0; line-height: 1.4;"
+    >
+      ℹ️
+    </span>
+    <div>
+      <div
+        style="font-size: 0.85rem; font-weight: 700; color: var(--blue); margin-bottom: 2px;"
+      >
+        Info
+      </div>
+      <div
+        style="font-size: 0.82rem; color: var(--text); line-height: 1.5;"
+      >
+        System is nominal
+      </div>
+    </div>
+  </div>
+  <div
+    style="color: var(--text); font-size: 0.88rem; line-height: 1.6;"
+  >
+    Check 
+    <code
+      style="background:rgba(45,212,191,0.08);border-radius:4px;padding:1px 5px;font-family:var(--mono);font-size:0.85em;color:var(--teal)"
+    >
+      logs
+    </code>
+     for details.
+  </div>
+</div>
+`;
+
+exports[`StatusCard component > snapshot: service health card 1`] = `
+<div
+  style="background: rgba(20, 28, 44, 0.7); backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; margin-top: 8px; margin-bottom: 8px;"
+>
+  <div
+    style="font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; color: var(--teal); font-family: var(--mono); margin-bottom: 12px; text-transform: uppercase;"
+  >
+    Service Health
+  </div>
+  <div
+    style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px 16px;"
+  >
+    <div
+      style="display: flex; align-items: center; gap: 8px;"
+    >
+      <div
+        style="width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); flex-shrink: 0;"
+      />
+      <div
+        style="flex: 1 1 0%; min-width: 0px;"
+      >
+        <div
+          style="font-size: 0.75rem; color: var(--muted); font-family: var(--mono);"
+        >
+          API
+        </div>
+        <div
+          style="font-size: 0.85rem; color: var(--text); font-weight: 600;"
+        >
+          Running
+        </div>
+      </div>
+    </div>
+    <div
+      style="display: flex; align-items: center; gap: 8px;"
+    >
+      <div
+        style="width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 6px var(--amber); flex-shrink: 0;"
+      />
+      <div
+        style="flex: 1 1 0%; min-width: 0px;"
+      >
+        <div
+          style="font-size: 0.75rem; color: var(--muted); font-family: var(--mono);"
+        >
+          DB
+        </div>
+        <div
+          style="font-size: 0.85rem; color: var(--text); font-weight: 600;"
+        >
+          Degraded
+        </div>
+      </div>
+    </div>
+    <div
+      style="display: flex; align-items: center; gap: 8px;"
+    >
+      <div
+        style="width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 6px var(--red); flex-shrink: 0;"
+      />
+      <div
+        style="flex: 1 1 0%; min-width: 0px;"
+      >
+        <div
+          style="font-size: 0.75rem; color: var(--muted); font-family: var(--mono);"
+        >
+          Cache
+        </div>
+        <div
+          style="font-size: 0.85rem; color: var(--text); font-weight: 600;"
+        >
+          Down
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;

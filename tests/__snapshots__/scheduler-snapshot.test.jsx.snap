@@ -1,0 +1,2300 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Scheduler — AI Planner tab > snapshot: AI planner tab fully loaded 1`] = `
+<div
+  style="padding: 28px 28px 40px; max-width: 1240px; margin: 0px auto;"
+>
+  <div
+    style="display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;"
+  >
+    <div
+      style="flex: 1 1 520px;"
+    >
+      <div
+        style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;"
+      >
+        <svg
+          fill="none"
+          height="22"
+          stroke="var(--teal)"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="22"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <path
+            d="M12 6v6l4 2"
+          />
+        </svg>
+        <h1
+          style="margin: 0px; font-size: 1.55rem; color: var(--text);"
+        >
+          Good morning
+          , Rafe
+        </h1>
+      </div>
+      <p
+        style="margin: 0px; color: var(--muted);"
+      >
+        Tuesday, March 24
+         · Scheduler Intelligence
+      </p>
+    </div>
+    <div
+      style="display: flex; align-items: center; gap: 8px;"
+    >
+      <span
+        style="font-size: 0.72rem; color: var(--faint); font-family: var(--mono);"
+      >
+        just now
+      </span>
+      <button
+        style="background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; padding: 4px 10px; font-size: 0.75rem; display: flex; align-items: center; gap: 5px; transition: all 0.2s;"
+      >
+        <svg
+          fill="none"
+          height="11"
+          stroke="currentColor"
+          stroke-width="2.5"
+          style="animation: none;"
+          viewBox="0 0 24 24"
+          width="11"
+        >
+          <polyline
+            points="23 4 23 10 17 10"
+          />
+          <path
+            d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"
+          />
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+  <div
+    style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;"
+  >
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Overview
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--teal); background: rgba(45, 212, 191, 0.1); color: var(--teal); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      AI Planner
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Cron Jobs
+      <span
+        class="badge"
+        style="background: var(--faint)22; color: var(--faint); border: 1px solid var(--faint)44;"
+      >
+        2
+      </span>
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Health
+    </button>
+  </div>
+  <div
+    style="display: grid; grid-template-columns: 1.35fr 0.95fr; gap: 18px; align-items: start;"
+  >
+    <div
+      style="display: grid; gap: 18px;"
+    >
+      <div
+        class="glass-card glow  "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 14px;"
+        >
+          <div>
+            <div
+              style="font-size: 0.78rem; color: var(--teal); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px;"
+            >
+              Today
+            </div>
+            <div
+              style="font-size: 1.2rem; font-weight: 700; color: var(--text);"
+            >
+              Productive day ahead
+            </div>
+          </div>
+          <span
+            class="badge"
+            style="background: var(--blue)22; color: var(--blue); border: 1px solid var(--blue)44;"
+          >
+            mistral-7b-instruct
+          </span>
+        </div>
+        <div
+          style="font-size: 0.94rem; color: var(--text); line-height: 1.7; margin-bottom: 16px;"
+        >
+          AI has analyzed your schedule and found 3 free slots.
+        </div>
+        <div
+          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;"
+        >
+          <div
+            style="padding: 12px 14px; border-radius: 10px; background: rgba(45, 212, 191, 0.08); border: 1px solid rgba(45, 212, 191, 0.18);"
+          >
+            <div
+              style="color: var(--teal); font-size: 0.72rem; margin-bottom: 6px;"
+            >
+              Action 
+              1
+            </div>
+            <div
+              style="color: var(--text); font-size: 0.86rem; line-height: 1.5;"
+            >
+              Block 09:00–10:00 for deep work
+            </div>
+          </div>
+          <div
+            style="padding: 12px 14px; border-radius: 10px; background: rgba(45, 212, 191, 0.08); border: 1px solid rgba(45, 212, 191, 0.18);"
+          >
+            <div
+              style="color: var(--teal); font-size: 0.72rem; margin-bottom: 6px;"
+            >
+              Action 
+              2
+            </div>
+            <div
+              style="color: var(--text); font-size: 0.86rem; line-height: 1.5;"
+            >
+              Review PRs at 16:00
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s; border-color: rgba(251, 191, 36, 0.3);"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Schedule Changes Detected
+          </div>
+          <span
+            class="badge"
+            style="background: rgba(251, 191, 36, 0.133); color: rgb(251, 191, 36); border: 1px solid rgba(251, 191, 36, 0.267);"
+          >
+            1 change
+          </span>
+          <span
+            style="margin-left: auto; color: var(--muted); font-size: 0.75rem;"
+          >
+            9:50 AM
+          </span>
+        </div>
+        <div
+          style="display: grid; gap: 6px; margin-bottom: 14px;"
+        >
+          <div
+            style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); font-size: 0.84rem;"
+          >
+            <span
+              style="font-weight: 700; font-size: 0.72rem; letter-spacing: 0.06em; color: var(--muted); min-width: 64px;"
+            >
+              added
+            </span>
+            <span
+              style="color: var(--text); flex: 1 1 0%;"
+            />
+          </div>
+        </div>
+        <div
+          style="font-size: 0.88rem; color: var(--text); line-height: 1.65; padding: 10px 14px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); margin-bottom: 14px;"
+        >
+          One new task added since yesterday.
+        </div>
+        <div
+          style="margin-bottom: 0px;"
+        >
+          <div
+            style="font-size: 0.76rem; color: var(--teal); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px;"
+          >
+            Action Items
+          </div>
+          <div
+            style="display: grid; gap: 6px;"
+          >
+            <div
+              style="padding: 8px 12px; border-radius: 8px; background: rgba(45, 212, 191, 0.07); border: 1px solid rgba(45, 212, 191, 0.15); color: var(--text); font-size: 0.84rem; line-height: 1.5;"
+            >
+              Prioritize the new test task
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Suggested Work Blocks
+          </div>
+          <span
+            class="badge"
+            style="background: var(--green)22; color: var(--green); border: 1px solid var(--green)44;"
+          >
+            2
+          </span>
+        </div>
+        <div
+          style="display: grid; gap: 10px;"
+        >
+          <div
+            style="padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.02);"
+          >
+            <div
+              style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap;"
+            >
+              <div
+                style="color: var(--text); font-weight: 600;"
+              >
+                Deep work block
+              </div>
+              <span
+                class="badge"
+                style="background: var(--blue)22; color: var(--blue); border: 1px solid var(--blue)44;"
+              >
+                undefinedm
+              </span>
+              <span
+                class="badge"
+                style="background: var(--amber)22; color: var(--amber); border: 1px solid var(--amber)44;"
+              >
+                No meetings until 10am
+              </span>
+            </div>
+            <div
+              style="color: var(--muted); font-size: 0.82rem; font-family: var(--mono);"
+            >
+              TBD
+               - 
+              TBD
+               · score 
+            </div>
+          </div>
+          <div
+            style="padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.02);"
+          >
+            <div
+              style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap;"
+            >
+              <div
+                style="color: var(--text); font-weight: 600;"
+              >
+                Review PRs
+              </div>
+              <span
+                class="badge"
+                style="background: var(--blue)22; color: var(--blue); border: 1px solid var(--blue)44;"
+              >
+                undefinedm
+              </span>
+              <span
+                class="badge"
+                style="background: var(--amber)22; color: var(--amber); border: 1px solid var(--amber)44;"
+              >
+                Light calendar in afternoon
+              </span>
+            </div>
+            <div
+              style="color: var(--muted); font-size: 0.82rem; font-family: var(--mono);"
+            >
+              TBD
+               - 
+              TBD
+               · score 
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      style="display: grid; gap: 18px;"
+    >
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Planner Model
+          </div>
+          <span
+            class="badge"
+            style="background: var(--green)22; color: var(--green); border: 1px solid var(--green)44;"
+          >
+            LM Studio up
+          </span>
+        </div>
+        <div
+          style="display: grid; gap: 14px;"
+        >
+          <div
+            style="display: flex; align-items: center; justify-content: space-between; gap: 10px;"
+          >
+            <span
+              style="color: var(--text); font-size: 0.84rem;"
+            >
+              AI planner
+            </span>
+            <button
+              style="padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(148, 163, 184, 0.12); color: var(--muted); cursor: pointer; font-size: 0.78rem; font-weight: 600; min-width: 78px;"
+            >
+              Off
+            </button>
+          </div>
+          <div
+            style="display: flex; align-items: center; justify-content: space-between; gap: 10px;"
+          >
+            <span
+              style="color: var(--text); font-size: 0.84rem;"
+            >
+              Local only
+            </span>
+            <button
+              style="padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(148, 163, 184, 0.12); color: var(--muted); cursor: pointer; font-size: 0.78rem; font-weight: 600; min-width: 78px;"
+            >
+              Off
+            </button>
+          </div>
+          <label
+            style="display: grid; gap: 6px;"
+          >
+            <span
+              style="color: var(--muted); font-size: 0.8rem;"
+            >
+              Tier
+            </span>
+            <select
+              style="width: 100%; background: rgba(15, 23, 42, 0.35); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 0.84rem;"
+            >
+              <option
+                value="micro"
+              >
+                micro
+              </option>
+              <option
+                value="small"
+              >
+                small
+              </option>
+              <option
+                value="medium"
+              >
+                medium
+              </option>
+              <option
+                value="standard"
+              >
+                standard
+              </option>
+              <option
+                value="strong"
+              >
+                strong
+              </option>
+            </select>
+          </label>
+          <label
+            style="display: grid; gap: 6px;"
+          >
+            <span
+              style="color: var(--muted); font-size: 0.8rem;"
+            >
+              Override model
+            </span>
+            <input
+              placeholder="Optional explicit model id"
+              style="width: 100%; background: rgba(15, 23, 42, 0.35); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 0.84rem;"
+              value=""
+            />
+          </label>
+          <div
+            style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"
+          >
+            <label
+              style="display: grid; gap: 6px;"
+            >
+              <span
+                style="color: var(--muted); font-size: 0.8rem;"
+              >
+                Temperature
+              </span>
+              <input
+                max="1"
+                min="0"
+                step="0.05"
+                style="width: 100%; background: rgba(15, 23, 42, 0.35); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 0.84rem;"
+                type="number"
+              />
+            </label>
+            <label
+              style="display: grid; gap: 6px;"
+            >
+              <span
+                style="color: var(--muted); font-size: 0.8rem;"
+              >
+                Max tokens
+              </span>
+              <input
+                max="4096"
+                min="128"
+                step="64"
+                style="width: 100%; background: rgba(15, 23, 42, 0.35); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 0.84rem;"
+                type="number"
+              />
+            </label>
+          </div>
+          <div
+            style="color: var(--muted); font-size: 0.78rem; line-height: 1.6;"
+          >
+            Active route: 
+            <span
+              style="color: var(--text);"
+            >
+              mistral-7b-instruct
+            </span>
+             · 
+            lm-studio
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Calendar Capacity
+          </div>
+          <span
+            class="badge"
+            style="background: var(--blue)22; color: var(--blue); border: 1px solid var(--blue)44;"
+          >
+            1 events
+          </span>
+        </div>
+        <div
+          style="display: grid; gap: 10px;"
+        >
+          <div
+            style="display: flex; justify-content: space-between; gap: 10px; font-size: 0.82rem; color: var(--text);"
+          >
+            <span>
+              11:00 AM
+               - 
+              12:00 PM
+            </span>
+            <span
+              style="color: var(--teal); font-family: var(--mono);"
+            >
+              60
+              m
+            </span>
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Ranked Tasks
+          </div>
+          <span
+            class="badge"
+            style="background: var(--faint)22; color: var(--faint); border: 1px solid var(--faint)44;"
+          >
+            0 overdue
+          </span>
+        </div>
+        <div
+          style="display: grid; gap: 10px;"
+        >
+          <div
+            style="padding-bottom: 10px; border-bottom: 1px solid var(--border);"
+          >
+            <div
+              style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;"
+            >
+              <span
+                style="color: var(--text); font-size: 0.86rem; font-weight: 600;"
+              >
+                Finish PAW dashboard tests
+              </span>
+              <span
+                class="badge"
+                style="background: var(--amber)22; color: var(--amber); border: 1px solid var(--amber)44;"
+              >
+                high
+              </span>
+              <span
+                class="badge"
+                style="background: var(--blue)22; color: var(--blue); border: 1px solid var(--blue)44;"
+              >
+                45m
+              </span>
+            </div>
+            <div
+              style="color: var(--muted); font-size: 0.77rem; font-family: var(--mono);"
+            >
+              score 
+              0.95
+               · 
+              active
+            </div>
+          </div>
+          <div
+            style="padding-bottom: 10px; border-bottom: 1px solid var(--border);"
+          >
+            <div
+              style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;"
+            >
+              <span
+                style="color: var(--text); font-size: 0.86rem; font-weight: 600;"
+              >
+                Review memory docs
+              </span>
+              <span
+                class="badge"
+                style="background: var(--amber)22; color: var(--amber); border: 1px solid var(--amber)44;"
+              >
+                medium
+              </span>
+              <span
+                class="badge"
+                style="background: var(--blue)22; color: var(--blue); border: 1px solid var(--blue)44;"
+              >
+                30m
+              </span>
+            </div>
+            <div
+              style="color: var(--muted); font-size: 0.77rem; font-family: var(--mono);"
+            >
+              score 
+              0.72
+               · 
+              active
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Conflicts
+          </div>
+          <span
+            class="badge"
+            style="background: var(--amber)22; color: var(--amber); border: 1px solid var(--amber)44;"
+          >
+            0
+          </span>
+        </div>
+        <div
+          style="color: var(--muted); font-size: 0.84rem;"
+        >
+          No conflicts detected.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Scheduler — Health tab > snapshot: health tab (no alerts) 1`] = `
+<div
+  style="padding: 28px 28px 40px; max-width: 1240px; margin: 0px auto;"
+>
+  <div
+    style="display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;"
+  >
+    <div
+      style="flex: 1 1 520px;"
+    >
+      <div
+        style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;"
+      >
+        <svg
+          fill="none"
+          height="22"
+          stroke="var(--teal)"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="22"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <path
+            d="M12 6v6l4 2"
+          />
+        </svg>
+        <h1
+          style="margin: 0px; font-size: 1.55rem; color: var(--text);"
+        >
+          Good morning
+          , Rafe
+        </h1>
+      </div>
+      <p
+        style="margin: 0px; color: var(--muted);"
+      >
+        Tuesday, March 24
+         · Scheduler Intelligence
+      </p>
+    </div>
+    <div
+      style="display: flex; align-items: center; gap: 8px;"
+    >
+      <span
+        style="font-size: 0.72rem; color: var(--faint); font-family: var(--mono);"
+      >
+        just now
+      </span>
+      <button
+        style="background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; padding: 4px 10px; font-size: 0.75rem; display: flex; align-items: center; gap: 5px; transition: all 0.2s;"
+      >
+        <svg
+          fill="none"
+          height="11"
+          stroke="currentColor"
+          stroke-width="2.5"
+          style="animation: none;"
+          viewBox="0 0 24 24"
+          width="11"
+        >
+          <polyline
+            points="23 4 23 10 17 10"
+          />
+          <path
+            d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"
+          />
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+  <div
+    style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;"
+  >
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Overview
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      AI Planner
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Cron Jobs
+      <span
+        class="badge"
+        style="background: var(--faint)22; color: var(--faint); border: 1px solid var(--faint)44;"
+      >
+        2
+      </span>
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--teal); background: rgba(45, 212, 191, 0.1); color: var(--teal); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Health
+    </button>
+  </div>
+  <div
+    style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start;"
+  >
+    <div
+      style="display: grid; gap: 18px;"
+    >
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 14px;"
+        >
+          System Services
+        </div>
+        <div
+          style="display: grid; gap: 8px;"
+        >
+          <div
+            style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0px;"
+          >
+            <span
+              style="color: var(--text); font-size: 0.86rem;"
+            >
+              Core
+            </span>
+            <div
+              style="display: flex; align-items: center; gap: 8px;"
+            >
+              <span
+                style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 600; color: var(--green);"
+              >
+                <span
+                  style="width: 6px; height: 6px; border-radius: 50%; background: var(--green);"
+                />
+                ok
+              </span>
+            </div>
+          </div>
+          <div
+            style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0px;"
+          >
+            <span
+              style="color: var(--text); font-size: 0.86rem;"
+            >
+              Database
+            </span>
+            <div
+              style="display: flex; align-items: center; gap: 8px;"
+            >
+              <span
+                style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 600; color: var(--green);"
+              >
+                <span
+                  style="width: 6px; height: 6px; border-radius: 50%; background: var(--green);"
+                />
+                ok
+              </span>
+            </div>
+          </div>
+          <div
+            style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0px;"
+          >
+            <span
+              style="color: var(--text); font-size: 0.86rem;"
+            >
+              Memory Server
+            </span>
+            <div
+              style="display: flex; align-items: center; gap: 8px;"
+            >
+              <span
+                style="font-size: 0.72rem; color: var(--faint); font-family: var(--mono);"
+              >
+                0 restarts
+              </span>
+              <span
+                style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 600; color: var(--green);"
+              >
+                <span
+                  style="width: 6px; height: 6px; border-radius: 50%; background: var(--green);"
+                />
+                ok
+              </span>
+            </div>
+          </div>
+          <div
+            style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0px;"
+          >
+            <span
+              style="color: var(--text); font-size: 0.86rem;"
+            >
+              LM Studio
+            </span>
+            <div
+              style="display: flex; align-items: center; gap: 8px;"
+            >
+              <span
+                style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 600; color: var(--green);"
+              >
+                <span
+                  style="width: 6px; height: 6px; border-radius: 50%; background: var(--green);"
+                />
+                ok
+              </span>
+            </div>
+          </div>
+          <div
+            style="font-size: 0.76rem; color: var(--faint); font-family: var(--mono); margin-top: 6px;"
+          >
+            uptime 
+            1
+            h 
+            2
+            m · pid 
+            12345
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 10px;"
+        >
+          Sentinel Status
+        </div>
+        <div
+          style="font-size: 0.9rem; color: var(--text); line-height: 1.6;"
+        >
+          All systems operational.
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s; border-color: rgba(251, 191, 36, 0.3);"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Blocked Tasks
+          </div>
+          <span
+            class="badge"
+            style="background: var(--amber)22; color: var(--amber); border: 1px solid var(--amber)44;"
+          >
+            1
+          </span>
+        </div>
+        <div
+          style="display: grid; gap: 8px;"
+        >
+          <div
+            style="padding: 10px 12px; border-radius: 8px; background: rgba(251, 191, 36, 0.06); border: 1px solid rgba(251, 191, 36, 0.15); font-size: 0.86rem;"
+          >
+            <div
+              style="color: var(--text); font-weight: 600; margin-bottom: 2px;"
+            >
+              Deploy to production
+            </div>
+            <div
+              style="color: var(--muted); font-size: 0.76rem;"
+            >
+              Blocked by: 
+              Awaiting code review
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      style="display: grid; gap: 18px;"
+    >
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Alerts
+          </div>
+          <span
+            class="badge"
+            style="background: var(--green)22; color: var(--green); border: 1px solid var(--green)44;"
+          >
+            all clear
+          </span>
+        </div>
+        <div
+          style="color: var(--muted); font-size: 0.86rem;"
+        >
+          No alerts. System is operating normally.
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 12px;"
+        >
+          Planner Model
+        </div>
+        <div
+          style="display: grid; gap: 8px;"
+        >
+          <div
+            style="display: flex; align-items: center; justify-content: space-between; padding: 6px 0px;"
+          >
+            <span
+              style="color: var(--text); font-size: 0.86rem;"
+            >
+              LM Studio
+            </span>
+            <div
+              style="display: flex; align-items: center; gap: 8px;"
+            >
+              <span
+                style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.78rem; font-weight: 600; color: var(--green);"
+              >
+                <span
+                  style="width: 6px; height: 6px; border-radius: 50%; background: var(--green);"
+                />
+                ok
+              </span>
+            </div>
+          </div>
+          <div
+            style="display: flex; justify-content: space-between; font-size: 0.84rem;"
+          >
+            <span
+              style="color: var(--muted);"
+            >
+              Active model
+            </span>
+            <span
+              style="color: var(--text); font-family: var(--mono);"
+            >
+              mistral-7b-instruct
+            </span>
+          </div>
+          <div
+            style="display: flex; justify-content: space-between; font-size: 0.84rem;"
+          >
+            <span
+              style="color: var(--muted);"
+            >
+              Source
+            </span>
+            <span
+              style="color: var(--text);"
+            >
+              lm-studio
+            </span>
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Completed Today
+          </div>
+          <span
+            class="badge"
+            style="background: var(--green)22; color: var(--green); border: 1px solid var(--green)44;"
+          >
+            2
+          </span>
+        </div>
+        <div
+          style="display: grid; gap: 6px;"
+        >
+          <div
+            style="display: flex; gap: 8px; align-items: center; padding: 8px 10px; background: rgba(45, 212, 191, 0.05); border-radius: 8px;"
+          >
+            <span
+              style="color: var(--green); font-weight: 700; flex-shrink: 0;"
+            >
+              ✓
+            </span>
+            <span
+              style="font-size: 0.84rem; color: var(--text);"
+            >
+              Set up monitoring
+            </span>
+          </div>
+          <div
+            style="display: flex; gap: 8px; align-items: center; padding: 8px 10px; background: rgba(45, 212, 191, 0.05); border-radius: 8px;"
+          >
+            <span
+              style="color: var(--green); font-weight: 700; flex-shrink: 0;"
+            >
+              ✓
+            </span>
+            <span
+              style="font-size: 0.84rem; color: var(--text);"
+            >
+              Write error boundaries
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Scheduler — Jobs tab > snapshot: jobs tab with system + agent jobs 1`] = `
+<div
+  style="padding: 28px 28px 40px; max-width: 1240px; margin: 0px auto;"
+>
+  <div
+    style="display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;"
+  >
+    <div
+      style="flex: 1 1 520px;"
+    >
+      <div
+        style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;"
+      >
+        <svg
+          fill="none"
+          height="22"
+          stroke="var(--teal)"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="22"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <path
+            d="M12 6v6l4 2"
+          />
+        </svg>
+        <h1
+          style="margin: 0px; font-size: 1.55rem; color: var(--text);"
+        >
+          Good morning
+          , Rafe
+        </h1>
+      </div>
+      <p
+        style="margin: 0px; color: var(--muted);"
+      >
+        Tuesday, March 24
+         · Scheduler Intelligence
+      </p>
+    </div>
+    <div
+      style="display: flex; align-items: center; gap: 8px;"
+    >
+      <span
+        style="font-size: 0.72rem; color: var(--faint); font-family: var(--mono);"
+      >
+        just now
+      </span>
+      <button
+        style="background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; padding: 4px 10px; font-size: 0.75rem; display: flex; align-items: center; gap: 5px; transition: all 0.2s;"
+      >
+        <svg
+          fill="none"
+          height="11"
+          stroke="currentColor"
+          stroke-width="2.5"
+          style="animation: none;"
+          viewBox="0 0 24 24"
+          width="11"
+        >
+          <polyline
+            points="23 4 23 10 17 10"
+          />
+          <path
+            d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"
+          />
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+  <div
+    style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;"
+  >
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Overview
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      AI Planner
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--teal); background: rgba(45, 212, 191, 0.1); color: var(--teal); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Cron Jobs
+      <span
+        class="badge"
+        style="background: var(--teal)22; color: var(--teal); border: 1px solid var(--teal)44;"
+      >
+        2
+      </span>
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Health
+    </button>
+  </div>
+  <div
+    style="display: grid; gap: 18px; max-width: 800px;"
+  >
+    <div
+      class="glass-card   "
+      style="padding: 24px; transition: all 0.25s;"
+    >
+      <div
+        style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;"
+      >
+        <div
+          style="font-size: 1rem; font-weight: 700; color: var(--text);"
+        >
+          System Jobs
+        </div>
+        <span
+          class="badge"
+          style="background: var(--purple)22; color: var(--purple); border: 1px solid var(--purple)44;"
+        >
+          2
+        </span>
+      </div>
+      <div
+        style="display: grid; gap: 10px;"
+      >
+        <div
+          style="padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.02);"
+        >
+          <div
+            style="display: flex; justify-content: space-between; gap: 14px; align-items: flex-start;"
+          >
+            <div
+              style="flex: 1 1 0%;"
+            >
+              <div
+                style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;"
+              >
+                <span
+                  style="color: var(--text); font-size: 0.88rem; font-weight: 600;"
+                >
+                  Daily Brief
+                </span>
+                <span
+                  class="badge"
+                  style="background: var(--green)22; color: var(--green); border: 1px solid var(--green)44;"
+                >
+                  active
+                </span>
+              </div>
+              <div
+                style="color: var(--muted); font-size: 0.77rem; font-family: var(--mono); margin-bottom: 4px;"
+              >
+                0 7 * * *
+              </div>
+              <div
+                style="color: var(--muted); font-size: 0.76rem;"
+              >
+                last 
+                1h ago
+                 · next in 1h 0m
+              </div>
+            </div>
+            <div
+              style="display: flex; gap: 8px;"
+            >
+              <button
+                style="padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(248, 113, 113, 0.12); color: var(--text); cursor: pointer; font-size: 0.78rem; font-weight: 600;"
+              >
+                Disable
+              </button>
+              <button
+                style="padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(96, 165, 250, 0.12); color: var(--text); cursor: pointer; font-size: 0.78rem; font-weight: 600;"
+              >
+                Run
+              </button>
+            </div>
+          </div>
+        </div>
+        <div
+          style="padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.02);"
+        >
+          <div
+            style="display: flex; justify-content: space-between; gap: 14px; align-items: flex-start;"
+          >
+            <div
+              style="flex: 1 1 0%;"
+            >
+              <div
+                style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;"
+              >
+                <span
+                  style="color: var(--text); font-size: 0.88rem; font-weight: 600;"
+                >
+                  Memory Sync
+                </span>
+                <span
+                  class="badge"
+                  style="background: var(--green)22; color: var(--green); border: 1px solid var(--green)44;"
+                >
+                  active
+                </span>
+              </div>
+              <div
+                style="color: var(--muted); font-size: 0.77rem; font-family: var(--mono); margin-bottom: 4px;"
+              >
+                */15 * * * *
+              </div>
+              <div
+                style="color: var(--muted); font-size: 0.76rem;"
+              >
+                last 
+                15m ago
+                 · next in 15m
+              </div>
+            </div>
+            <div
+              style="display: flex; gap: 8px;"
+            >
+              <button
+                style="padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(248, 113, 113, 0.12); color: var(--text); cursor: pointer; font-size: 0.78rem; font-weight: 600;"
+              >
+                Disable
+              </button>
+              <button
+                style="padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(96, 165, 250, 0.12); color: var(--text); cursor: pointer; font-size: 0.78rem; font-weight: 600;"
+              >
+                Run
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      class="glass-card   "
+      style="padding: 24px; transition: all 0.25s;"
+    >
+      <div
+        style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;"
+      >
+        <div
+          style="font-size: 1rem; font-weight: 700; color: var(--text);"
+        >
+          Agent Jobs
+        </div>
+        <span
+          class="badge"
+          style="background: var(--purple)22; color: var(--purple); border: 1px solid var(--purple)44;"
+        >
+          1
+        </span>
+      </div>
+      <div
+        style="display: grid; gap: 10px;"
+      >
+        <div
+          style="padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.02);"
+        >
+          <div
+            style="display: flex; justify-content: space-between; gap: 14px; align-items: flex-start;"
+          >
+            <div
+              style="flex: 1 1 0%;"
+            >
+              <div
+                style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;"
+              >
+                <span
+                  style="color: var(--text); font-size: 0.88rem; font-weight: 600;"
+                >
+                  Weekly Reporter
+                </span>
+                <span
+                  class="badge"
+                  style="background: var(--faint)22; color: var(--faint); border: 1px solid var(--faint)44;"
+                >
+                  disabled
+                </span>
+              </div>
+              <div
+                style="color: var(--muted); font-size: 0.77rem; font-family: var(--mono); margin-bottom: 4px;"
+              >
+                0 9 * * 1
+              </div>
+              <div
+                style="color: var(--muted); font-size: 0.76rem;"
+              >
+                last 
+                Never
+              </div>
+            </div>
+            <div
+              style="display: flex; gap: 8px;"
+            >
+              <button
+                style="padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(45, 212, 191, 0.12); color: var(--text); cursor: pointer; font-size: 0.78rem; font-weight: 600;"
+              >
+                Enable
+              </button>
+              <button
+                style="padding: 7px 12px; border-radius: 8px; border: 1px solid var(--border); background: rgba(96, 165, 250, 0.12); color: var(--text); cursor: pointer; font-size: 0.78rem; font-weight: 600;"
+              >
+                Run
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Scheduler — Overview tab > snapshot: overview tab fully loaded 1`] = `
+<div
+  style="padding: 28px 28px 40px; max-width: 1240px; margin: 0px auto;"
+>
+  <div
+    style="display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;"
+  >
+    <div
+      style="flex: 1 1 520px;"
+    >
+      <div
+        style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;"
+      >
+        <svg
+          fill="none"
+          height="22"
+          stroke="var(--teal)"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="22"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <path
+            d="M12 6v6l4 2"
+          />
+        </svg>
+        <h1
+          style="margin: 0px; font-size: 1.55rem; color: var(--text);"
+        >
+          Good morning
+          , Rafe
+        </h1>
+      </div>
+      <p
+        style="margin: 0px; color: var(--muted);"
+      >
+        Tuesday, March 24
+         · Scheduler Intelligence
+      </p>
+    </div>
+    <div
+      style="display: flex; align-items: center; gap: 8px;"
+    >
+      <span
+        style="font-size: 0.72rem; color: var(--faint); font-family: var(--mono);"
+      >
+        just now
+      </span>
+      <button
+        style="background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; padding: 4px 10px; font-size: 0.75rem; display: flex; align-items: center; gap: 5px; transition: all 0.2s;"
+      >
+        <svg
+          fill="none"
+          height="11"
+          stroke="currentColor"
+          stroke-width="2.5"
+          style="animation: none;"
+          viewBox="0 0 24 24"
+          width="11"
+        >
+          <polyline
+            points="23 4 23 10 17 10"
+          />
+          <path
+            d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"
+          />
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+  <div
+    style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;"
+  >
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--teal); background: rgba(45, 212, 191, 0.1); color: var(--teal); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Overview
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      AI Planner
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Cron Jobs
+      <span
+        class="badge"
+        style="background: var(--faint)22; color: var(--faint); border: 1px solid var(--faint)44;"
+      >
+        2
+      </span>
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Health
+    </button>
+  </div>
+  <div
+    style="display: grid; grid-template-columns: 1.3fr 0.95fr; gap: 18px; align-items: start;"
+  >
+    <div
+      style="display: grid; gap: 18px;"
+    >
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; text-align: center;"
+        >
+          <div>
+            <div
+              style="font-size: 1.8rem; font-weight: 800; color: var(--green);"
+            >
+              5
+            </div>
+            <div
+              style="font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px;"
+            >
+              Completed
+            </div>
+          </div>
+          <div>
+            <div
+              style="font-size: 1.8rem; font-weight: 800; color: var(--blue);"
+            >
+              2
+            </div>
+            <div
+              style="font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px;"
+            >
+              Active
+            </div>
+          </div>
+          <div>
+            <div
+              style="font-size: 1.8rem; font-weight: 800; color: var(--amber);"
+            >
+              1
+            </div>
+            <div
+              style="font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px;"
+            >
+              Blocked
+            </div>
+          </div>
+          <div>
+            <div
+              style="font-size: 1.8rem; font-weight: 800; color: var(--teal);"
+            >
+              1
+            </div>
+            <div
+              style="font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px;"
+            >
+              Free Slots
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card glow  "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; justify-content: space-between; gap: 12px; margin-bottom: 14px;"
+        >
+          <div>
+            <div
+              style="font-size: 0.78rem; color: var(--teal); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px;"
+            >
+              Today
+            </div>
+            <div
+              style="font-size: 1.2rem; font-weight: 700; color: var(--text);"
+            >
+              Productive day ahead
+            </div>
+          </div>
+          <span
+            class="badge"
+            style="background: var(--blue)22; color: var(--blue); border: 1px solid var(--blue)44;"
+          >
+            mistral-7b-instruct
+          </span>
+        </div>
+        <div
+          style="font-size: 0.94rem; color: var(--text); line-height: 1.7; margin-bottom: 16px;"
+        >
+          AI has analyzed your schedule and found 3 free slots.
+        </div>
+        <div
+          style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;"
+        >
+          <div
+            style="padding: 12px 14px; border-radius: 10px; background: rgba(45, 212, 191, 0.08); border: 1px solid rgba(45, 212, 191, 0.18);"
+          >
+            <div
+              style="color: var(--teal); font-size: 0.72rem; margin-bottom: 6px;"
+            >
+              Action 
+              1
+            </div>
+            <div
+              style="color: var(--text); font-size: 0.86rem; line-height: 1.5;"
+            >
+              Block 09:00–10:00 for deep work
+            </div>
+          </div>
+          <div
+            style="padding: 12px 14px; border-radius: 10px; background: rgba(45, 212, 191, 0.08); border: 1px solid rgba(45, 212, 191, 0.18);"
+          >
+            <div
+              style="color: var(--teal); font-size: 0.72rem; margin-bottom: 6px;"
+            >
+              Action 
+              2
+            </div>
+            <div
+              style="color: var(--text); font-size: 0.86rem; line-height: 1.5;"
+            >
+              Review PRs at 16:00
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card glow  "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;"
+        >
+          <svg
+            fill="none"
+            height="16"
+            stroke="var(--teal)"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="16"
+          >
+            <path
+              d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"
+            />
+            <path
+              d="M12 8v4l3 3"
+            />
+          </svg>
+          <span
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            AI Summary
+          </span>
+        </div>
+        <div
+          style="font-size: 0.9rem; color: var(--text); line-height: 1.7; border-left: 2px solid var(--teal); padding-left: 14px; margin-left: 4px;"
+        >
+          Today has been productive. Focus on the scheduler work.
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s; border-color: rgba(251, 191, 36, 0.3);"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Schedule Changes Detected
+          </div>
+          <span
+            class="badge"
+            style="background: rgba(251, 191, 36, 0.133); color: rgb(251, 191, 36); border: 1px solid rgba(251, 191, 36, 0.267);"
+          >
+            1 change
+          </span>
+          <span
+            style="margin-left: auto; color: var(--muted); font-size: 0.75rem;"
+          >
+            9:50 AM
+          </span>
+        </div>
+        <div
+          style="display: grid; gap: 6px; margin-bottom: 14px;"
+        >
+          <div
+            style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); font-size: 0.84rem;"
+          >
+            <span
+              style="font-weight: 700; font-size: 0.72rem; letter-spacing: 0.06em; color: var(--muted); min-width: 64px;"
+            >
+              added
+            </span>
+            <span
+              style="color: var(--text); flex: 1 1 0%;"
+            />
+          </div>
+        </div>
+        <div
+          style="font-size: 0.88rem; color: var(--text); line-height: 1.65; padding: 10px 14px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); margin-bottom: 14px;"
+        >
+          One new task added since yesterday.
+        </div>
+        <div
+          style="margin-bottom: 0px;"
+        >
+          <div
+            style="font-size: 0.76rem; color: var(--teal); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px;"
+          >
+            Action Items
+          </div>
+          <div
+            style="display: grid; gap: 6px;"
+          >
+            <div
+              style="padding: 8px 12px; border-radius: 8px; background: rgba(45, 212, 191, 0.07); border: 1px solid rgba(45, 212, 191, 0.15); color: var(--text); font-size: 0.84rem; line-height: 1.5;"
+            >
+              Prioritize the new test task
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;"
+        >
+          <svg
+            fill="none"
+            height="16"
+            stroke="var(--blue)"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="16"
+          >
+            <rect
+              height="18"
+              rx="2"
+              ry="2"
+              width="18"
+              x="3"
+              y="4"
+            />
+            <line
+              x1="16"
+              x2="16"
+              y1="2"
+              y2="6"
+            />
+            <line
+              x1="8"
+              x2="8"
+              y1="2"
+              y2="6"
+            />
+            <line
+              x1="3"
+              x2="21"
+              y1="10"
+              y2="10"
+            />
+          </svg>
+          <span
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Today's Calendar
+          </span>
+          <span
+            class="badge"
+            style="background: var(--blue)22; color: var(--blue); border: 1px solid var(--blue)44;"
+          >
+            1
+          </span>
+        </div>
+        <div
+          style="display: flex; flex-direction: column; gap: 6px;"
+        >
+          <div
+            style="display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; background: var(--amber)0d; border: 1px solid var(--amber)33; border-radius: 8px; opacity: 1;"
+          >
+            <div
+              style="width: 68px; flex-shrink: 0; text-align: right;"
+            >
+              <div
+                style="font-size: 0.8rem; color: var(--amber); font-family: var(--mono); font-weight: 600;"
+              >
+                10:30 AM
+              </div>
+              <div
+                style="font-size: 0.7rem; color: var(--faint); font-family: var(--mono);"
+              >
+                – 
+                10:45 AM
+              </div>
+            </div>
+            <div
+              style="width: 5px; height: 5px; border-radius: 50%; background: var(--amber); flex-shrink: 0; margin-top: 5px;"
+            />
+            <div
+              style="flex: 1 1 0%;"
+            >
+              <div
+                style="font-size: 0.88rem; color: var(--text); font-weight: 600;"
+              >
+                Stand-up
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Suggested Work Blocks
+          </div>
+          <span
+            class="badge"
+            style="background: var(--green)22; color: var(--green); border: 1px solid var(--green)44;"
+          >
+            2
+          </span>
+        </div>
+        <div
+          style="display: grid; gap: 10px;"
+        >
+          <div
+            style="padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.02);"
+          >
+            <div
+              style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap;"
+            >
+              <div
+                style="color: var(--text); font-weight: 600;"
+              >
+                Deep work block
+              </div>
+              <span
+                class="badge"
+                style="background: var(--blue)22; color: var(--blue); border: 1px solid var(--blue)44;"
+              >
+                undefinedm
+              </span>
+              <span
+                class="badge"
+                style="background: var(--amber)22; color: var(--amber); border: 1px solid var(--amber)44;"
+              >
+                No meetings until 10am
+              </span>
+            </div>
+            <div
+              style="color: var(--muted); font-size: 0.82rem; font-family: var(--mono);"
+            >
+              TBD
+               - 
+              TBD
+               · score 
+            </div>
+          </div>
+          <div
+            style="padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.02);"
+          >
+            <div
+              style="display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap;"
+            >
+              <div
+                style="color: var(--text); font-weight: 600;"
+              >
+                Review PRs
+              </div>
+              <span
+                class="badge"
+                style="background: var(--blue)22; color: var(--blue); border: 1px solid var(--blue)44;"
+              >
+                undefinedm
+              </span>
+              <span
+                class="badge"
+                style="background: var(--amber)22; color: var(--amber); border: 1px solid var(--amber)44;"
+              >
+                Light calendar in afternoon
+              </span>
+            </div>
+            <div
+              style="color: var(--muted); font-size: 0.82rem; font-family: var(--mono);"
+            >
+              TBD
+               - 
+              TBD
+               · score 
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      style="display: grid; gap: 18px;"
+    >
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Calendar Capacity
+          </div>
+          <span
+            class="badge"
+            style="background: var(--blue)22; color: var(--blue); border: 1px solid var(--blue)44;"
+          >
+            1 events
+          </span>
+        </div>
+        <div
+          style="display: grid; gap: 10px;"
+        >
+          <div
+            style="display: flex; justify-content: space-between; gap: 10px; font-size: 0.82rem; color: var(--text);"
+          >
+            <span>
+              11:00 AM
+               - 
+              12:00 PM
+            </span>
+            <span
+              style="color: var(--teal); font-family: var(--mono);"
+            >
+              60
+              m
+            </span>
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Ranked Tasks
+          </div>
+          <span
+            class="badge"
+            style="background: var(--faint)22; color: var(--faint); border: 1px solid var(--faint)44;"
+          >
+            0 overdue
+          </span>
+        </div>
+        <div
+          style="display: grid; gap: 10px;"
+        >
+          <div
+            style="padding-bottom: 10px; border-bottom: 1px solid var(--border);"
+          >
+            <div
+              style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;"
+            >
+              <span
+                style="color: var(--text); font-size: 0.86rem; font-weight: 600;"
+              >
+                Finish PAW dashboard tests
+              </span>
+              <span
+                class="badge"
+                style="background: var(--amber)22; color: var(--amber); border: 1px solid var(--amber)44;"
+              >
+                high
+              </span>
+              <span
+                class="badge"
+                style="background: var(--blue)22; color: var(--blue); border: 1px solid var(--blue)44;"
+              >
+                45m
+              </span>
+            </div>
+            <div
+              style="color: var(--muted); font-size: 0.77rem; font-family: var(--mono);"
+            >
+              score 
+              0.95
+               · 
+              active
+            </div>
+          </div>
+          <div
+            style="padding-bottom: 10px; border-bottom: 1px solid var(--border);"
+          >
+            <div
+              style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;"
+            >
+              <span
+                style="color: var(--text); font-size: 0.86rem; font-weight: 600;"
+              >
+                Review memory docs
+              </span>
+              <span
+                class="badge"
+                style="background: var(--amber)22; color: var(--amber); border: 1px solid var(--amber)44;"
+              >
+                medium
+              </span>
+              <span
+                class="badge"
+                style="background: var(--blue)22; color: var(--blue); border: 1px solid var(--blue)44;"
+              >
+                30m
+              </span>
+            </div>
+            <div
+              style="color: var(--muted); font-size: 0.77rem; font-family: var(--mono);"
+            >
+              score 
+              0.72
+               · 
+              active
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 12px;"
+        >
+          Highlights
+        </div>
+        <div
+          style="display: flex; flex-direction: column; gap: 6px;"
+        >
+          <div
+            style="display: flex; gap: 8px; align-items: flex-start;"
+          >
+            <span
+              style="color: var(--teal); font-size: 0.9rem; line-height: 1.6; flex-shrink: 0;"
+            >
+              →
+            </span>
+            <div
+              style="font-size: 0.84rem; color: var(--text); line-height: 1.6;"
+            >
+              Completed 5 tasks today
+            </div>
+          </div>
+          <div
+            style="display: flex; gap: 8px; align-items: flex-start;"
+          >
+            <span
+              style="color: var(--teal); font-size: 0.9rem; line-height: 1.6; flex-shrink: 0;"
+            >
+              →
+            </span>
+            <div
+              style="font-size: 0.84rem; color: var(--text); line-height: 1.6;"
+            >
+              Inbox is nearly clear
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Active Tasks
+          </div>
+          <span
+            class="badge"
+            style="background: var(--blue)22; color: var(--blue); border: 1px solid var(--blue)44;"
+          >
+            2
+          </span>
+        </div>
+        <div
+          style="display: flex; flex-direction: column; gap: 6px;"
+        >
+          <div
+            style="display: flex; gap: 10px; align-items: center; padding: 8px 10px; background: rgba(255, 255, 255, 0.02); border-radius: 8px;"
+          >
+            <span
+              style="color: var(--blue); font-size: 0.6rem; flex-shrink: 0;"
+            >
+              ●
+            </span>
+            <div
+              style="flex: 1 1 0%; min-width: 0px;"
+            >
+              <div
+                style="font-size: 0.84rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+              >
+                Fix scheduler tests
+              </div>
+              <div
+                style="font-size: 0.7rem; color: var(--faint);"
+              >
+                paw-hub
+              </div>
+            </div>
+            <span
+              class="badge"
+              style="background: var(--amber)22; color: var(--amber); border: 1px solid var(--amber)44;"
+            >
+              high
+            </span>
+          </div>
+          <div
+            style="display: flex; gap: 10px; align-items: center; padding: 8px 10px; background: rgba(255, 255, 255, 0.02); border-radius: 8px;"
+          >
+            <span
+              style="color: var(--blue); font-size: 0.6rem; flex-shrink: 0;"
+            >
+              ●
+            </span>
+            <div
+              style="flex: 1 1 0%; min-width: 0px;"
+            >
+              <div
+                style="font-size: 0.84rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+              >
+                Update docs
+              </div>
+              <div
+                style="font-size: 0.7rem; color: var(--faint);"
+              >
+                nexus
+              </div>
+            </div>
+            <span
+              class="badge"
+              style="background: var(--amber)22; color: var(--amber); border: 1px solid var(--amber)44;"
+            >
+              low
+            </span>
+          </div>
+        </div>
+      </div>
+      <div
+        class="glass-card   "
+        style="padding: 24px; transition: all 0.25s;"
+      >
+        <div
+          style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;"
+        >
+          <div
+            style="font-size: 1rem; font-weight: 700; color: var(--text);"
+          >
+            Conflicts
+          </div>
+          <span
+            class="badge"
+            style="background: var(--amber)22; color: var(--amber); border: 1px solid var(--amber)44;"
+          >
+            0
+          </span>
+        </div>
+        <div
+          style="color: var(--muted); font-size: 0.84rem;"
+        >
+          No conflicts detected.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`Scheduler — loading state > snapshot: loading state 1`] = `
+<div
+  style="padding: 28px 28px 40px; max-width: 1240px; margin: 0px auto;"
+>
+  <div
+    style="display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;"
+  >
+    <div
+      style="flex: 1 1 520px;"
+    >
+      <div
+        style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;"
+      >
+        <svg
+          fill="none"
+          height="22"
+          stroke="var(--teal)"
+          stroke-width="2"
+          viewBox="0 0 24 24"
+          width="22"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+          />
+          <path
+            d="M12 6v6l4 2"
+          />
+        </svg>
+        <h1
+          style="margin: 0px; font-size: 1.55rem; color: var(--text);"
+        >
+          Good morning
+          , Rafe
+        </h1>
+      </div>
+      <p
+        style="margin: 0px; color: var(--muted);"
+      >
+        Tuesday, March 24
+         · Scheduler Intelligence
+      </p>
+    </div>
+    <div
+      style="display: flex; align-items: center; gap: 8px;"
+    >
+      <button
+        style="background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); cursor: pointer; padding: 4px 10px; font-size: 0.75rem; display: flex; align-items: center; gap: 5px; transition: all 0.2s;"
+      >
+        <svg
+          fill="none"
+          height="11"
+          stroke="currentColor"
+          stroke-width="2.5"
+          style="animation: none;"
+          viewBox="0 0 24 24"
+          width="11"
+        >
+          <polyline
+            points="23 4 23 10 17 10"
+          />
+          <path
+            d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"
+          />
+        </svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+  <div
+    style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;"
+  >
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--teal); background: rgba(45, 212, 191, 0.1); color: var(--teal); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Overview
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      AI Planner
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Cron Jobs
+      <span
+        class="badge"
+        style="background: var(--faint)22; color: var(--faint); border: 1px solid var(--faint)44;"
+      >
+        0
+      </span>
+    </button>
+    <button
+      style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-size: 0.84rem; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: all 0.2s;"
+    >
+      Health
+    </button>
+  </div>
+  <div
+    class="glass-card   "
+    style="padding: 32px; transition: all 0.25s; color: var(--muted);"
+  >
+    Loading scheduler state...
+  </div>
+</div>
+`;
