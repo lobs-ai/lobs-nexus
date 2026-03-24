@@ -27,39 +27,22 @@ const CATEGORIES = [
 // Brain Dump Section
 // ─────────────────────────────────────────────
 function BrainDumpSection({ onTasksCreated }) {
-  const [open, setOpen] = useState(null); // null = uninitialized (auto-detect)
+  const [open, setOpen] = useState(true);
   const [text, setText] = useState('');
   const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState(null); // { summary, accomplishments, proposed_tasks }
-  const [checkedTasks, setCheckedTasks] = useState({});
-  const [confirming, setConfirming] = useState(false);
-  const [successSummary, setSuccessSummary] = useState(null);
+  const [result, setResult] = useState(null); // { summary, accomplishments, context_updates, tasks_created, task_count }
   const textareaRef = useRef(null);
-
-  // Auto-open logic: prop from parent tells us whether there are active tasks
-  // We track this with a ref to only run once on mount
-  const initializedRef = useRef(false);
-  useEffect(() => {
-    if (!initializedRef.current && open === null) {
-      // Default open — parent will tell us via onTasksCreated counts
-      // We'll default open for now and let the parent control via hasActiveTasks prop
-      setOpen(true);
-      initializedRef.current = true;
-    }
-  }, [open]);
 
   const handleProcess = async () => {
     if (!text.trim()) return;
     setProcessing(true);
     setResult(null);
-    setSuccessSummary(null);
     try {
+      // Backend auto-creates tasks and returns full summary
       const data = await api.brainDump({ text, mode: 'personal' });
       setResult(data);
-      // Check all proposed tasks by default
-      const checks = {};
-      (data.proposed_tasks || []).forEach((t, i) => { checks[i] = true; });
-      setCheckedTasks(checks);
+      setText('');
+      if (data.task_count > 0) onTasksCreated();
     } catch (err) {
       showToast('Brain dump failed — try again', 'error');
     } finally {
@@ -67,43 +50,19 @@ function BrainDumpSection({ onTasksCreated }) {
     }
   };
 
-  const handleConfirm = async () => {
-    if (!result) return;
-    const selectedTasks = (result.proposed_tasks || []).filter((_, i) => checkedTasks[i]);
-    if (selectedTasks.length === 0) {
-      showToast('No tasks selected', 'error');
-      return;
-    }
-    setConfirming(true);
-    try {
-      const data = await api.brainDumpConfirm({ tasks: selectedTasks, mode: 'personal' });
-      const created = data?.created ?? selectedTasks.length;
-      setSuccessSummary({ created, skipped: data?.skipped ?? 0 });
-      setText('');
-      setResult(null);
-      setCheckedTasks({});
-      onTasksCreated();
-    } catch (err) {
-      showToast('Failed to create tasks', 'error');
-    } finally {
-      setConfirming(false);
-    }
-  };
-
   const handleKeyDown = (e) => {
-    // Ctrl+Enter or Cmd+Enter to process
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
-      if (!result) handleProcess();
-      else handleConfirm();
+      handleProcess();
     }
   };
 
-  const selectedCount = Object.values(checkedTasks).filter(Boolean).length;
+  const clearResult = () => {
+    setResult(null);
+  };
 
   return (
     <div style={{ marginBottom: 28 }}>
-      {/* Header row */}
       <button
         onClick={() => setOpen(o => !o)}
         style={{
@@ -121,7 +80,7 @@ function BrainDumpSection({ onTasksCreated }) {
         <span style={{ fontSize: '1.3rem' }}>🧠</span>
         <span style={{ color: 'var(--text)', fontWeight: 700, fontSize: '1rem' }}>Brain Dump</span>
         <span style={{ color: 'var(--muted)', fontSize: '0.75rem', fontFamily: 'var(--mono)', marginLeft: 4 }}>
-          — dump everything, let Lobs sort it out
+          — what's going on? updates, tasks, context, anything
         </span>
         <span style={{ marginLeft: 'auto', color: 'var(--muted)', fontSize: '0.75rem' }}>
           {open ? '▼' : '▶'}
@@ -130,254 +89,182 @@ function BrainDumpSection({ onTasksCreated }) {
 
       {open && (
         <GlassCard style={{ padding: 20 }}>
-          {/* Success summary */}
-          {successSummary && (
-            <div style={{
-              marginBottom: 16,
-              padding: '14px 16px',
-              background: 'rgba(52,211,153,0.1)',
-              border: '1px solid rgba(52,211,153,0.3)',
-              borderRadius: 8,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-            }}>
-              <span style={{ fontSize: '1.4rem' }}>🎉</span>
-              <div>
-                <div style={{ color: 'var(--green)', fontWeight: 700, fontSize: '0.95rem' }}>
-                  {successSummary.created} task{successSummary.created !== 1 ? 's' : ''} created!
-                </div>
-                {successSummary.skipped > 0 && (
-                  <div style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>
-                    {successSummary.skipped} skipped
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={() => setSuccessSummary(null)}
-                style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: '1rem' }}
-              >
-                ✕
-              </button>
-            </div>
-          )}
-
-          {/* Textarea input */}
-          {!result && (
-            <>
-              <textarea
-                ref={textareaRef}
-                className="nx-input"
-                rows={5}
-                placeholder="What's on your mind? Dump everything — what you did today, what needs doing, deadlines, whatever..."
-                value={text}
-                onChange={e => setText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                style={{
-                  resize: 'vertical',
-                  width: '100%',
-                  fontSize: '0.95rem',
-                  lineHeight: 1.6,
-                  marginBottom: 12,
-                  boxSizing: 'border-box',
-                }}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <button
-                  onClick={handleProcess}
-                  disabled={!text.trim() || processing}
-                  className="btn-primary"
-                  style={{
-                    opacity: (!text.trim() || processing) ? 0.5 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
-                >
-                  {processing ? (
-                    <>
-                      <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span>
-                      Processing…
-                    </>
-                  ) : (
-                    <>✨ Process</>
-                  )}
-                </button>
-                {text.trim() && !processing && (
-                  <span style={{ color: 'var(--faint)', fontSize: '0.75rem', fontFamily: 'var(--mono)' }}>
-                    ⌘↵ to process
-                  </span>
-                )}
-                {text.trim() && (
-                  <button
-                    onClick={() => { setText(''); setSuccessSummary(null); }}
-                    className="btn-ghost"
-                    style={{ marginLeft: 'auto' }}
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* Processing shimmer */}
-          {processing && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-              {[1, 2, 3].map(i => (
-                <div key={i} className="shimmer" style={{ height: 48, borderRadius: 8, background: 'rgba(255,255,255,0.04)' }} />
-              ))}
-            </div>
-          )}
-
-          {/* Results / Review step */}
-          {result && !processing && (
-            <div>
+          {/* Result summary (shown after processing) */}
+          {result && (
+            <div style={{ marginBottom: 16 }}>
               {/* Summary */}
               {result.summary && (
                 <div style={{
-                  padding: '10px 14px',
+                  padding: '12px 14px',
                   background: 'rgba(45,212,191,0.07)',
                   border: '1px solid rgba(45,212,191,0.2)',
                   borderRadius: 8,
-                  color: 'var(--muted)',
-                  fontSize: '0.875rem',
+                  color: 'var(--text)',
+                  fontSize: '0.9rem',
                   lineHeight: 1.6,
-                  marginBottom: 16,
+                  marginBottom: 14,
                 }}>
                   {result.summary}
                 </div>
               )}
 
-              {/* Accomplishments */}
-              {result.accomplishments && result.accomplishments.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ color: 'var(--muted)', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'var(--mono)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    ✓ Done Today
+              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                {/* Accomplishments */}
+                {result.accomplishments?.length > 0 && (
+                  <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                    <div style={{ color: 'var(--green)', fontSize: '0.72rem', fontWeight: 700, fontFamily: 'var(--mono)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      ✓ Accomplished
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {result.accomplishments.map((acc, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, color: 'var(--muted)', fontSize: '0.85rem' }}>
+                          <span style={{ color: 'var(--green)', flexShrink: 0 }}>✓</span>
+                          <span>{acc}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {result.accomplishments.map((acc, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, color: 'var(--muted)', fontSize: '0.85rem' }}>
-                        <span style={{ color: 'var(--green)', flexShrink: 0 }}>✓</span>
-                        <span>{acc}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                )}
 
-              {/* Proposed tasks */}
-              {result.proposed_tasks && result.proposed_tasks.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
-                  <div style={{ color: 'var(--muted)', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'var(--mono)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Tasks to Create ({selectedCount} of {result.proposed_tasks.length} selected)
+                {/* Context updates */}
+                {result.context_updates?.length > 0 && (
+                  <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+                    <div style={{ color: 'var(--blue)', fontSize: '0.72rem', fontWeight: 700, fontFamily: 'var(--mono)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      📌 Noted
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {result.context_updates.map((note, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, color: 'var(--muted)', fontSize: '0.85rem' }}>
+                          <span style={{ color: 'var(--blue)', flexShrink: 0 }}>•</span>
+                          <span>{note}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {result.proposed_tasks.map((task, i) => {
-                      const isChecked = !!checkedTasks[i];
+                )}
+              </div>
+
+              {/* Tasks created */}
+              {result.tasks_created?.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  <div style={{ color: 'var(--teal)', fontSize: '0.72rem', fontWeight: 700, fontFamily: 'var(--mono)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    ⚡ {result.task_count} Task{result.task_count !== 1 ? 's' : ''} Created
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {result.tasks_created.map((task, i) => {
                       const priorityColor = PRIORITY_COLORS[task.priority] || PRIORITY_COLORS.medium;
-                      const category = CATEGORIES.find(c => c.value === task.category);
+                      const category = CATEGORIES.find(c => c.value === task.shape);
                       return (
-                        <label
-                          key={i}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: 12,
-                            padding: '12px 14px',
-                            background: isChecked ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.015)',
-                            borderRadius: 8,
-                            border: `1px solid ${isChecked ? 'rgba(45,212,191,0.2)' : 'var(--border)'}`,
-                            cursor: 'pointer',
-                            transition: 'all 0.15s',
-                            opacity: isChecked ? 1 : 0.55,
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={e => setCheckedTasks(c => ({ ...c, [i]: e.target.checked }))}
-                            style={{ marginTop: 2, accentColor: 'var(--teal)', width: 16, height: 16, flexShrink: 0 }}
-                          />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ color: 'var(--text)', fontSize: '0.9rem', fontWeight: 600, marginBottom: 4 }}>
-                              {task.title}
-                            </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-                              <span style={{
-                                fontSize: '0.7rem',
-                                fontFamily: 'var(--mono)',
-                                color: priorityColor,
-                                background: priorityColor + '22',
-                                padding: '2px 8px',
-                                borderRadius: 4,
-                                fontWeight: 700,
-                                textTransform: 'uppercase',
-                              }}>
-                                {task.priority || 'medium'}
-                              </span>
-                              {category && (
-                                <span style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: 4, color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
-                                  {category.icon} {category.label}
-                                </span>
-                              )}
-                              {task.estimatedTime && (
-                                <span style={{ fontSize: '0.7rem', color: 'var(--faint)', fontFamily: 'var(--mono)' }}>
-                                  ⏱ {task.estimatedTime}
-                                </span>
-                              )}
-                              {task.dueDate && (
-                                <span style={{ fontSize: '0.7rem', color: 'var(--blue)', fontFamily: 'var(--mono)' }}>
-                                  📅 {task.dueDate}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </label>
+                        <div key={i} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '8px 12px',
+                          background: 'rgba(45,212,191,0.05)',
+                          borderRadius: 6,
+                          borderLeft: `3px solid ${priorityColor}`,
+                        }}>
+                          <span style={{ color: 'var(--text)', fontSize: '0.85rem', fontWeight: 600, flex: 1 }}>
+                            {task.title}
+                          </span>
+                          <span style={{
+                            fontSize: '0.65rem',
+                            fontFamily: 'var(--mono)',
+                            color: priorityColor,
+                            background: priorityColor + '22',
+                            padding: '2px 6px',
+                            borderRadius: 3,
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                          }}>
+                            {task.priority}
+                          </span>
+                          {category && (
+                            <span style={{ fontSize: '0.65rem', color: 'var(--faint)', fontFamily: 'var(--mono)' }}>
+                              {category.icon}
+                            </span>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
                 </div>
               )}
 
-              {/* Confirm row */}
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <button
-                  onClick={handleConfirm}
-                  disabled={confirming || selectedCount === 0}
-                  className="btn-primary"
-                  style={{ opacity: (confirming || selectedCount === 0) ? 0.5 : 1, display: 'flex', alignItems: 'center', gap: 8 }}
-                >
-                  {confirming ? (
-                    <>
-                      <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span>
-                      Creating…
-                    </>
-                  ) : (
-                    <>✓ Confirm &amp; Create {selectedCount} Task{selectedCount !== 1 ? 's' : ''}</>
-                  )}
-                </button>
-                <button
-                  className="btn-ghost"
-                  onClick={() => {
-                    setResult(null);
-                    setCheckedTasks({});
-                  }}
-                >
-                  ← Edit Dump
-                </button>
-                <button
-                  className="btn-ghost"
-                  style={{ marginLeft: 'auto', color: 'var(--muted)' }}
-                  onClick={() => {
-                    setText('');
-                    setResult(null);
-                    setCheckedTasks({});
-                    setSuccessSummary(null);
-                  }}
-                >
-                  Discard
-                </button>
+              {/* No tasks but still useful */}
+              {(!result.tasks_created || result.tasks_created.length === 0) && (
+                <div style={{ marginTop: 14, color: 'var(--faint)', fontSize: '0.8rem', fontStyle: 'italic' }}>
+                  No actionable tasks extracted — just context noted.
+                </div>
+              )}
+
+              {/* Dismiss */}
+              <button
+                onClick={clearResult}
+                className="btn-ghost"
+                style={{ marginTop: 14, fontSize: '0.8rem' }}
+              >
+                ✕ Dismiss
+              </button>
+            </div>
+          )}
+
+          {/* Input area */}
+          <textarea
+            ref={textareaRef}
+            className="nx-input"
+            rows={4}
+            placeholder="What's going on? Worked on something, didn't get to something, new info, deadlines, random thoughts — just dump it all..."
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={processing}
+            style={{
+              resize: 'vertical',
+              width: '100%',
+              fontSize: '0.95rem',
+              lineHeight: 1.6,
+              marginBottom: 12,
+              boxSizing: 'border-box',
+              opacity: processing ? 0.5 : 1,
+            }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button
+              onClick={handleProcess}
+              disabled={!text.trim() || processing}
+              className="btn-primary"
+              style={{
+                opacity: (!text.trim() || processing) ? 0.5 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              {processing ? (
+                <>
+                  <span style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⟳</span>
+                  Processing…
+                </>
+              ) : (
+                <>🧠 Process</>
+              )}
+            </button>
+            {text.trim() && !processing && (
+              <span style={{ color: 'var(--faint)', fontSize: '0.75rem', fontFamily: 'var(--mono)' }}>
+                ⌘↵
+              </span>
+            )}
+          </div>
+
+          {/* Processing shimmer */}
+          {processing && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+              {[1, 2, 3].map(i => (
+                <div key={i} className="shimmer" style={{ height: 40, borderRadius: 8, background: 'rgba(255,255,255,0.04)' }} />
+              ))}
+              <div style={{ color: 'var(--faint)', fontSize: '0.8rem', fontFamily: 'var(--mono)', textAlign: 'center', marginTop: 4 }}>
+                Understanding your dump…
               </div>
             </div>
           )}
