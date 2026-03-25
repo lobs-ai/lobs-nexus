@@ -31,13 +31,54 @@ function renderMarkdown(text) {
   });
 
   // Process line-level formatting
-  const lines = processed.split('\n');
+  const rawLines = processed.split('\n');
+
+  // Pre-pass: collapse consecutive pipe-lines into table tokens
+  const lines = [];
+  for (let i = 0; i < rawLines.length; i++) {
+    if (rawLines[i].trim().startsWith('|')) {
+      const tableLines = [];
+      while (i < rawLines.length && rawLines[i].trim().startsWith('|')) {
+        tableLines.push(rawLines[i]);
+        i++;
+      }
+      i--; // will be incremented by the for loop
+      lines.push({ type: 'table', lines: tableLines });
+    } else {
+      lines.push({ type: 'text', value: rawLines[i] });
+    }
+  }
+
   const output = [];
   let inList = false;
   let listType = null;
 
   for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
+    // Handle pre-grouped table blocks
+    if (lines[i].type === 'table') {
+      if (inList) { output.push(listType === 'ul' ? '</ul>' : '</ol>'); inList = false; }
+      const tLines = lines[i].lines;
+      const isSep = (l) => /^\|[\s\-:|]+\|$/.test(l.trim());
+      const parseRow = (l) => l.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+      const sepIdx = tLines.findIndex(isSep);
+      if (sepIdx > 0) {
+        const headerCells = parseRow(tLines[sepIdx - 1]);
+        const bodyRows = tLines.slice(sepIdx + 1).filter((l) => l.trim().startsWith('|'));
+        const ths = headerCells.map((h) => `<th style="padding:4px 10px;border:1px solid rgba(45,212,191,0.2);background:rgba(45,212,191,0.08);color:var(--teal);font-weight:600;text-align:left">${applyInline(h)}</th>`).join('');
+        const trs = bodyRows.map((row, ri) => {
+          const tds = parseRow(row).map((c) => `<td style="padding:4px 10px;border:1px solid rgba(45,212,191,0.2)">${applyInline(c)}</td>`).join('');
+          const bg = ri % 2 === 1 ? 'background:rgba(255,255,255,0.02);' : '';
+          return `<tr style="${bg}">${tds}</tr>`;
+        }).join('');
+        output.push(`<table style="border-collapse:collapse;margin:8px 0;font-size:0.82rem"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`);
+      } else {
+        // No separator found — render as plain lines
+        tLines.forEach((l) => output.push(applyInline(l) + '<br>'));
+      }
+      continue;
+    }
+
+    let line = lines[i].value;
 
     // Headers
     const headerMatch = line.match(/^(#{1,4})\s+(.+)$/);
@@ -2081,6 +2122,25 @@ export default function ChatPage() {
           display: block;
           white-space: pre-wrap;
           word-break: break-all;
+        }
+        .chat-table {
+          border-collapse: collapse;
+          margin: 8px 0;
+          font-size: 0.82rem;
+          width: auto;
+        }
+        .chat-table th, .chat-table td {
+          border: 1px solid rgba(45,212,191,0.2);
+          padding: 4px 10px;
+          text-align: left;
+        }
+        .chat-table thead tr {
+          background: rgba(45,212,191,0.08);
+          color: var(--teal);
+          font-weight: 600;
+        }
+        .chat-table tbody tr:nth-child(even) {
+          background: rgba(255,255,255,0.02);
         }
       `}</style>
     </div>
