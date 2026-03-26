@@ -76,9 +76,9 @@ function formatDate(ts) {
 }
 
 function RecordingSection({ onUploaded, onLiveMeeting }) {
-  const [recordings, setRecordings] = useState([]); // [{id, recording, elapsed, mediaRecorder, timerRef, transcribing}]
+  const [recordings, setRecordings] = useState([]); // [{id, recording, elapsed, mediaRecorder, timerRef, transcribing, transcriptOnly}]
 
-  const startRecording = async (withSystem = false) => {
+  const startRecording = async (withSystem = false, transcriptOnly = false) => {
     try {
       const streams = [];
       // Always get mic
@@ -130,6 +130,7 @@ function RecordingSection({ onUploaded, onLiveMeeting }) {
         transcribing: false,
         streams,
         withSystem,
+        transcriptOnly,
       };
 
       timerRef.current = setInterval(() => {
@@ -162,9 +163,16 @@ function RecordingSection({ onUploaded, onLiveMeeting }) {
         try {
           const formData = new FormData();
           formData.append('audio', blob, 'recording.webm');
+          if (rec.transcriptOnly) {
+            formData.append('skipAnalysis', 'true');
+          }
           const res = await fetch('/paw/api/meetings/upload', { method: 'POST', body: formData });
           if (!res.ok) throw new Error('Upload failed: ' + res.status);
-          showToast('Meeting uploaded — transcribing & analyzing', 'success');
+          if (rec.transcriptOnly) {
+            showToast('Recording uploaded — transcript only (no AI analysis)', 'success');
+          } else {
+            showToast('Meeting uploaded — transcribing & analyzing', 'success');
+          }
           onUploaded();
         } catch (err) {
           showToast(err.message, 'error');
@@ -180,16 +188,28 @@ function RecordingSection({ onUploaded, onLiveMeeting }) {
   const activeRecordings = recordings.filter(r => r.recording);
   const processingRecordings = recordings.filter(r => r.transcribing);
 
+  // Determine icon color: purple for transcript-only, red for normal recording
+  const hasTranscriptOnly = activeRecordings.some(r => r.transcriptOnly);
+  const iconColor = activeRecordings.length > 0
+    ? (hasTranscriptOnly ? '#a78bfa' : '#ef4444')
+    : 'var(--teal)';
+  const iconBg = activeRecordings.length > 0
+    ? (hasTranscriptOnly ? 'rgba(167,139,250,0.2)' : 'rgba(239,68,68,0.2)')
+    : 'rgba(45,212,191,0.1)';
+  const iconBorder = activeRecordings.length > 0
+    ? (hasTranscriptOnly ? 'rgba(167,139,250,0.4)' : 'rgba(239,68,68,0.4)')
+    : 'rgba(45,212,191,0.2)';
+
   return (
     <GlassCard style={{ marginBottom: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: activeRecordings.length > 0 ? 16 : 0 }}>
         <div style={{
           width: 36, height: 36, borderRadius: 10,
-          background: activeRecordings.length > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(45,212,191,0.1)',
-          border: `1px solid ${activeRecordings.length > 0 ? 'rgba(239,68,68,0.4)' : 'rgba(45,212,191,0.2)'}`,
+          background: iconBg,
+          border: `1px solid ${iconBorder}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <svg width="16" height="16" fill="none" stroke={activeRecordings.length > 0 ? '#ef4444' : 'var(--teal)'} strokeWidth="2" viewBox="0 0 24 24">
+          <svg width="16" height="16" fill="none" stroke={iconColor} strokeWidth="2" viewBox="0 0 24 24">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
             <line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>
@@ -203,8 +223,8 @@ function RecordingSection({ onUploaded, onLiveMeeting }) {
           </div>
         </div>
         {activeRecordings.length === 0 && (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => startRecording(false)} style={{
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button onClick={() => startRecording(false, false)} style={{
               background: 'linear-gradient(135deg, var(--teal), var(--blue))', border: 'none',
               borderRadius: 8, padding: '10px 16px', color: '#fff', fontWeight: 600,
               fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
@@ -212,7 +232,7 @@ function RecordingSection({ onUploaded, onLiveMeeting }) {
               <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>
               Record
             </button>
-            <button onClick={() => startRecording(true)} style={{
+            <button onClick={() => startRecording(true, false)} style={{
               background: 'rgba(96,165,250,0.12)', border: '1px solid rgba(96,165,250,0.3)',
               borderRadius: 8, padding: '10px 16px', color: '#60a5fa', fontWeight: 600,
               fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
@@ -232,32 +252,55 @@ function RecordingSection({ onUploaded, onLiveMeeting }) {
               </svg>
               Live Meeting
             </button>
+            <button onClick={() => startRecording(false, true)} style={{
+              background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.3)',
+              borderRadius: 8, padding: '10px 16px', color: '#a78bfa', fontWeight: 600,
+              fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+            }} title="Transcribe audio only — no AI analysis">
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+              Transcript Only
+            </button>
           </div>
         )}
       </div>
 
       {/* Active recordings */}
-      {activeRecordings.map(rec => (
-        <div key={rec.id} style={{
-          display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
-          background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)',
-          borderRadius: 8, marginBottom: 8,
-        }}>
-          <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', animation: 'pulse 1.2s infinite' }} />
-          <span style={{ color: '#ef4444', fontFamily: 'var(--mono)', fontSize: '0.9rem', fontWeight: 700, flex: 1 }}>
-            {formatDuration(rec.elapsed)}
-          </span>
-          {rec.withSystem && <Badge label="System Audio" color="#60a5fa" />}
-          <button onClick={() => stopRecording(rec.id)} style={{
-            background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
-            borderRadius: 6, padding: '6px 14px', color: '#ef4444', fontWeight: 600,
-            fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+      {activeRecordings.map(rec => {
+        const isTranscriptOnly = rec.transcriptOnly;
+        const recColor = isTranscriptOnly ? '#a78bfa' : '#ef4444';
+        const recBg = isTranscriptOnly ? 'rgba(167,139,250,0.05)' : 'rgba(239,68,68,0.05)';
+        const recBorder = isTranscriptOnly ? 'rgba(167,139,250,0.15)' : 'rgba(239,68,68,0.15)';
+        const stopBg = isTranscriptOnly ? 'rgba(167,139,250,0.15)' : 'rgba(239,68,68,0.15)';
+        const stopBorder = isTranscriptOnly ? 'rgba(167,139,250,0.4)' : 'rgba(239,68,68,0.4)';
+        return (
+          <div key={rec.id} style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
+            background: recBg, border: `1px solid ${recBorder}`,
+            borderRadius: 8, marginBottom: 8,
           }}>
-            <svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-            Stop
-          </button>
-        </div>
-      ))}
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: recColor, animation: 'pulse 1.2s infinite' }} />
+            <span style={{ color: recColor, fontFamily: 'var(--mono)', fontSize: '0.9rem', fontWeight: 700, flex: 1 }}>
+              {formatDuration(rec.elapsed)}
+            </span>
+            {rec.withSystem && <Badge label="System Audio" color="#60a5fa" />}
+            {isTranscriptOnly && <Badge label="Transcript Only" color="#a78bfa" />}
+            <button onClick={() => stopRecording(rec.id)} style={{
+              background: stopBg, border: `1px solid ${stopBorder}`,
+              borderRadius: 6, padding: '6px 14px', color: recColor, fontWeight: 600,
+              fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              <svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+              Stop
+            </button>
+          </div>
+        );
+      })}
 
       {/* Processing indicators */}
       {processingRecordings.map(rec => (
@@ -389,9 +432,7 @@ function ShareButton({ meeting, actionItems }) {
     let text = format === 'markdown'
       ? `📋 **${meeting.title || 'Meeting'}** — ${formatDate(meeting.created_at)}`
       : `📋 ${meeting.title || 'Meeting'} — ${formatDate(meeting.created_at)}`;
-    if (meeting.summary) text += `
-
-${meeting.summary}`;
+    if (meeting.summary) text += `\n\n${meeting.summary}`;
     if (actionItems?.length) {
       const grouped = {};
       actionItems.forEach(i => {
@@ -399,14 +440,10 @@ ${meeting.summary}`;
         if (!grouped[k]) grouped[k] = [];
         grouped[k].push(i);
       });
-      text += `
-
-${format === 'markdown' ? '**Action Items:**' : 'Action Items:'}`;
+      text += `\n\n${format === 'markdown' ? '**Action Items:**' : 'Action Items:'}`;
       Object.entries(grouped).forEach(([assignee, items]) => {
-        text += `
-@${assignee}:`;
-        items.forEach(i => { text += `
-  • ${i.description}`; });
+        text += `\n@${assignee}:`;
+        items.forEach(i => { text += `\n  • ${i.description}`; });
       });
     }
     return text;
@@ -478,10 +515,17 @@ ${format === 'markdown' ? '**Action Items:**' : 'Action Items:'}`;
   );
 }
 
-function TranscriptItem({ meeting }) {
+function TranscriptItem({ meeting: initialMeeting, onDelete }) {
+  const [meeting, setMeeting] = useState(initialMeeting);
   const [expanded, setExpanded] = useState(false);
   const [tab, setTab] = useState('summary');
   const [actionItems, setActionItems] = useState(null);
+  // Inline title editing state
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(meeting.title || '');
+  const [hoveringHeader, setHoveringHeader] = useState(false);
+  const titleInputRef = useRef(null);
+
   const participants = Array.isArray(meeting.participants)
     ? meeting.participants.join(', ')
     : (meeting.participants || null);
@@ -495,13 +539,28 @@ function TranscriptItem({ meeting }) {
     participants,
   });
 
+  // Keep local meeting in sync with prop changes (e.g. after refresh)
+  useEffect(() => {
+    if (!editingTitle) {
+      setMeeting(initialMeeting);
+      setTitleDraft(initialMeeting.title || '');
+    }
+  }, [initialMeeting, editingTitle]);
+
+  // Focus input when entering edit mode
+  useEffect(() => {
+    if (editingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+      titleInputRef.current.select();
+    }
+  }, [editingTitle]);
+
   useEffect(() => {
     if (expanded && !actionItems) {
       fetch(`/paw/api/meetings/${meeting.id}/action-items`)
         .then(r => r.json())
         .then(async (d) => {
           const items = Array.isArray(d) ? d : [];
-          // Sync task statuses for items that have a task link
           const synced = await syncActionItemsWithTasks(items, updateItemStatus);
           setActionItems(synced);
         })
@@ -517,42 +576,207 @@ function TranscriptItem({ meeting }) {
     setActionItems(prev => prev.map(i => i.id === itemId ? { ...i, status } : i));
   };
 
+  // ── Delete handler ──────────────────────────────────────────────────
+  const handleDelete = async (e) => {
+    e.stopPropagation();
+    if (!confirm('Delete this meeting?')) return;
+    try {
+      const res = await fetch(`/paw/api/meetings/${meeting.id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Delete failed: ' + res.status);
+      showToast('Meeting deleted', 'success');
+      onDelete?.(meeting.id);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  };
+
+  // ── Rename handler ──────────────────────────────────────────────────
+  const handleEditClick = (e) => {
+    e.stopPropagation();
+    setTitleDraft(meeting.title || '');
+    setEditingTitle(true);
+  };
+
+  const handleTitleSave = async () => {
+    const newTitle = titleDraft.trim();
+    if (!newTitle || newTitle === meeting.title) {
+      setEditingTitle(false);
+      return;
+    }
+    try {
+      const res = await fetch(`/paw/api/meetings/${meeting.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle }),
+      });
+      if (!res.ok) throw new Error('Rename failed: ' + res.status);
+      setMeeting(m => ({ ...m, title: newTitle }));
+      showToast('Meeting renamed', 'success');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setEditingTitle(false);
+    }
+  };
+
+  const handleTitleKeyDown = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); handleTitleSave(); }
+    if (e.key === 'Escape') { setEditingTitle(false); setTitleDraft(meeting.title || ''); }
+  };
+
+  // ── Transcript copy/download ────────────────────────────────────────
+  const getTranscriptText = () => {
+    const t = meeting.transcript;
+    if (!t) return '';
+    if (typeof t === 'string') return t;
+    if (Array.isArray(t)) return t.map(seg => `[${seg.timestamp || ''}] ${seg.speaker ? seg.speaker + ': ' : ''}${seg.text}`).join('\n');
+    return String(t);
+  };
+
+  const handleCopyTranscript = async () => {
+    try {
+      await navigator.clipboard.writeText(getTranscriptText());
+      showToast('Transcript copied', 'success');
+    } catch {
+      showToast('Copy failed', 'error');
+    }
+  };
+
+  const handleDownloadTranscript = () => {
+    const text = getTranscriptText();
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${(meeting.title || 'transcript').replace(/[^a-z0-9_\-. ]/gi, '_')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const analysisLabel = meeting.analysis_status === 'completed' ? null
     : meeting.analysis_status === 'processing' ? '⏳ Analyzing…'
     : meeting.analysis_status === 'failed' ? '❌ Analysis failed'
     : null;
+
+  const isTranscriptOnly = meeting.analysis_status === 'skipped';
 
   return (
     <div style={{
       background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
       borderRadius: 10, marginBottom: 10, overflow: 'hidden', transition: 'border-color 0.2s',
     }}>
-      <div onClick={() => setExpanded(v => !v)}
-        style={{ padding: '14px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
+      {/* Row header */}
+      <div
+        onClick={() => !editingTitle && setExpanded(v => !v)}
+        onMouseEnter={() => setHoveringHeader(true)}
+        onMouseLeave={() => setHoveringHeader(false)}
+        style={{ padding: '14px 16px', cursor: editingTitle ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}
+      >
+        {/* Icon */}
         <div style={{
           width: 32, height: 32, borderRadius: 8,
-          background: 'rgba(45,212,191,0.08)', border: '1px solid rgba(45,212,191,0.15)',
+          background: isTranscriptOnly ? 'rgba(167,139,250,0.08)' : 'rgba(45,212,191,0.08)',
+          border: `1px solid ${isTranscriptOnly ? 'rgba(167,139,250,0.15)' : 'rgba(45,212,191,0.15)'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>
-          <svg width="14" height="14" fill="none" stroke="var(--teal)" strokeWidth="2" viewBox="0 0 24 24">
+          <svg width="14" height="14" fill="none" stroke={isTranscriptOnly ? '#a78bfa' : 'var(--teal)'} strokeWidth="2" viewBox="0 0 24 24">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
           </svg>
         </div>
+
+        {/* Title + metadata */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', marginBottom: 3 }}>{meeting.title || 'Untitled Meeting'}</div>
+          {/* Title line */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+            {editingTitle ? (
+              <input
+                ref={titleInputRef}
+                value={titleDraft}
+                onChange={e => setTitleDraft(e.target.value)}
+                onBlur={handleTitleSave}
+                onKeyDown={handleTitleKeyDown}
+                onClick={e => e.stopPropagation()}
+                style={{
+                  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(45,212,191,0.4)',
+                  borderRadius: 6, padding: '2px 8px', color: 'var(--text)', fontWeight: 600,
+                  fontSize: '0.9rem', outline: 'none', minWidth: 200, maxWidth: '100%',
+                }}
+              />
+            ) : (
+              <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {meeting.title || 'Untitled Meeting'}
+              </span>
+            )}
+            {/* Edit icon — show on hover, not when editing */}
+            {!editingTitle && hoveringHeader && (
+              <button
+                onClick={handleEditClick}
+                title="Rename meeting"
+                style={{
+                  background: 'transparent', border: 'none', padding: '2px 4px',
+                  cursor: 'pointer', color: 'var(--muted)', display: 'flex', alignItems: 'center',
+                  borderRadius: 4, flexShrink: 0,
+                }}
+              >
+                <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </button>
+            )}
+          </div>
+
+          {/* Metadata badges */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
             <span style={{ color: 'var(--faint)', fontSize: '0.75rem', fontFamily: 'var(--mono)' }}>{formatDate(meeting.created_at)}</span>
             {meeting.duration_seconds && <Badge label={formatDuration(meeting.duration_seconds)} color="var(--blue)" />}
             {meeting.meeting_type && <Badge label={meeting.meeting_type} color="var(--teal)" />}
+            {isTranscriptOnly && (
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.3)',
+                borderRadius: 4, padding: '1px 7px', color: '#a78bfa',
+                fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.02em',
+              }}>
+                <svg width="9" height="9" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                Transcript Only
+              </span>
+            )}
             {analysisLabel && <span style={{ fontSize: '0.72rem' }}>{analysisLabel}</span>}
           </div>
           {participants && <div style={{ color: 'var(--faint)', fontSize: '0.72rem', marginTop: 2 }}>👥 {participants}</div>}
         </div>
-        <svg width="16" height="16" fill="none" stroke="var(--muted)" strokeWidth="2" viewBox="0 0 24 24"
-          style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
+
+        {/* Right side: delete + expand chevron */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+          {hoveringHeader && !editingTitle && (
+            <button
+              onClick={handleDelete}
+              title="Delete meeting"
+              style={{
+                background: 'transparent', border: 'none', padding: '4px 6px',
+                cursor: 'pointer', color: 'var(--faint)', display: 'flex', alignItems: 'center',
+                borderRadius: 4,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--faint)'; e.currentTarget.style.background = 'transparent'; }}
+            >
+              <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+            </button>
+          )}
+          <svg width="16" height="16" fill="none" stroke="var(--muted)" strokeWidth="2" viewBox="0 0 24 24"
+            style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
       </div>
 
       {expanded && (
@@ -584,7 +808,9 @@ function TranscriptItem({ meeting }) {
                   </div>
                 ) : (
                   <div style={{ color: 'var(--faint)', fontSize: '0.85rem', fontStyle: 'italic', marginBottom: 12 }}>
-                    {meeting.analysis_status === 'processing' ? '⏳ Generating summary…' : 'No summary available.'}
+                    {meeting.analysis_status === 'processing' ? '⏳ Generating summary…'
+                      : isTranscriptOnly ? 'Analysis was skipped for this recording.'
+                      : 'No summary available.'}
                   </div>
                 )}
                 {actionChipsAffordance && (
@@ -596,9 +822,37 @@ function TranscriptItem({ meeting }) {
                 <ActionItemsList items={actionItems} onStatusChange={updateItemStatus} />
               </>
             ) : (
-              meeting.transcript
-                ? <TranscriptBody transcript={meeting.transcript} />
-                : <div style={{ color: 'var(--faint)', fontSize: '0.85rem', fontStyle: 'italic' }}>No transcript available.</div>
+              <>
+                {/* Transcript toolbar: copy + download */}
+                {meeting.transcript && (
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, marginBottom: 10 }}>
+                    <button onClick={handleCopyTranscript} style={{
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                      borderRadius: 6, padding: '4px 10px', color: 'var(--muted)', fontSize: '0.73rem',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                    }}>
+                      <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                      </svg>
+                      Copy
+                    </button>
+                    <button onClick={handleDownloadTranscript} style={{
+                      background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                      borderRadius: 6, padding: '4px 10px', color: 'var(--muted)', fontSize: '0.73rem',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                    }}>
+                      <svg width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                      </svg>
+                      Download
+                    </button>
+                  </div>
+                )}
+                {meeting.transcript
+                  ? <TranscriptBody transcript={meeting.transcript} />
+                  : <div style={{ color: 'var(--faint)', fontSize: '0.85rem', fontStyle: 'italic' }}>No transcript available.</div>
+                }
+              </>
             )}
           </div>
         </div>
@@ -615,7 +869,16 @@ export default function Meetings() {
 
   const fetchMeetings = useCallback(() => fetch('/paw/api/meetings').then(r => r.json()), []);
   const { data: meetingsData, reload: refresh } = usePolling(fetchMeetings, 15000);
-  const meetings = meetingsData?.meetings || meetingsData || [];
+  const [meetingsList, setMeetingsList] = useState(null);
+
+  // Keep local list in sync with polled data
+  useEffect(() => {
+    if (meetingsData) {
+      setMeetingsList(meetingsData?.meetings || meetingsData || []);
+    }
+  }, [meetingsData]);
+
+  const meetings = meetingsList || [];
 
   const [search, setSearch] = useState('');
   const filtered = meetings.filter(m => {
@@ -625,6 +888,10 @@ export default function Meetings() {
       || (m.meeting_type || '').toLowerCase().includes(q)
       || (m.participants || '').toLowerCase().includes(q);
   });
+
+  const handleDeleteMeeting = useCallback((id) => {
+    setMeetingsList(prev => (prev || []).filter(m => m.id !== id));
+  }, []);
 
   const fetchMyItems = useCallback(() =>
     fetch('/paw/api/meetings/action-items?assignee=lobs').then(r => r.json()).then(d => Array.isArray(d) ? d : []), []);
@@ -713,7 +980,13 @@ export default function Meetings() {
           ? <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--faint)', fontSize: '0.875rem' }}>
               {meetings.length === 0 ? 'No meetings recorded yet.' : 'No meetings match your search.'}
             </div>
-          : filtered.map(m => <TranscriptItem key={m.id} meeting={m} />)
+          : filtered.map(m => (
+              <TranscriptItem
+                key={m.id}
+                meeting={m}
+                onDelete={handleDeleteMeeting}
+              />
+            ))
         }
       </GlassCard>
     </div>
