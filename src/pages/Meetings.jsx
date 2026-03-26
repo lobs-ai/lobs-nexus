@@ -8,6 +8,7 @@ import { usePolling } from '../hooks/usePolling';
 import { useAffordances } from '../hooks/useAffordances';
 import AIReplyChips from '../components/ai/AIReplyChips';
 import { api } from '../lib/api';
+import LiveMeeting from '../components/LiveMeeting';
 
 // Fetch task status for action items that have a task_id.
 // Returns a map of { taskId -> task } for only the found tasks.
@@ -74,7 +75,7 @@ function formatDate(ts) {
   return new Date(ts).toLocaleString();
 }
 
-function RecordingSection({ onUploaded }) {
+function RecordingSection({ onUploaded, onLiveMeeting }) {
   const [recordings, setRecordings] = useState([]); // [{id, recording, elapsed, mediaRecorder, timerRef, transcribing}]
 
   const startRecording = async (withSystem = false) => {
@@ -220,6 +221,16 @@ function RecordingSection({ onUploaded }) {
                 <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
               </svg>
               Online Meeting
+            </button>
+            <button onClick={onLiveMeeting} style={{
+              background: 'linear-gradient(135deg, #a78bfa, #60a5fa)', border: 'none',
+              borderRadius: 8, padding: '10px 16px', color: '#fff', fontWeight: 600,
+              fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+            }} title="Real-time transcription with live AI analysis">
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+              </svg>
+              Live Meeting
             </button>
           </div>
         )}
@@ -597,6 +608,8 @@ function TranscriptItem({ meeting }) {
 }
 
 export default function Meetings() {
+  const [liveMeetingActive, setLiveMeetingActive] = useState(false);
+
   const { data: projectsData } = useApi(signal => api.projects(signal));
   const projects = projectsData?.projects || projectsData || [];
 
@@ -623,6 +636,15 @@ export default function Meetings() {
     syncActionItemsWithTasks(rawMyItems, () => {}).then(synced => setMyItems(synced));
   }, [rawMyItems]);
 
+  if (liveMeetingActive) {
+    return (
+      <LiveMeeting onClose={() => {
+        setLiveMeetingActive(false);
+        refresh();
+      }} />
+    );
+  }
+
   return (
     <div style={{ padding: '28px 28px 40px', maxWidth: 900, margin: '0 auto' }}>
       <div style={{ marginBottom: 28 }}>
@@ -638,7 +660,7 @@ export default function Meetings() {
         <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.875rem' }}>Record meetings and browse transcripts.</p>
       </div>
 
-      <RecordingSection onUploaded={refresh} />
+      <RecordingSection onUploaded={refresh} onLiveMeeting={() => setLiveMeetingActive(true)} />
 
       {myItems && myItems.length > 0 && (
         <GlassCard style={{ marginBottom: 24 }}>
