@@ -37,14 +37,22 @@ function CompositeScore({ score }) {
   );
 }
 
+// ── Track config ─────────────────────────────────────────────────────
+
+const TRACKS = {
+  paper:   { icon: '📄', label: 'Paper',       color: '#818cf8', borderColor: '#818cf822' },
+  lobs:    { icon: '🔧', label: 'Lobs',        color: '#34d399', borderColor: '#34d39922' },
+  product: { icon: '💰', label: 'Product',      color: '#fbbf24', borderColor: '#fbbf2422' },
+};
+
 // ── Status colors ────────────────────────────────────────────────────
 
 const STATUS_COLORS = {
   idea: '#94a3b8',
   developing: '#60a5fa',
   ready: '#a78bfa',
-  writing: '#fbbf24',
-  published: '#34d399',
+  in_progress: '#fbbf24',
+  done: '#34d399',
   archived: '#6b7280',
 };
 
@@ -52,9 +60,32 @@ const STATUS_LABELS = {
   idea: '🌱 Idea',
   developing: '🔬 Developing',
   ready: '💎 Ready',
-  writing: '✍️ Writing',
-  published: '🚀 Published',
+  in_progress: '⚡ In Progress',
+  done: '✅ Done',
   archived: '📦 Archived',
+};
+
+// ── Section labels per track ─────────────────────────────────────────
+
+const SECTION_LABELS = {
+  paper: {
+    gap: 'Research Gap',
+    angle: 'Our Unique Angle',
+    methodology: 'Methodology',
+    experiments: 'Key Experiments',
+  },
+  lobs: {
+    gap: 'Capability Gap',
+    angle: 'Why Build This',
+    methodology: 'Implementation Plan',
+    experiments: 'Key Milestones',
+  },
+  product: {
+    gap: 'Market Gap',
+    angle: 'Our Edge',
+    methodology: 'Go-to-Market Plan',
+    experiments: 'Validation Steps',
+  },
 };
 
 // ── Time helpers ─────────────────────────────────────────────────────
@@ -86,13 +117,17 @@ function Stat({ label, value, sub, color }) {
   );
 }
 
-// ── Idea card (collapsed) ────────────────────────────────────────────
+// ── Idea card ────────────────────────────────────────────────────────
 
 function IdeaCard({ idea, expanded, onToggle }) {
+  const track = TRACKS[idea.track] || TRACKS.paper;
+  const labels = SECTION_LABELS[idea.track] || SECTION_LABELS.paper;
+
   return (
     <div
       style={{
-        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
+        background: 'var(--surface)', border: `1px solid var(--border)`, borderRadius: 12,
+        borderLeft: `3px solid ${track.color}`,
         padding: '16px 20px', cursor: 'pointer', transition: 'border-color 0.15s',
       }}
       onClick={onToggle}
@@ -102,9 +137,10 @@ function IdeaCard({ idea, expanded, onToggle }) {
         <CompositeScore score={(idea.noveltyScore + idea.feasibilityScore + idea.impactScore) / 3} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <Badge label={`${track.icon} ${track.label}`} color={track.color} />
             <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>{idea.title}</span>
             <Badge label={STATUS_LABELS[idea.status] || idea.status} color={STATUS_COLORS[idea.status] || '#94a3b8'} />
-            {idea.researchArea && <Badge label={idea.researchArea} color="#818cf8" />}
+            {idea.researchArea && <Badge label={idea.researchArea} color="#6b7280" />}
           </div>
           <div style={{ color: 'var(--muted)', fontSize: '0.78rem', marginTop: 4, lineHeight: 1.4 }}>
             {idea.thesis}
@@ -127,30 +163,22 @@ function IdeaCard({ idea, expanded, onToggle }) {
 
           {/* Gap */}
           {idea.gapAnalysis && (
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 4 }}>Research Gap</div>
-              <div style={{ fontSize: '0.82rem', color: 'var(--text)', lineHeight: 1.5, padding: '8px 12px', background: 'var(--bg)', borderRadius: 8 }}>{idea.gapAnalysis}</div>
-            </div>
+            <DetailSection label={labels.gap} text={idea.gapAnalysis} />
           )}
 
-          {/* Our angle + methodology */}
+          {/* Our angle */}
           {idea.ourAngle && (
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 4 }}>Our Unique Angle</div>
-              <div style={{ fontSize: '0.82rem', color: 'var(--text)', lineHeight: 1.5, padding: '8px 12px', background: 'var(--bg)', borderRadius: 8 }}>{idea.ourAngle}</div>
-            </div>
+            <DetailSection label={labels.angle} text={idea.ourAngle} />
           )}
+
+          {/* Methodology / implementation plan / GTM */}
           {idea.methodology && (
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 4 }}>Methodology</div>
-              <div style={{ fontSize: '0.82rem', color: 'var(--text)', lineHeight: 1.5, padding: '8px 12px', background: 'var(--bg)', borderRadius: 8 }}>{idea.methodology}</div>
-            </div>
+            <DetailSection label={labels.methodology} text={idea.methodology} />
           )}
+
+          {/* Experiments / milestones / validation */}
           {idea.keyExperiments && (
-            <div style={{ marginBottom: 10 }}>
-              <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 4 }}>Key Experiments</div>
-              <div style={{ fontSize: '0.82rem', color: 'var(--text)', lineHeight: 1.5, padding: '8px 12px', background: 'var(--bg)', borderRadius: 8 }}>{idea.keyExperiments}</div>
-            </div>
+            <DetailSection label={labels.experiments} text={idea.keyExperiments} />
           )}
 
           {/* Related work */}
@@ -175,7 +203,7 @@ function IdeaCard({ idea, expanded, onToggle }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {idea.evolutionLog.map((ev, i) => (
                   <div key={i} style={{ display: 'flex', gap: 8, fontSize: '0.75rem' }}>
-                    <span style={{ color: 'var(--faint)', whiteSpace: 'nowrap', fontFamily: 'var(--mono)', minWidth: 60 }}>{timeAgo(ev.timestamp)}</span>
+                    <span style={{ color: 'var(--faint)', whiteSpace: 'nowrap', fontFamily: 'var(--mono)', minWidth: 60 }}>{timeAgo(ev.date)}</span>
                     <Badge label={ev.event} color={STATUS_COLORS[ev.event] || '#60a5fa'} />
                     {ev.detail && <span style={{ color: 'var(--muted)' }}>{ev.detail}</span>}
                   </div>
@@ -196,29 +224,41 @@ function IdeaCard({ idea, expanded, onToggle }) {
   );
 }
 
+function DetailSection({ label, text }) {
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: '0.82rem', color: 'var(--text)', lineHeight: 1.5, padding: '8px 12px', background: 'var(--bg)', borderRadius: 8 }}>{text}</div>
+    </div>
+  );
+}
+
 // ── Main page ────────────────────────────────────────────────────────
 
 export default function ResearchRadar() {
   const [expandedId, setExpandedId] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [trackFilter, setTrackFilter] = useState('all');
   const [sortBy, setSortBy] = useState('composite');
 
   const fetchIdeas = useCallback(async (signal) => {
     const params = new URLSearchParams();
     if (statusFilter !== 'all') params.set('status', statusFilter);
+    if (trackFilter !== 'all') params.set('track', trackFilter);
     params.set('sort', sortBy);
     params.set('limit', '100');
     const q = params.toString();
-    const res = await api.researchRadarList(q, signal);
-    return res;
-  }, [statusFilter, sortBy]);
+    return api.researchRadarList(q, signal);
+  }, [statusFilter, trackFilter, sortBy]);
 
   const fetchStats = useCallback(async (signal) => {
     return api.researchRadarStats(signal);
   }, []);
 
-  const ideas = usePolling(fetchIdeas, 15000) ?? [];
-  const stats = usePolling(fetchStats, 30000) ?? {};
+  const { data: ideasData } = usePolling(fetchIdeas, 15000);
+  const { data: statsData } = usePolling(fetchStats, 30000);
+  const ideas = ideasData ?? [];
+  const stats = statsData ?? {};
 
   return (
     <div style={{ padding: '24px 32px', maxWidth: 1100, margin: '0 auto' }}>
@@ -228,16 +268,16 @@ export default function ResearchRadar() {
           <span>🎯</span> Research Radar
         </h1>
         <p style={{ color: 'var(--muted)', fontSize: '0.8rem', margin: '6px 0 0' }}>
-          AI-identified research gaps and novel paper opportunities from intel analysis
+          Papers to write, things to build, products to ship — auto-identified from intel analysis
         </p>
       </div>
 
       {/* Stats row */}
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
         <Stat label="Total Ideas" value={stats.total ?? ideas.length} />
-        <Stat label="Ready" value={stats.byStatus?.ready ?? 0} color="#a78bfa" />
-        <Stat label="Developing" value={stats.byStatus?.developing ?? 0} color="#60a5fa" />
-        <Stat label="Ideas" value={stats.byStatus?.idea ?? 0} color="var(--muted)" />
+        <Stat label="📄 Papers" value={stats.byTrack?.paper ?? 0} color="#818cf8" />
+        <Stat label="🔧 Lobs" value={stats.byTrack?.lobs ?? 0} color="#34d399" />
+        <Stat label="💰 Products" value={stats.byTrack?.product ?? 0} color="#fbbf24" />
         <Stat
           label="Avg Score"
           value={stats.avgNovelty != null ? Math.round(((stats.avgNovelty + (stats.avgFeasibility ?? 0) + (stats.avgImpact ?? 0)) / 3) * 100) : '—'}
@@ -249,9 +289,34 @@ export default function ResearchRadar() {
       {/* Filters */}
       <GlassCard>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          {/* Track filter */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 600 }}>Track:</span>
+            {[
+              { key: 'all', label: 'All' },
+              { key: 'paper', label: '📄 Papers' },
+              { key: 'lobs', label: '🔧 Lobs' },
+              { key: 'product', label: '💰 Products' },
+            ].map(t => (
+              <button
+                key={t.key}
+                onClick={() => setTrackFilter(t.key)}
+                style={{
+                  padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                  fontSize: '0.72rem', fontWeight: 600,
+                  background: trackFilter === t.key ? 'var(--text)' : 'var(--surface)',
+                  color: trackFilter === t.key ? 'var(--bg)' : 'var(--muted)',
+                }}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Status filter */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 600 }}>Status:</span>
-            {['all', 'idea', 'developing', 'ready', 'writing', 'published', 'archived'].map(s => (
+            {['all', 'idea', 'developing', 'ready', 'in_progress', 'done', 'archived'].map(s => (
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
@@ -266,6 +331,8 @@ export default function ResearchRadar() {
               </button>
             ))}
           </div>
+
+          {/* Sort */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
             <span style={{ fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 600 }}>Sort:</span>
             <select
@@ -293,7 +360,7 @@ export default function ResearchRadar() {
           <div style={{
             textAlign: 'center', padding: 48, color: 'var(--muted)', fontSize: '0.85rem',
           }}>
-            No research ideas yet. The radar worker will analyze intel sources and identify gaps.
+            No ideas yet. The radar worker analyzes intel insights daily and identifies papers to write, improvements to build, and products to ship.
           </div>
         ) : (
           ideas.map(idea => (
