@@ -152,9 +152,7 @@ function LiveMeetingSetup({ onStart, onCancel }) {
   };
 
   return (
-    <div style={{
-      maxWidth: 520, margin: '60px auto', padding: '0 20px',
-    }}>
+    <div style={{ maxWidth: 520, margin: '60px auto', padding: '0 20px' }}>
       <GlassCard>
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{
@@ -261,61 +259,49 @@ function LiveMeetingSetup({ onStart, onCancel }) {
 /* ───────────────────────── Main LiveMeeting Component ───────────────────────── */
 
 export default function LiveMeeting({ onClose }) {
-  // Phases: setup → recording → ended
-  const [phase, setPhase] = useState('setup');
+  const [phase, setPhase] = useState('setup'); // setup → recording → ended
 
-  // Session state
   const [sessionId, setSessionId] = useState(null);
   const [title, setTitle] = useState('Live Meeting');
   const [editingTitle, setEditingTitle] = useState(false);
 
-  // Recording state
   const [elapsed, setElapsed] = useState(0);
-  const [chunks, setChunks] = useState([]); // [{text, index, timestamp}]
-  const [fullTranscript, setFullTranscript] = useState('');
-  const [insights, setInsights] = useState([]); // [{type, content, timestamp, assignee?}]
+  const [chunks, setChunks] = useState([]);
+  const [insights, setInsights] = useState([]);
   const [runningSummary, setRunningSummary] = useState('');
   const [topics, setTopics] = useState([]);
 
-  // Refs
   const mediaRecorderRef = useRef(null);
-  const eventSourceRef = useRef(null);
   const timerRef = useRef(null);
+  const pollRef = useRef(null);
   const streamsRef = useRef([]);
   const transcriptEndRef = useRef(null);
   const activityEndRef = useRef(null);
   const newItemsRef = useRef(new Set());
+  const lastInsightCountRef = useRef(0);
 
   // Auto-scroll transcript
   useEffect(() => {
-    if (transcriptEndRef.current) {
-      transcriptEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [chunks, fullTranscript]);
+    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chunks]);
 
   // Auto-scroll activity feed
   useEffect(() => {
-    if (activityEndRef.current) {
-      activityEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    activityEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [insights]);
 
-  // Mark new items as "seen" after animation
+  // Clear new-item animation markers
   useEffect(() => {
     if (newItemsRef.current.size > 0) {
-      const timer = setTimeout(() => {
-        newItemsRef.current.clear();
-      }, 500);
-      return () => clearTimeout(timer);
+      const t = setTimeout(() => newItemsRef.current.clear(), 500);
+      return () => clearTimeout(t);
     }
   }, [insights]);
 
   // Timer
   useEffect(() => {
     if (phase === 'recording') {
-      timerRef.current = setInterval(() => {
-        setElapsed(prev => prev + 1);
-      }, 1000);
+      timerRef.current = setInterval(() => setElapsed(prev => prev + 1), 1000);
       return () => clearInterval(timerRef.current);
     }
   }, [phase]);
@@ -324,19 +310,77 @@ export default function LiveMeeting({ onClose }) {
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
-      if (eventSourceRef.current) eventSourceRef.current.close();
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
+      if (pollRef.current) clearInterval(pollRef.current);
+      if (mediaRecorderRef.current?.state !== 'inactive') {
+        try { mediaRecorderRef.current?.stop(); } catch (_) {}
       }
       streamsRef.current.forEach(s => s.getTracks().forEach(t => t.stop()));
     };
+  }, []);
+
+  /* ─── Poll backend for session updates ─── */
+  const startPolling = useCallback((sid) => {
+    if (pollRef.current) clearInterval(pollRef.current);
+
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`/paw/api/meetings/live/${sid}`);
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Update chunks from server (authoritative)
+        if (data.chunks?.length) {
+          setChunks(data.chunks.map((c, i) => ({
+            text: c.text,
+            index: c.index ?? i,
+            timestamp: null,
+          })));
+        }
+
+        // Update insights — detect new ones for animation
+        if (data.insights?.length > lastInsightCountRef.current) {
+          const newOnes = data.insights.slice(lastInsightCountRef.current);
+          for (const ins of newOnes) {
+            const id = Date.now() + Math.random();
+            ins._id = id;
+            newItemsRef.current.add(id);
+          }
+          lastInsightCountRef.current = data.insights.length;
+        }
+        if (data.insights) {
+          setInsights(data.insights.map((ins, i) => ({ ...ins, _id: ins._id || i })));
+        }
+
+        // Action items are included in insights as type "action" from the LLM,
+        // but we also get dedicated actionItems array
+        if (data.actionItems?.length) {
+          // Merge action items into insights as type "action"
+          const actionInsights = data.actionItems.map((a, i) => ({
+            type: 'action',
+            content: a.description,
+            assignee: a.assignee,
+            priority: a.priority,
+            _id: `action-${i}`,
+          }));
+          setInsights(prev => {
+            const nonActions = prev.filter(p => p.type !== 'action');
+            return [...nonActions, ...actionInsights];
+          });
+        }
+
+        if (data.runningSummary) setRunningSummary(data.runningSummary);
+        if (data.topics?.length) setTopics(data.topics);
+      } catch (_) {
+        // Polling failure — just try again next interval
+      }
+    }, 5000);
   }, []);
 
   /* ─── Start live meeting ─── */
   const handleStart = useCallback(async ({ title: meetingTitle, participants, meetingType, withSystem }) => {
     setTitle(meetingTitle);
 
-    // 1. Create session on backend
+    // 1. Create session
     const res = await fetch('/paw/api/meetings/live/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -347,70 +391,16 @@ export default function LiveMeeting({ onClose }) {
     const sid = data.sessionId || data.session_id || data.id;
     setSessionId(sid);
 
-    // 2. Set up SSE connection
-    const es = new EventSource(`/paw/api/meetings/live/${sid}/stream`);
+    // 2. Start polling for updates
+    startPolling(sid);
 
-    es.addEventListener('transcript', (e) => {
-      try {
-        const d = JSON.parse(e.data);
-        if (d.fullTranscript != null) setFullTranscript(d.fullTranscript);
-        if (d.text) {
-          setChunks(prev => [...prev, {
-            text: d.text,
-            index: d.chunkIndex ?? prev.length,
-            timestamp: d.timestamp || null,
-          }]);
-        }
-      } catch (_) {}
-    });
-
-    es.addEventListener('insight', (e) => {
-      try {
-        const d = JSON.parse(e.data);
-        const id = Date.now() + Math.random();
-        newItemsRef.current.add(id);
-        setInsights(prev => [...prev, { ...d, _id: id }]);
-      } catch (_) {}
-    });
-
-    es.addEventListener('action_item', (e) => {
-      try {
-        const d = JSON.parse(e.data);
-        const id = Date.now() + Math.random();
-        newItemsRef.current.add(id);
-        setInsights(prev => [...prev, { type: 'action', ...d, _id: id }]);
-      } catch (_) {}
-    });
-
-    es.addEventListener('summary', (e) => {
-      try {
-        const d = JSON.parse(e.data);
-        setRunningSummary(d.summary || d.text || '');
-      } catch (_) {}
-    });
-
-    es.addEventListener('topics', (e) => {
-      try {
-        const d = JSON.parse(e.data);
-        setTopics(d.topics || d);
-      } catch (_) {}
-    });
-
-    es.addEventListener('error', () => {
-      // SSE reconnects automatically, but let's log it
-      console.warn('[LiveMeeting] SSE connection error — will auto-reconnect');
-    });
-
-    eventSourceRef.current = es;
-
-    // 3. Start audio recording with 30s chunks
+    // 3. Set up audio recording
     const streams = [];
     try {
       const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streams.push(micStream);
     } catch (e) {
       showToast('Microphone access denied: ' + e.message, 'error');
-      es.close();
       throw e;
     }
 
@@ -445,11 +435,11 @@ export default function LiveMeeting({ onClose }) {
     mr.ondataavailable = async (e) => {
       if (e.data.size > 0 && sid) {
         try {
-          const formData = new FormData();
-          formData.append('audio', e.data, 'chunk.webm');
+          // Send raw audio blob — no FormData wrapper
           await fetch(`/paw/api/meetings/live/${sid}/chunk`, {
             method: 'POST',
-            body: formData,
+            headers: { 'Content-Type': 'audio/webm' },
+            body: e.data,
           });
         } catch (err) {
           console.warn('[LiveMeeting] Failed to send chunk:', err.message);
@@ -462,32 +452,27 @@ export default function LiveMeeting({ onClose }) {
 
     setPhase('recording');
     showToast('Live meeting started — Lobs is listening', 'success');
-  }, []);
+  }, [startPolling]);
 
   /* ─── Stop live meeting ─── */
   const handleStop = useCallback(async () => {
-    // Stop recording
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
+    if (mediaRecorderRef.current?.state !== 'inactive') {
+      try { mediaRecorderRef.current?.stop(); } catch (_) {}
     }
 
-    // Stop streams
     streamsRef.current.forEach(s => s.getTracks().forEach(t => t.stop()));
     streamsRef.current = [];
 
-    // Close SSE
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
     }
 
-    // Stop timer
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
 
-    // Finalize on backend
     if (sessionId) {
       try {
         await fetch(`/paw/api/meetings/live/${sessionId}/stop`, { method: 'POST' });
@@ -502,12 +487,10 @@ export default function LiveMeeting({ onClose }) {
 
   /* ─── Render ─── */
 
-  // Setup phase
   if (phase === 'setup') {
     return <LiveMeetingSetup onStart={handleStart} onCancel={onClose} />;
   }
 
-  // Recording or ended phase — the main split-panel view
   const isRecording = phase === 'recording';
   const actionItems = insights.filter(i => i.type === 'action');
   const otherInsights = insights.filter(i => i.type !== 'action');
@@ -517,7 +500,6 @@ export default function LiveMeeting({ onClose }) {
       display: 'flex', flexDirection: 'column', height: '100vh',
       overflow: 'hidden', position: 'relative',
     }}>
-      {/* Inline keyframes for new item animation */}
       <style>{`
         @keyframes slideUpItem {
           from { opacity: 0; transform: translateY(12px); }
@@ -536,7 +518,6 @@ export default function LiveMeeting({ onClose }) {
         background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(12px)',
         flexShrink: 0, zIndex: 10,
       }}>
-        {/* Back button */}
         <button onClick={isRecording ? undefined : onClose} style={{
           background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
           borderRadius: 6, padding: '6px 10px', color: 'var(--muted)',
@@ -548,7 +529,6 @@ export default function LiveMeeting({ onClose }) {
           </svg>
         </button>
 
-        {/* Recording indicator */}
         {isRecording && (
           <span style={{
             width: 10, height: 10, borderRadius: '50%', background: '#ef4444',
@@ -556,7 +536,6 @@ export default function LiveMeeting({ onClose }) {
           }} />
         )}
 
-        {/* Title */}
         {editingTitle ? (
           <input
             value={title}
@@ -583,7 +562,6 @@ export default function LiveMeeting({ onClose }) {
           </div>
         )}
 
-        {/* Duration */}
         <div style={{
           fontFamily: 'var(--mono)', fontSize: '0.95rem', fontWeight: 700,
           color: isRecording ? '#ef4444' : 'var(--text)',
@@ -592,14 +570,12 @@ export default function LiveMeeting({ onClose }) {
           {formatElapsed(elapsed)}
         </div>
 
-        {/* Status badge */}
         {isRecording ? (
           <Badge label="LIVE" color="#ef4444" dot />
         ) : (
           <Badge label="ENDED" color="var(--muted)" />
         )}
 
-        {/* End / Close button */}
         {isRecording ? (
           <button onClick={handleStop} style={{
             background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
@@ -631,7 +607,6 @@ export default function LiveMeeting({ onClose }) {
           flex: '0 0 60%', display: 'flex', flexDirection: 'column',
           borderRight: '1px solid var(--border)', overflow: 'hidden',
         }} className="live-meeting-transcript-panel">
-          {/* Panel header */}
           <div style={{
             padding: '12px 20px', borderBottom: '1px solid var(--border)',
             display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
@@ -649,18 +624,15 @@ export default function LiveMeeting({ onClose }) {
             </span>
           </div>
 
-          {/* Transcript content */}
-          <div style={{
-            flex: 1, overflowY: 'auto', padding: 20,
-          }}>
-            {chunks.length === 0 && !fullTranscript ? (
+          <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+            {chunks.length === 0 ? (
               <div style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 justifyContent: 'center', height: '100%', color: 'var(--faint)',
               }}>
                 {isRecording ? (
                   <>
-                    <svg width="32" height="32" fill="none" stroke="var(--faint)" strokeWidth="1.5" viewBox="0 0 24 24" style={{ marginBottom: 12, animation: 'pulse 2s infinite' }}>
+                    <svg width="32" height="32" fill="none" stroke="var(--faint)" strokeWidth="1.5" viewBox="0 0 24 24" style={{ marginBottom: 12 }}>
                       <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
                       <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
                     </svg>
@@ -694,15 +666,6 @@ export default function LiveMeeting({ onClose }) {
                     </div>
                   </div>
                 ))}
-                {/* If we have fullTranscript but no chunks, show it as raw text */}
-                {chunks.length === 0 && fullTranscript && (
-                  <div style={{
-                    color: 'var(--text)', fontSize: '0.85rem', lineHeight: 1.7,
-                    whiteSpace: 'pre-wrap', fontFamily: 'var(--mono)',
-                  }}>
-                    {fullTranscript}
-                  </div>
-                )}
                 <div ref={transcriptEndRef} />
               </>
             )}
@@ -714,7 +677,6 @@ export default function LiveMeeting({ onClose }) {
           flex: '0 0 40%', display: 'flex', flexDirection: 'column',
           overflow: 'hidden',
         }} className="live-meeting-activity-panel">
-          {/* Panel header */}
           <div style={{
             padding: '12px 20px', borderBottom: '1px solid var(--border)',
             display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
@@ -729,15 +691,10 @@ export default function LiveMeeting({ onClose }) {
             </span>
           </div>
 
-          {/* Activity content */}
           <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
-            {/* Running summary */}
             <RunningSummary summary={runningSummary} />
-
-            {/* Topics */}
             <TopicsList topics={topics} />
 
-            {/* Action items section */}
             {actionItems.length > 0 && (
               <div style={{ marginBottom: 16 }}>
                 <div style={{
@@ -757,7 +714,6 @@ export default function LiveMeeting({ onClose }) {
               </div>
             )}
 
-            {/* Other insights */}
             {otherInsights.length > 0 && (
               <div>
                 {actionItems.length > 0 && (
@@ -778,7 +734,6 @@ export default function LiveMeeting({ onClose }) {
               </div>
             )}
 
-            {/* Empty state */}
             {insights.length === 0 && !runningSummary && (
               <div style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -804,7 +759,6 @@ export default function LiveMeeting({ onClose }) {
         </div>
       </div>
 
-      {/* ─── Responsive styles ─── */}
       <style>{`
         @media (max-width: 768px) {
           .live-meeting-panels {
