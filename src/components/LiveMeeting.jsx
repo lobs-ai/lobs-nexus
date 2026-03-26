@@ -264,6 +264,8 @@ export default function LiveMeeting({ onClose }) {
   const [sessionId, setSessionId] = useState(null);
   const [title, setTitle] = useState('Live Meeting');
   const [editingTitle, setEditingTitle] = useState(false);
+  const [participants, setParticipants] = useState([]);
+  const [meetingType, setMeetingType] = useState('other');
 
   const [elapsed, setElapsed] = useState(0);
   const [chunks, setChunks] = useState([]);
@@ -370,21 +372,28 @@ export default function LiveMeeting({ onClose }) {
 
         if (data.runningSummary) setRunningSummary(data.runningSummary);
         if (data.topics?.length) setTopics(data.topics);
+
+        // Update metadata from LLM analysis
+        if (data.title && !editingTitle) setTitle(data.title);
+        if (data.participants?.length) setParticipants(data.participants);
+        if (data.meetingType) setMeetingType(data.meetingType);
       } catch (_) {
         // Polling failure — just try again next interval
       }
     }, 5000);
-  }, []);
+  }, [editingTitle]);
 
   /* ─── Start live meeting ─── */
-  const handleStart = useCallback(async ({ title: meetingTitle, participants, meetingType, withSystem }) => {
+  const handleStart = useCallback(async ({ title: meetingTitle, participants: initParticipants, meetingType: initType, withSystem }) => {
     setTitle(meetingTitle);
+    setParticipants(initParticipants || []);
+    setMeetingType(initType || 'other');
 
     // 1. Create session
     const res = await fetch('/paw/api/meetings/live/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: meetingTitle, participants, meetingType }),
+      body: JSON.stringify({ title: meetingTitle, participants: initParticipants, meetingType: initType }),
     });
     if (!res.ok) throw new Error('Failed to start live meeting: ' + res.status);
     const data = await res.json();
@@ -554,11 +563,28 @@ export default function LiveMeeting({ onClose }) {
             onClick={() => setEditingTitle(true)}
             style={{
               color: 'var(--text)', fontSize: '1rem', fontWeight: 700,
-              cursor: 'pointer', flex: 1,
+              cursor: 'pointer', flex: 1, display: 'flex', alignItems: 'baseline', gap: 10,
             }}
             title="Click to edit title"
           >
-            {title}
+            <span>{title}</span>
+            {meetingType && meetingType !== 'other' && (
+              <span style={{
+                fontSize: '0.68rem', fontWeight: 600, textTransform: 'capitalize',
+                color: '#a78bfa', background: 'rgba(167,139,250,0.12)',
+                border: '1px solid rgba(167,139,250,0.25)',
+                borderRadius: 10, padding: '1px 8px',
+              }}>
+                {meetingType.replace(/-/g, ' ')}
+              </span>
+            )}
+            {participants.length > 0 && (
+              <span style={{
+                fontSize: '0.72rem', color: 'var(--faint)', fontWeight: 400,
+              }}>
+                {participants.join(', ')}
+              </span>
+            )}
           </div>
         )}
 
