@@ -226,4 +226,11 @@ export const api = {
   snoozeMyTask: (id, until) => reqSafe(`/api/my-tasks/${id}/snooze`, { method: 'POST', body: { until } }),
   deleteMyTask: (id) => reqSafe(`/api/my-tasks/${id}`, { method: 'DELETE' }),
   assignToRafe: (body) => reqSafe('/api/my-tasks/from-agent', { method: 'POST', body }),
+
+  // Structured Memory (memory.db)
+  structuredMemoryStats: (signal) => reqSafe('/api/structured-memory/stats', { signal }, {}),
+  structuredMemories: (params, signal) => reqSafe(`/api/structured-memory/memories?${new URLSearchParams(params)}`, { signal }, { memories: [], total: 0 }),
+  structuredConflicts: (status, signal) => reqSafe(`/api/structured-memory/conflicts?status=${status || 'open'}`, { signal }, { conflicts: [] }),
+  structuredGcLog: (limit, signal) => reqSafe(`/api/structured-memory/gc-log?limit=${limit || 20}`, { signal }, { entries: [] }),
+  structuredEvents: (limit, signal) => reqSafe(`/api/structured-memory/events?limit=${limit || 20}`, { signal }, { events: [] }),
 };
