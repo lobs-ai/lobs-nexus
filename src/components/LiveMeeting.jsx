@@ -17,29 +17,43 @@ function formatChunkTime(seconds) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-/* ───────────────────────── Activity Item ───────────────────────── */
+/* ───────────────────────── Expandable Activity Item ───────────────────────── */
 
 function ActivityItem({ item, isNew }) {
+  const [expanded, setExpanded] = useState(false);
   const icons = {
     note: '📝', action: '✅', flag: '⚠️', context: '🔍', question: '❓',
+    research: '🔬', suggestion: '💡',
   };
   const colors = {
     note: 'var(--teal)', action: '#60a5fa', flag: '#fbbf24',
     context: '#a78bfa', question: '#fb923c',
+    research: '#22d3ee', suggestion: '#34d399',
   };
+  const priorityIcons = { high: '🔴', medium: '🟡', low: '🟢' };
 
   const color = colors[item.type] || 'var(--muted)';
   const icon = icons[item.type] || '💡';
+  const truncateLen = 120;
+  const shouldTruncate = item.content && item.content.length > truncateLen;
+  const displayText = (!expanded && shouldTruncate)
+    ? item.content.slice(0, truncateLen) + '…'
+    : item.content;
 
   return (
-    <div style={{
-      padding: '10px 12px',
-      background: `${color}10`,
-      border: `1px solid ${color}30`,
-      borderRadius: 8,
-      marginBottom: 8,
-      animation: isNew ? 'slideUpItem 0.3s ease-out' : 'none',
-    }}>
+    <div
+      onClick={() => (shouldTruncate || item.type === 'action') && setExpanded(!expanded)}
+      style={{
+        padding: '10px 12px',
+        background: `${color}10`,
+        border: `1px solid ${color}30`,
+        borderRadius: 8,
+        marginBottom: 8,
+        animation: isNew ? 'slideUpItem 0.3s ease-out' : 'none',
+        cursor: shouldTruncate || item.type === 'action' ? 'pointer' : 'default',
+        transition: 'background 0.15s',
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
         <span>{icon}</span>
         <span style={{
@@ -48,6 +62,11 @@ function ActivityItem({ item, isNew }) {
         }}>
           {item.type}
         </span>
+        {item.priority && (
+          <span style={{ fontSize: '0.65rem' }}>
+            {priorityIcons[item.priority] || ''} {item.priority}
+          </span>
+        )}
         {item.timestamp && (
           <span style={{
             color: 'var(--faint)', fontSize: '0.7rem',
@@ -56,13 +75,46 @@ function ActivityItem({ item, isNew }) {
             {item.timestamp}
           </span>
         )}
+        {(shouldTruncate || item.type === 'action') && (
+          <span style={{
+            color: 'var(--faint)', fontSize: '0.65rem', marginLeft: shouldTruncate && !item.timestamp ? 'auto' : 4,
+            transition: 'transform 0.2s',
+            transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+            display: 'inline-block',
+          }}>▼</span>
+        )}
       </div>
       <div style={{ color: 'var(--text)', fontSize: '0.83rem', lineHeight: 1.5 }}>
-        {item.content}
+        {displayText}
       </div>
-      {item.type === 'action' && item.assignee && (
+      {expanded && item.type === 'action' && (
+        <div style={{
+          marginTop: 8, paddingTop: 8,
+          borderTop: `1px solid ${color}20`,
+          display: 'flex', gap: 12, alignItems: 'center',
+        }}>
+          {item.assignee && (
+            <span style={{
+              color: '#60a5fa', fontSize: '0.72rem', fontWeight: 600,
+              background: 'rgba(96,165,250,0.1)', borderRadius: 10, padding: '2px 8px',
+            }}>
+              @{item.assignee}
+            </span>
+          )}
+          {item.priority && (
+            <span style={{
+              color: item.priority === 'high' ? '#ef4444' : item.priority === 'medium' ? '#fbbf24' : '#22c55e',
+              fontSize: '0.72rem', fontWeight: 600,
+              textTransform: 'uppercase',
+            }}>
+              {item.priority} priority
+            </span>
+          )}
+        </div>
+      )}
+      {!expanded && item.type === 'action' && item.assignee && (
         <div style={{ color: 'var(--faint)', fontSize: '0.72rem', marginTop: 4 }}>
-          Assigned to <span style={{ color: '#60a5fa' }}>@{item.assignee}</span>
+          → <span style={{ color: '#60a5fa' }}>@{item.assignee}</span>
         </div>
       )}
     </div>
@@ -73,6 +125,7 @@ function ActivityItem({ item, isNew }) {
 
 function TopicsList({ topics }) {
   if (!topics || topics.length === 0) return null;
+  const topicColors = ['#a78bfa', '#60a5fa', '#2dd4bf', '#fb923c', '#f472b6', '#fbbf24'];
   return (
     <div style={{ marginBottom: 12 }}>
       <div style={{
@@ -80,15 +133,18 @@ function TopicsList({ topics }) {
         textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6,
       }}>Topics Discussed</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {topics.map((topic, i) => (
-          <span key={i} style={{
-            background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)',
-            borderRadius: 12, padding: '3px 10px', color: '#a78bfa',
-            fontSize: '0.72rem', fontWeight: 600,
-          }}>
-            {topic}
-          </span>
-        ))}
+        {topics.map((topic, i) => {
+          const c = topicColors[i % topicColors.length];
+          return (
+            <span key={i} style={{
+              background: `${c}15`, border: `1px solid ${c}40`,
+              borderRadius: 12, padding: '3px 10px', color: c,
+              fontSize: '0.72rem', fontWeight: 600,
+            }}>
+              {topic}
+            </span>
+          );
+        })}
       </div>
     </div>
   );
@@ -110,6 +166,330 @@ function RunningSummary({ summary }) {
       <div style={{ color: 'var(--text)', fontSize: '0.82rem', lineHeight: 1.6 }}>
         {summary}
       </div>
+    </div>
+  );
+}
+
+/* ───────────────────────── Tab Bar ───────────────────────── */
+
+function TabBar({ tabs, activeTab, onTabChange }) {
+  return (
+    <div style={{
+      display: 'flex', gap: 2, padding: '0 16px',
+      borderBottom: '1px solid var(--border)',
+      background: 'rgba(0,0,0,0.1)',
+    }}>
+      {tabs.map(tab => (
+        <button
+          key={tab.id}
+          onClick={() => onTabChange(tab.id)}
+          style={{
+            background: 'none', border: 'none',
+            borderBottom: activeTab === tab.id
+              ? '2px solid var(--teal)'
+              : '2px solid transparent',
+            padding: '10px 14px',
+            color: activeTab === tab.id ? 'var(--text)' : 'var(--faint)',
+            fontSize: '0.78rem', fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6,
+            transition: 'color 0.15s, border-color 0.15s',
+          }}
+        >
+          <span>{tab.icon}</span>
+          {tab.label}
+          {tab.count > 0 && (
+            <span style={{
+              background: activeTab === tab.id ? 'var(--teal)' : 'rgba(255,255,255,0.1)',
+              color: activeTab === tab.id ? '#000' : 'var(--faint)',
+              fontSize: '0.62rem', fontWeight: 700,
+              borderRadius: 8, padding: '1px 6px',
+              minWidth: 16, textAlign: 'center',
+            }}>
+              {tab.count}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/* ───────────────────────── Processing Indicator ───────────────────────── */
+
+function ProcessingIndicator({ chunkCount }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '8px 16px',
+      background: 'rgba(96,165,250,0.06)',
+      borderBottom: '1px solid rgba(96,165,250,0.1)',
+    }}>
+      <div style={{
+        width: 6, height: 6, borderRadius: '50%',
+        background: '#60a5fa',
+        animation: 'processingPulse 1s ease-in-out infinite',
+      }} />
+      <span style={{ color: '#60a5fa', fontSize: '0.72rem', fontWeight: 600 }}>
+        Processing chunk {chunkCount + 1}…
+      </span>
+    </div>
+  );
+}
+
+/* ───────────────────────── Post-Meeting Recap ───────────────────────── */
+
+function MeetingRecap({ title, elapsed, participants, meetingType, runningSummary, topics, insights, chunks, onClose }) {
+  const [showTranscript, setShowTranscript] = useState(false);
+  const actionItems = insights.filter(i => i.type === 'action');
+  const keyInsights = insights.filter(i => i.type !== 'action');
+
+  // Group actions by assignee
+  const actionsByAssignee = {};
+  actionItems.forEach(item => {
+    const key = item.assignee || 'Unassigned';
+    if (!actionsByAssignee[key]) actionsByAssignee[key] = [];
+    actionsByAssignee[key].push(item);
+  });
+
+  const priorityIcon = { high: '🔴', medium: '🟡', low: '🟢' };
+  const fullTranscript = chunks.map(c => c.text).join(' ');
+
+  const copySummary = () => {
+    const parts = [];
+    parts.push(`# ${title}`);
+    parts.push(`Duration: ${formatElapsed(elapsed)} | Participants: ${participants.join(', ') || 'N/A'}`);
+    if (runningSummary) parts.push(`\n## Summary\n${runningSummary}`);
+    if (topics.length) parts.push(`\n## Topics\n${topics.map(t => `- ${t}`).join('\n')}`);
+    if (actionItems.length) {
+      parts.push('\n## Action Items');
+      actionItems.forEach(a => {
+        const p = priorityIcon[a.priority] || '';
+        parts.push(`- ${p} ${a.content}${a.assignee ? ` → @${a.assignee}` : ''}`);
+      });
+    }
+    if (keyInsights.length) {
+      parts.push('\n## Insights');
+      keyInsights.forEach(i => parts.push(`- [${i.type}] ${i.content}`));
+    }
+    navigator.clipboard.writeText(parts.join('\n'));
+    showToast('Summary copied to clipboard', 'success');
+  };
+
+  const copyTranscript = () => {
+    navigator.clipboard.writeText(fullTranscript);
+    showToast('Transcript copied', 'success');
+  };
+
+  return (
+    <div style={{
+      maxWidth: 800, margin: '40px auto', padding: '0 20px',
+      animation: 'slideUpItem 0.4s ease-out',
+    }}>
+      {/* Header card */}
+      <GlassCard>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
+          <div>
+            <h2 style={{ color: 'var(--text)', fontSize: '1.4rem', fontWeight: 700, margin: '0 0 8px' }}>
+              {title}
+            </h2>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{
+                color: 'var(--faint)', fontSize: '0.78rem',
+                fontFamily: 'var(--mono)',
+              }}>
+                ⏱ {formatElapsed(elapsed)}
+              </span>
+              {meetingType && meetingType !== 'other' && (
+                <span style={{
+                  fontSize: '0.68rem', fontWeight: 600, textTransform: 'capitalize',
+                  color: '#a78bfa', background: 'rgba(167,139,250,0.12)',
+                  border: '1px solid rgba(167,139,250,0.25)',
+                  borderRadius: 10, padding: '2px 10px',
+                }}>
+                  {meetingType.replace(/-/g, ' ')}
+                </span>
+              )}
+              {participants.map((p, i) => (
+                <span key={i} style={{
+                  fontSize: '0.72rem', fontWeight: 600,
+                  color: '#60a5fa', background: 'rgba(96,165,250,0.1)',
+                  border: '1px solid rgba(96,165,250,0.25)',
+                  borderRadius: 10, padding: '2px 10px',
+                }}>
+                  {p}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button onClick={copySummary} style={{
+              background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.3)',
+              borderRadius: 8, padding: '8px 14px', color: 'var(--teal)',
+              fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              📋 Copy Summary
+            </button>
+            <button onClick={onClose} style={{
+              background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+              borderRadius: 8, padding: '8px 14px', color: 'var(--muted)',
+              fontWeight: 600, fontSize: '0.78rem', cursor: 'pointer',
+            }}>
+              Done
+            </button>
+          </div>
+        </div>
+
+        {/* Summary */}
+        {runningSummary && (
+          <div style={{
+            background: 'rgba(45,212,191,0.06)', border: '1px solid rgba(45,212,191,0.15)',
+            borderRadius: 10, padding: 16, marginBottom: 20,
+          }}>
+            <div style={{
+              color: 'var(--teal)', fontSize: '0.72rem', fontWeight: 700,
+              textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6,
+            }}>Summary</div>
+            <div style={{ color: 'var(--text)', fontSize: '0.88rem', lineHeight: 1.7 }}>
+              {runningSummary}
+            </div>
+          </div>
+        )}
+
+        {/* Topics */}
+        {topics.length > 0 && <TopicsList topics={topics} />}
+      </GlassCard>
+
+      {/* Action Items */}
+      {actionItems.length > 0 && (
+        <GlassCard style={{ marginTop: 16 }}>
+          <div style={{
+            color: '#60a5fa', fontSize: '0.78rem', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14,
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <span>✅</span> Action Items ({actionItems.length})
+          </div>
+          {Object.entries(actionsByAssignee).map(([assignee, items]) => (
+            <div key={assignee} style={{ marginBottom: 16 }}>
+              <div style={{
+                color: assignee === 'Unassigned' ? 'var(--faint)' : '#60a5fa',
+                fontSize: '0.75rem', fontWeight: 600, marginBottom: 8,
+              }}>
+                {assignee === 'Unassigned' ? 'Unassigned' : `@${assignee}`}
+              </div>
+              {items.map((item, i) => (
+                <div key={i} style={{
+                  display: 'flex', gap: 10, alignItems: 'flex-start',
+                  padding: '8px 12px', marginBottom: 6,
+                  background: 'rgba(96,165,250,0.05)',
+                  border: '1px solid rgba(96,165,250,0.12)',
+                  borderRadius: 8,
+                }}>
+                  <span style={{ fontSize: '0.75rem', flexShrink: 0, paddingTop: 2 }}>
+                    {priorityIcon[item.priority] || '⚪'}
+                  </span>
+                  <div style={{
+                    color: 'var(--text)', fontSize: '0.83rem', lineHeight: 1.5, flex: 1,
+                  }}>
+                    {item.content}
+                  </div>
+                  {item.priority && (
+                    <span style={{
+                      fontSize: '0.62rem', fontWeight: 700,
+                      textTransform: 'uppercase', flexShrink: 0,
+                      color: item.priority === 'high' ? '#ef4444' : item.priority === 'medium' ? '#fbbf24' : '#22c55e',
+                    }}>
+                      {item.priority}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))}
+        </GlassCard>
+      )}
+
+      {/* Key Insights */}
+      {keyInsights.length > 0 && (
+        <GlassCard style={{ marginTop: 16 }}>
+          <div style={{
+            color: '#a78bfa', fontSize: '0.78rem', fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 14,
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <span>🧠</span> Key Insights ({keyInsights.length})
+          </div>
+          {keyInsights.map((item, i) => (
+            <ActivityItem key={i} item={item} isNew={false} />
+          ))}
+        </GlassCard>
+      )}
+
+      {/* Transcript */}
+      <GlassCard style={{ marginTop: 16 }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          marginBottom: showTranscript ? 14 : 0,
+        }}>
+          <button
+            onClick={() => setShowTranscript(!showTranscript)}
+            style={{
+              background: 'none', border: 'none', color: 'var(--text)',
+              fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 8, padding: 0,
+            }}
+          >
+            <span style={{
+              display: 'inline-block',
+              transition: 'transform 0.2s',
+              transform: showTranscript ? 'rotate(90deg)' : 'rotate(0deg)',
+              fontSize: '0.7rem',
+            }}>▶</span>
+            Full Transcript
+            <span style={{ color: 'var(--faint)', fontSize: '0.72rem', fontWeight: 400 }}>
+              ({chunks.length} chunks)
+            </span>
+          </button>
+          {showTranscript && (
+            <button onClick={copyTranscript} style={{
+              background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+              borderRadius: 6, padding: '4px 10px', color: 'var(--muted)',
+              fontSize: '0.72rem', cursor: 'pointer',
+            }}>
+              📋 Copy
+            </button>
+          )}
+        </div>
+        {showTranscript && (
+          <div style={{
+            maxHeight: 400, overflowY: 'auto',
+            animation: 'slideUpItem 0.3s ease-out',
+          }}>
+            {chunks.map((chunk, i) => (
+              <div key={i} style={{
+                display: 'flex', gap: 12, marginBottom: 14,
+              }}>
+                <div style={{
+                  minWidth: 56, color: 'var(--faint)', fontSize: '0.72rem',
+                  fontFamily: 'var(--mono)', paddingTop: 3, textAlign: 'right',
+                  flexShrink: 0,
+                }}>
+                  {chunk.timestamp || formatChunkTime(i * 30)}
+                </div>
+                <div style={{
+                  flex: 1, color: 'var(--text)', fontSize: '0.85rem',
+                  lineHeight: 1.7, borderLeft: '2px solid rgba(45,212,191,0.2)',
+                  paddingLeft: 12,
+                }}>
+                  {chunk.text}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </GlassCard>
     </div>
   );
 }
@@ -272,6 +652,10 @@ export default function LiveMeeting({ onClose }) {
   const [insights, setInsights] = useState([]);
   const [runningSummary, setRunningSummary] = useState('');
   const [topics, setTopics] = useState([]);
+  const [activeTab, setActiveTab] = useState('summary');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [lastChunkCount, setLastChunkCount] = useState(0);
+  const [pendingResearch, setPendingResearch] = useState([]);
 
   const mediaRecorderRef = useRef(null);
   const timerRef = useRef(null);
@@ -281,6 +665,7 @@ export default function LiveMeeting({ onClose }) {
   const activityEndRef = useRef(null);
   const newItemsRef = useRef(new Set());
   const lastInsightCountRef = useRef(0);
+  const chunkSentAtRef = useRef(null);
 
   // Auto-scroll transcript
   useEffect(() => {
@@ -307,6 +692,15 @@ export default function LiveMeeting({ onClose }) {
       return () => clearInterval(timerRef.current);
     }
   }, [phase]);
+
+  // Processing detection: if we sent a chunk but haven't gotten it back yet
+  useEffect(() => {
+    if (chunkSentAtRef.current && chunks.length > lastChunkCount) {
+      setIsProcessing(false);
+      chunkSentAtRef.current = null;
+      setLastChunkCount(chunks.length);
+    }
+  }, [chunks, lastChunkCount]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -356,7 +750,6 @@ export default function LiveMeeting({ onClose }) {
         // Action items are included in insights as type "action" from the LLM,
         // but we also get dedicated actionItems array
         if (data.actionItems?.length) {
-          // Merge action items into insights as type "action"
           const actionInsights = data.actionItems.map((a, i) => ({
             type: 'action',
             content: a.description,
@@ -372,8 +765,8 @@ export default function LiveMeeting({ onClose }) {
 
         if (data.runningSummary) setRunningSummary(data.runningSummary);
         if (data.topics?.length) setTopics(data.topics);
+        if (data.pendingResearch) setPendingResearch(data.pendingResearch);
 
-        // Update metadata from LLM analysis
         if (data.title && !editingTitle) setTitle(data.title);
         if (data.participants?.length) setParticipants(data.participants);
         if (data.meetingType) setMeetingType(data.meetingType);
@@ -389,7 +782,6 @@ export default function LiveMeeting({ onClose }) {
     setParticipants(initParticipants || []);
     setMeetingType(initType || 'other');
 
-    // 1. Create session
     const res = await fetch('/paw/api/meetings/live/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -400,10 +792,8 @@ export default function LiveMeeting({ onClose }) {
     const sid = data.sessionId || data.session_id || data.id;
     setSessionId(sid);
 
-    // 2. Start polling for updates
     startPolling(sid);
 
-    // 3. Set up audio recording
     const streams = [];
     try {
       const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -443,8 +833,9 @@ export default function LiveMeeting({ onClose }) {
 
     mr.ondataavailable = async (e) => {
       if (e.data.size > 0 && sid) {
+        setIsProcessing(true);
+        chunkSentAtRef.current = Date.now();
         try {
-          // Send raw audio blob — no FormData wrapper
           await fetch(`/paw/api/meetings/live/${sid}/chunk`, {
             method: 'POST',
             headers: { 'Content-Type': 'audio/webm' },
@@ -452,11 +843,12 @@ export default function LiveMeeting({ onClose }) {
           });
         } catch (err) {
           console.warn('[LiveMeeting] Failed to send chunk:', err.message);
+          setIsProcessing(false);
         }
       }
     };
 
-    mr.start(30000); // 30 second timeslice
+    mr.start(30000);
     mediaRecorderRef.current = mr;
 
     setPhase('recording');
@@ -494,15 +886,56 @@ export default function LiveMeeting({ onClose }) {
     setPhase('ended');
   }, [sessionId]);
 
+  /* ─── Copy transcript ─── */
+  const copyTranscript = () => {
+    const text = chunks.map(c => c.text).join(' ');
+    navigator.clipboard.writeText(text);
+    showToast('Transcript copied', 'success');
+  };
+
   /* ─── Render ─── */
 
   if (phase === 'setup') {
     return <LiveMeetingSetup onStart={handleStart} onCancel={onClose} />;
   }
 
-  const isRecording = phase === 'recording';
+  // Post-meeting recap view
+  if (phase === 'ended') {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', height: '100vh',
+        overflow: 'auto',
+      }}>
+        <style>{`
+          @keyframes slideUpItem {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
+        <MeetingRecap
+          title={title}
+          elapsed={elapsed}
+          participants={participants}
+          meetingType={meetingType}
+          runningSummary={runningSummary}
+          topics={topics}
+          insights={insights}
+          chunks={chunks}
+          onClose={onClose}
+        />
+      </div>
+    );
+  }
+
+  // Live recording view
   const actionItems = insights.filter(i => i.type === 'action');
   const otherInsights = insights.filter(i => i.type !== 'action');
+
+  const tabs = [
+    { id: 'summary', label: 'Summary', icon: '📊', count: topics.length },
+    { id: 'actions', label: 'Actions', icon: '✅', count: actionItems.length },
+    { id: 'insights', label: 'Insights', icon: '🧠', count: otherInsights.length },
+  ];
 
   return (
     <div style={{
@@ -516,7 +949,11 @@ export default function LiveMeeting({ onClose }) {
         }
         @keyframes livePulse {
           0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(239,68,68,0.5); }
-          50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+          50% { opacity: 0.7; box-shadow: 0 0 0 8px rgba(239,68,68,0); }
+        }
+        @keyframes processingPulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
         }
       `}</style>
 
@@ -527,23 +964,21 @@ export default function LiveMeeting({ onClose }) {
         background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(12px)',
         flexShrink: 0, zIndex: 10,
       }}>
-        <button onClick={isRecording ? undefined : onClose} style={{
+        <button onClick={undefined} style={{
           background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
           borderRadius: 6, padding: '6px 10px', color: 'var(--muted)',
-          cursor: isRecording ? 'default' : 'pointer', opacity: isRecording ? 0.4 : 1,
+          cursor: 'default', opacity: 0.4,
           display: 'flex', alignItems: 'center',
-        }} disabled={isRecording} title={isRecording ? 'End meeting first' : 'Back to meetings'}>
+        }} disabled title="End meeting first">
           <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <polyline points="15 18 9 12 15 6"/>
           </svg>
         </button>
 
-        {isRecording && (
-          <span style={{
-            width: 10, height: 10, borderRadius: '50%', background: '#ef4444',
-            animation: 'livePulse 1.5s ease-in-out infinite', flexShrink: 0,
-          }} />
-        )}
+        <span style={{
+          width: 10, height: 10, borderRadius: '50%', background: '#ef4444',
+          animation: 'livePulse 1.5s ease-in-out infinite', flexShrink: 0,
+        }} />
 
         {editingTitle ? (
           <input
@@ -563,7 +998,7 @@ export default function LiveMeeting({ onClose }) {
             onClick={() => setEditingTitle(true)}
             style={{
               color: 'var(--text)', fontSize: '1rem', fontWeight: 700,
-              cursor: 'pointer', flex: 1, display: 'flex', alignItems: 'baseline', gap: 10,
+              cursor: 'pointer', flex: 1, display: 'flex', alignItems: 'center', gap: 10,
             }}
             title="Click to edit title"
           >
@@ -578,50 +1013,70 @@ export default function LiveMeeting({ onClose }) {
                 {meetingType.replace(/-/g, ' ')}
               </span>
             )}
-            {participants.length > 0 && (
-              <span style={{
-                fontSize: '0.72rem', color: 'var(--faint)', fontWeight: 400,
-              }}>
-                {participants.join(', ')}
-              </span>
-            )}
           </div>
         )}
 
+        {/* Badges area */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {participants.length > 0 && (
+            <span style={{
+              fontSize: '0.68rem', color: 'var(--faint)',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--border)',
+              borderRadius: 10, padding: '2px 8px',
+            }}>
+              👥 {participants.length}
+            </span>
+          )}
+          {chunks.length > 0 && (
+            <span style={{
+              fontSize: '0.68rem', color: 'var(--faint)',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--border)',
+              borderRadius: 10, padding: '2px 8px',
+              fontFamily: 'var(--mono)',
+            }}>
+              {chunks.length} chunk{chunks.length !== 1 ? 's' : ''}
+            </span>
+          )}
+          {isProcessing && (
+            <span style={{
+              fontSize: '0.68rem', color: '#60a5fa',
+              background: 'rgba(96,165,250,0.1)',
+              border: '1px solid rgba(96,165,250,0.25)',
+              borderRadius: 10, padding: '2px 8px',
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}>
+              <span style={{
+                width: 5, height: 5, borderRadius: '50%',
+                background: '#60a5fa',
+                animation: 'processingPulse 1s ease-in-out infinite',
+              }} />
+              processing
+            </span>
+          )}
+        </div>
+
         <div style={{
           fontFamily: 'var(--mono)', fontSize: '0.95rem', fontWeight: 700,
-          color: isRecording ? '#ef4444' : 'var(--text)',
+          color: '#ef4444',
           minWidth: 70, textAlign: 'center',
         }}>
           {formatElapsed(elapsed)}
         </div>
 
-        {isRecording ? (
-          <Badge label="LIVE" color="#ef4444" dot />
-        ) : (
-          <Badge label="ENDED" color="var(--muted)" />
-        )}
+        <Badge label="LIVE" color="#ef4444" dot />
 
-        {isRecording ? (
-          <button onClick={handleStop} style={{
-            background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
-            borderRadius: 8, padding: '8px 18px', color: '#ef4444', fontWeight: 700,
-            fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-          }}>
-            <svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24">
-              <rect x="4" y="4" width="16" height="16" rx="2"/>
-            </svg>
-            End Meeting
-          </button>
-        ) : (
-          <button onClick={onClose} style={{
-            background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.3)',
-            borderRadius: 8, padding: '8px 18px', color: 'var(--teal)', fontWeight: 700,
-            fontSize: '0.85rem', cursor: 'pointer',
-          }}>
-            Done
-          </button>
-        )}
+        <button onClick={handleStop} style={{
+          background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)',
+          borderRadius: 8, padding: '8px 18px', color: '#ef4444', fontWeight: 700,
+          fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          <svg width="10" height="10" fill="currentColor" viewBox="0 0 24 24">
+            <rect x="4" y="4" width="16" height="16" rx="2"/>
+          </svg>
+          End Meeting
+        </button>
       </div>
 
       {/* ─── Split panels ─── */}
@@ -634,7 +1089,7 @@ export default function LiveMeeting({ onClose }) {
           borderRight: '1px solid var(--border)', overflow: 'hidden',
         }} className="live-meeting-transcript-panel">
           <div style={{
-            padding: '12px 20px', borderBottom: '1px solid var(--border)',
+            padding: '10px 20px', borderBottom: '1px solid var(--border)',
             display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
             background: 'rgba(0,0,0,0.15)',
           }}>
@@ -645,10 +1100,22 @@ export default function LiveMeeting({ onClose }) {
             <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.85rem' }}>
               Live Transcript
             </span>
-            <span style={{ color: 'var(--faint)', fontSize: '0.75rem', marginLeft: 'auto' }}>
+            <span style={{ color: 'var(--faint)', fontSize: '0.72rem', marginLeft: 'auto' }}>
               {chunks.length} chunk{chunks.length !== 1 ? 's' : ''}
             </span>
+            {chunks.length > 0 && (
+              <button onClick={copyTranscript} style={{
+                background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)',
+                borderRadius: 5, padding: '3px 8px', color: 'var(--faint)',
+                fontSize: '0.68rem', cursor: 'pointer',
+              }} title="Copy transcript">
+                📋
+              </button>
+            )}
           </div>
+
+          {/* Processing indicator */}
+          {isProcessing && <ProcessingIndicator chunkCount={chunks.length} />}
 
           <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
             {chunks.length === 0 ? (
@@ -656,37 +1123,45 @@ export default function LiveMeeting({ onClose }) {
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 justifyContent: 'center', height: '100%', color: 'var(--faint)',
               }}>
-                {isRecording ? (
-                  <>
-                    <svg width="32" height="32" fill="none" stroke="var(--faint)" strokeWidth="1.5" viewBox="0 0 24 24" style={{ marginBottom: 12 }}>
-                      <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                      <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                    </svg>
-                    <div style={{ fontSize: '0.85rem' }}>Listening… transcript will appear here</div>
-                    <div style={{ fontSize: '0.75rem', marginTop: 4 }}>First chunk processes after ~30 seconds</div>
-                  </>
-                ) : (
-                  <div style={{ fontSize: '0.85rem' }}>No transcript recorded.</div>
-                )}
+                <svg width="32" height="32" fill="none" stroke="var(--faint)" strokeWidth="1.5" viewBox="0 0 24 24" style={{ marginBottom: 12, opacity: 0.5 }}>
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                </svg>
+                <div style={{ fontSize: '0.85rem' }}>Listening… transcript will appear here</div>
+                <div style={{ fontSize: '0.75rem', marginTop: 4, opacity: 0.7 }}>First chunk processes after ~30 seconds</div>
               </div>
             ) : (
               <>
                 {chunks.map((chunk, i) => (
-                  <div key={i} style={{
-                    display: 'flex', gap: 12, marginBottom: 14,
-                    animation: i === chunks.length - 1 ? 'slideUpItem 0.3s ease-out' : 'none',
-                  }}>
+                  <div key={i}>
+                    {/* Time pill separator between chunks */}
                     <div style={{
-                      minWidth: 56, color: 'var(--faint)', fontSize: '0.72rem',
-                      fontFamily: 'var(--mono)', paddingTop: 3, textAlign: 'right',
-                      flexShrink: 0,
+                      display: 'flex', alignItems: 'center', gap: 10,
+                      marginBottom: 8, marginTop: i > 0 ? 16 : 0,
                     }}>
-                      {chunk.timestamp || formatChunkTime(i * 30)}
+                      <div style={{
+                        flex: 1, height: 1,
+                        background: i === 0 ? 'transparent' : 'linear-gradient(to right, transparent, var(--border), transparent)',
+                      }} />
+                      <span style={{
+                        background: 'rgba(45,212,191,0.08)',
+                        border: '1px solid rgba(45,212,191,0.2)',
+                        borderRadius: 10, padding: '2px 10px',
+                        color: 'var(--teal)', fontSize: '0.65rem',
+                        fontFamily: 'var(--mono)', fontWeight: 600,
+                        flexShrink: 0,
+                      }}>
+                        {chunk.timestamp || formatChunkTime(i * 30)}
+                      </span>
+                      <div style={{
+                        flex: 1, height: 1,
+                        background: i === 0 ? 'transparent' : 'linear-gradient(to right, transparent, var(--border), transparent)',
+                      }} />
                     </div>
                     <div style={{
-                      flex: 1, color: 'var(--text)', fontSize: '0.85rem',
-                      lineHeight: 1.7, borderLeft: '2px solid rgba(45,212,191,0.2)',
-                      paddingLeft: 12,
+                      color: 'var(--text)', fontSize: '0.85rem',
+                      lineHeight: 1.7, paddingLeft: 8,
+                      animation: i === chunks.length - 1 ? 'slideUpItem 0.3s ease-out' : 'none',
                     }}>
                       {chunk.text}
                     </div>
@@ -698,13 +1173,14 @@ export default function LiveMeeting({ onClose }) {
           </div>
         </div>
 
-        {/* Right panel — Activity Feed (40%) */}
+        {/* Right panel — Activity Feed with Tabs (40%) */}
         <div style={{
           flex: '0 0 40%', display: 'flex', flexDirection: 'column',
           overflow: 'hidden',
         }} className="live-meeting-activity-panel">
+          {/* Panel header */}
           <div style={{
-            padding: '12px 20px', borderBottom: '1px solid var(--border)',
+            padding: '10px 20px', borderBottom: 'none',
             display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
             background: 'rgba(0,0,0,0.15)',
           }}>
@@ -712,70 +1188,112 @@ export default function LiveMeeting({ onClose }) {
             <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.85rem' }}>
               Lobs Activity
             </span>
-            <span style={{ color: 'var(--faint)', fontSize: '0.75rem', marginLeft: 'auto' }}>
+            <span style={{ color: 'var(--faint)', fontSize: '0.72rem', marginLeft: 'auto' }}>
               {insights.length} item{insights.length !== 1 ? 's' : ''}
             </span>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
-            <RunningSummary summary={runningSummary} />
-            <TopicsList topics={topics} />
+          {/* Tab bar */}
+          <TabBar tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
-            {actionItems.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{
-                  color: '#60a5fa', fontSize: '0.72rem', fontWeight: 700,
-                  textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8,
-                  display: 'flex', alignItems: 'center', gap: 6,
+          {/* Research in progress indicator */}
+          {pendingResearch.filter(r => r.status !== 'done').length > 0 && (
+            <div style={{
+              padding: '8px 16px',
+              background: 'rgba(96, 165, 250, 0.08)',
+              borderBottom: '1px solid rgba(96, 165, 250, 0.15)',
+              display: 'flex', flexDirection: 'column', gap: 4,
+            }}>
+              {pendingResearch.filter(r => r.status !== 'done').map((r, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  color: '#60a5fa', fontSize: '0.75rem',
                 }}>
-                  <span>✅</span> Action Items ({actionItems.length})
+                  <span style={{
+                    display: 'inline-block', width: 6, height: 6,
+                    borderRadius: '50%', background: '#60a5fa',
+                    animation: 'pulse 1.5s ease-in-out infinite',
+                  }} />
+                  <span style={{ fontWeight: 600 }}>Researching:</span>
+                  <span style={{ color: 'var(--text)', opacity: 0.8 }}>{r.query || r.topic}</span>
                 </div>
-                {actionItems.map((item, i) => (
-                  <ActivityItem
-                    key={item._id || i}
-                    item={item}
-                    isNew={newItemsRef.current.has(item._id)}
-                  />
-                ))}
-              </div>
-            )}
+              ))}
+            </div>
+          )}
 
-            {otherInsights.length > 0 && (
-              <div>
-                {actionItems.length > 0 && (
+          {/* Tab content */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+            {/* Summary tab */}
+            {activeTab === 'summary' && (
+              <div style={{ animation: 'slideUpItem 0.2s ease-out' }}>
+                <RunningSummary summary={runningSummary} />
+                <TopicsList topics={topics} />
+                {!runningSummary && topics.length === 0 && (
                   <div style={{
-                    color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 700,
-                    textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    justifyContent: 'center', paddingTop: 60, color: 'var(--faint)',
+                    textAlign: 'center',
                   }}>
-                    Insights
+                    <span style={{ fontSize: '1.5rem', marginBottom: 8, opacity: 0.5 }}>📊</span>
+                    <div style={{ fontSize: '0.82rem' }}>Summary building…</div>
+                    <div style={{ fontSize: '0.72rem', marginTop: 4, maxWidth: 200, opacity: 0.7 }}>
+                      A running summary and topics will appear as the meeting progresses
+                    </div>
                   </div>
                 )}
-                {otherInsights.map((item, i) => (
-                  <ActivityItem
-                    key={item._id || i}
-                    item={item}
-                    isNew={newItemsRef.current.has(item._id)}
-                  />
-                ))}
               </div>
             )}
 
-            {insights.length === 0 && !runningSummary && (
-              <div style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center',
-                justifyContent: 'center', height: '60%', color: 'var(--faint)',
-                textAlign: 'center',
-              }}>
-                {isRecording ? (
-                  <>
-                    <span style={{ fontSize: '1.5rem', marginBottom: 8 }}>🧠</span>
-                    <div style={{ fontSize: '0.82rem' }}>Lobs is analyzing…</div>
-                    <div style={{ fontSize: '0.72rem', marginTop: 4, maxWidth: 220 }}>
-                      Insights, action items, and notes will appear here as the conversation unfolds
-                    </div>
-                  </>
+            {/* Actions tab */}
+            {activeTab === 'actions' && (
+              <div style={{ animation: 'slideUpItem 0.2s ease-out' }}>
+                {actionItems.length > 0 ? (
+                  actionItems.map((item, i) => (
+                    <ActivityItem
+                      key={item._id || i}
+                      item={item}
+                      isNew={newItemsRef.current.has(item._id)}
+                    />
+                  ))
                 ) : (
-                  <div style={{ fontSize: '0.85rem' }}>No insights generated.</div>
+                  <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    justifyContent: 'center', paddingTop: 60, color: 'var(--faint)',
+                    textAlign: 'center',
+                  }}>
+                    <span style={{ fontSize: '1.5rem', marginBottom: 8, opacity: 0.5 }}>✅</span>
+                    <div style={{ fontSize: '0.82rem' }}>No action items yet</div>
+                    <div style={{ fontSize: '0.72rem', marginTop: 4, maxWidth: 200, opacity: 0.7 }}>
+                      Lobs will extract action items as they come up in discussion
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Insights tab */}
+            {activeTab === 'insights' && (
+              <div style={{ animation: 'slideUpItem 0.2s ease-out' }}>
+                {otherInsights.length > 0 ? (
+                  otherInsights.map((item, i) => (
+                    <ActivityItem
+                      key={item._id || i}
+                      item={item}
+                      isNew={newItemsRef.current.has(item._id)}
+                    />
+                  ))
+                ) : (
+                  <div style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    justifyContent: 'center', paddingTop: 60, color: 'var(--faint)',
+                    textAlign: 'center',
+                  }}>
+                    <span style={{ fontSize: '1.5rem', marginBottom: 8, opacity: 0.5 }}>🧠</span>
+                    <div style={{ fontSize: '0.82rem' }}>No insights yet</div>
+                    <div style={{ fontSize: '0.72rem', marginTop: 4, maxWidth: 220, opacity: 0.7 }}>
+                      Notes, flags, context, and questions will appear here as Lobs analyzes
+                    </div>
+                  </div>
                 )}
               </div>
             )}
