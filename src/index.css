@@ -309,10 +309,13 @@ select.nx-input { cursor: pointer; }
 .btn-success:hover { background: rgba(52,211,153,0.2); }
 
 .modal-backdrop {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  position: fixed; top: 0; right: 0; bottom: 0;
+  left: var(--sidebar-width, 0px);
+  background: rgba(0,0,0,0.75);
   backdrop-filter: blur(8px); z-index: 1000;
   display: flex; align-items: center; justify-content: center;
   animation: fadeInUp 0.15s ease;
+  transition: left 0.25s ease;
 }
 .modal-box {
   background: rgba(9,13,26,0.98); border: 1px solid rgba(45,212,191,0.2);

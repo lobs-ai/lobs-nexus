@@ -16,6 +16,12 @@ export default function Layout({ systemStatus }) {
     return () => window.removeEventListener('resize', handler);
   }, []);
 
+  // Keep --sidebar-width CSS var in sync so modals/popups can offset correctly
+  useEffect(() => {
+    const width = isMobile ? '0px' : collapsed ? '64px' : '240px';
+    document.documentElement.style.setProperty('--sidebar-width', width);
+  }, [collapsed, isMobile]);
+
   useEffect(() => {
     const onKey = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
