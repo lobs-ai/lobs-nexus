@@ -50,6 +50,7 @@ function SuggestionCard({ item, onRefresh }) {
         project_id: 'lobs',
         external_source: 'suggestion',
         external_id: item.id,
+        model_tier: 'standard',
       });
       await api.updateSuggestion(item.id, { status: 'planned' });
       await onRefresh();
