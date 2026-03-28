@@ -48,6 +48,8 @@ function SuggestionCard({ item, onRefresh }) {
           ? `Feature request from lobslab.com:\n\n**${item.title}**\n\n${item.description}`
           : `Feature request from lobslab.com: ${item.title}`,
         project_id: 'lobs',
+        external_source: 'suggestion',
+        external_id: item.id,
       });
       await api.updateSuggestion(item.id, { status: 'planned' });
       await onRefresh();
