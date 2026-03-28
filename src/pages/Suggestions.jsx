@@ -44,10 +44,10 @@ function SuggestionCard({ item, onRefresh }) {
     try {
       await api.createTask({
         title: `[Suggestion] ${item.title}`,
-        description: item.description
+        notes: item.description
           ? `Feature request from lobslab.com:\n\n**${item.title}**\n\n${item.description}`
           : `Feature request from lobslab.com: ${item.title}`,
-        project: 'lobs',
+        project_id: 'lobs',
       });
       await api.updateSuggestion(item.id, { status: 'planned' });
       await onRefresh();
