@@ -231,6 +231,7 @@ export const api = {
   structuredMemoryStats: (signal) => reqSafe('/api/structured-memory/stats', { signal }, {}),
   structuredMemories: (params, signal) => reqSafe(`/api/structured-memory/memories?${new URLSearchParams(params)}`, { signal }, { memories: [], total: 0 }),
   structuredConflicts: (status, signal) => reqSafe(`/api/structured-memory/conflicts?status=${status || 'open'}`, { signal }, { conflicts: [] }),
+  resolveConflict: (id, body) => req(`/api/structured-memory/conflicts/${id}/resolve`, { method: 'POST', body }),
   structuredGcLog: (limit, signal) => reqSafe(`/api/structured-memory/gc-log?limit=${limit || 20}`, { signal }, { entries: [] }),
   structuredEvents: (limit, signal) => reqSafe(`/api/structured-memory/events?limit=${limit || 20}`, { signal }, { events: [] }),
 };

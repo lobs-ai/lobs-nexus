@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import GlassCard from '../components/GlassCard';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
@@ -121,7 +121,7 @@ function MemoryDetail({ mem }) {
         <Badge label={mem.memory_type} color={typeColor(mem.memory_type)} />
         <Badge label={mem.status} color={statusColor(mem.status)} />
         {mem.scope && <Badge label={mem.scope} color="var(--muted)" />}
-        <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--faint)', fontFamily: 'var(--mono)' }}>id #{mem.id}</span>
+        <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--faint)', fontFamily: 'var(--mono)' }}>#{mem.id}</span>
       </div>
 
       <div style={{ background: 'rgba(8,12,24,0.9)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px', marginBottom: 16 }}>
@@ -162,12 +162,20 @@ function MemoryDetail({ mem }) {
 function MemoriesPane() {
   const [statusFilter, setStatusFilter] = useState('active');
   const [typeFilter, setTypeFilter] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState(null);
   const LIMIT = 25;
 
-  // Offset is reset by the onChange handlers below (no effect needed)
+  // Debounce search input — fire query 300ms after typing stops
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearch(searchInput);
+      setOffset(0);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const params = { limit: LIMIT, offset };
   if (statusFilter) params.status = statusFilter;
@@ -211,8 +219,15 @@ function MemoriesPane() {
         <select className="nx-select" value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setOffset(0); }} style={{ minWidth: 140 }}>
           {typeOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
-        <input className="nx-input" value={search} onChange={e => { setSearch(e.target.value); setOffset(0); }} placeholder="Search content…" style={{ flex: 1, minWidth: 200, maxWidth: 400 }} />
-        <span style={{ color: 'var(--muted)', fontSize: '0.78rem', fontFamily: 'var(--mono)', marginLeft: 'auto' }}>{total} total</span>
+        <div style={{ position: 'relative', flex: 1, minWidth: 200, maxWidth: 400 }}>
+          <svg style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 14, height: 14, color: 'var(--muted)', pointerEvents: 'none' }} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="9" cy="9" r="6" /><line x1="15" y1="15" x2="19" y2="19" />
+          </svg>
+          <input className="nx-input" value={searchInput} onChange={e => setSearchInput(e.target.value)} placeholder="Search content…" style={{ width: '100%', paddingLeft: 30, boxSizing: 'border-box' }} />
+        </div>
+        <span style={{ color: 'var(--muted)', fontSize: '0.78rem', fontFamily: 'var(--mono)', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+          {search ? `${total} result${total !== 1 ? 's' : ''} for '${search}'` : `${total} total`}
+        </span>
       </div>
 
       {loading ? (
@@ -228,7 +243,7 @@ function MemoriesPane() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {memories.map(m => (
             <GlassCard key={m.id} onClick={() => setSelected(m)} style={{ cursor: 'pointer' }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 10 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8 }}>
                 <span style={{
                   background: typeColor(m.memory_type) + '22',
                   color: typeColor(m.memory_type),
@@ -245,7 +260,11 @@ function MemoriesPane() {
                 }}>{m.status}</span>
                 <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--faint)', fontFamily: 'var(--mono)' }}>{m.derived_at ? timeAgo(m.derived_at) : (m.created_at ? timeAgo(m.created_at) : '')}</span>
               </div>
-              <p style={{ color: 'var(--text)', fontSize: '0.85rem', lineHeight: 1.6, margin: '0 0 10px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+              {/* Title row — bold heading or content preview fallback */}
+              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)', marginBottom: 4, lineHeight: 1.4 }}>
+                {m.title || m.content.slice(0, 60) + (m.content.length > 60 ? '…' : '')}
+              </div>
+              <p style={{ color: 'var(--muted)', fontSize: '0.82rem', lineHeight: 1.6, margin: '0 0 10px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                 {m.content.length > 150 ? m.content.slice(0, 150) + '…' : m.content}
               </p>
               <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
@@ -269,7 +288,7 @@ function MemoriesPane() {
         </div>
       )}
 
-      <Modal large open={!!selected} onClose={() => setSelected(null)} title={selected ? `Memory #${selected.id}` : ''}>
+      <Modal large open={!!selected} onClose={() => setSelected(null)} title={selected ? (selected.title || `Memory #${selected.id}`) : ''}>
         <MemoryDetail mem={selected} />
       </Modal>
     </div>
@@ -350,8 +369,105 @@ function RecentActivity() {
 // ConflictsPane
 // ---------------------------------------------------------------------------
 
+// Resolution pill button
+function ResolveBtn({ label, accentBg, accentText, accentBorder, onClick, disabled }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        padding: '3px 12px',
+        borderRadius: 999,
+        border: `1px solid ${hover && !disabled ? accentBorder : 'var(--border)'}`,
+        background: hover && !disabled ? accentBg : 'transparent',
+        color: hover && !disabled ? accentText : 'var(--muted)',
+        fontSize: '0.72rem',
+        fontWeight: 600,
+        cursor: disabled ? 'default' : 'pointer',
+        transition: 'all 0.15s',
+        opacity: disabled ? 0.4 : 1,
+        letterSpacing: '0.02em',
+      }}
+    >{label}</button>
+  );
+}
+
+// Single conflict card with resolution controls
+function ConflictCard({ c, onResolved }) {
+  const [resolving, setResolving] = useState(false);
+  const [resolved, setResolved] = useState(false);
+
+  async function resolve(winner) {
+    setResolving(true);
+    try {
+      const labelMap = { a: 'A', b: 'B', both: 'both' };
+      await api.resolveConflict(c.id, { winner, resolution: `Kept ${labelMap[winner]} via Nexus` });
+      setResolved(true);
+      // Brief success state, then notify parent to refetch
+      setTimeout(() => onResolved(), 800);
+    } catch (e) {
+      console.error('resolve conflict failed', e);
+      setResolving(false);
+    }
+  }
+
+  return (
+    <div style={{
+      padding: '12px 16px',
+      background: resolved ? 'rgba(74,222,128,0.06)' : 'rgba(239,68,68,0.04)',
+      border: `1px solid ${resolved ? 'rgba(74,222,128,0.3)' : 'rgba(239,68,68,0.2)'}`,
+      borderRadius: 10,
+      transition: 'background 0.3s, border-color 0.3s',
+    }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+        <Badge label={resolved ? 'resolved' : (c.status ?? 'open')} color={resolved ? '#4ade80' : '#ef4444'} />
+        {c.conflict_type && <Badge label={c.conflict_type} color="var(--muted)" />}
+        <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--faint)', fontFamily: 'var(--mono)' }}>
+          {c.detected_at ? timeAgo(c.detected_at) : ''}
+        </span>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+        <div style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '2px', color: 'var(--teal)', fontFamily: 'var(--mono)', marginBottom: 6 }}>MEMORY A #{c.memory_a_id}</div>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text)', lineHeight: 1.6 }}>{c.memory_a_content ?? '—'}</p>
+          {c.memory_a_confidence != null && (
+            <div style={{ marginTop: 8 }}>
+              <ConfBar value={c.memory_a_confidence} color="var(--teal)" />
+            </div>
+          )}
+        </div>
+        <div style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid var(--border)' }}>
+          <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '2px', color: '#ec4899', fontFamily: 'var(--mono)', marginBottom: 6 }}>MEMORY B #{c.memory_b_id}</div>
+          <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text)', lineHeight: 1.6 }}>{c.memory_b_content ?? '—'}</p>
+          {c.memory_b_confidence != null && (
+            <div style={{ marginTop: 8 }}>
+              <ConfBar value={c.memory_b_confidence} color="#ec4899" />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Resolution actions */}
+      {resolved ? (
+        <div style={{ fontSize: '0.75rem', color: '#4ade80', fontWeight: 600 }}>✓ Resolved</div>
+      ) : (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: '0.7rem', color: 'var(--faint)', fontFamily: 'var(--mono)', marginRight: 4 }}>resolve:</span>
+          <ResolveBtn label="Keep A" accentBg="rgba(45,212,191,0.12)" accentText="var(--teal)" accentBorder="rgba(45,212,191,0.4)" onClick={() => resolve('a')} disabled={resolving} />
+          <ResolveBtn label="Keep B" accentBg="rgba(236,72,153,0.12)" accentText="#ec4899" accentBorder="rgba(236,72,153,0.4)" onClick={() => resolve('b')} disabled={resolving} />
+          <ResolveBtn label="Keep Both" accentBg="rgba(255,255,255,0.06)" accentText="var(--text)" accentBorder="rgba(255,255,255,0.2)" onClick={() => resolve('both')} disabled={resolving} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ConflictsPane() {
-  const { data, loading } = useApi(signal => api.structuredConflicts('open', signal), []);
+  const { data, loading, reload } = useApi(signal => api.structuredConflicts('open', signal), []);
   const conflicts = data?.conflicts ?? [];
 
   return (
@@ -367,35 +483,7 @@ function ConflictsPane() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {conflicts.map(c => (
-            <div key={c.id} style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10 }}>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-                <Badge label={c.status ?? 'open'} color="#ef4444" />
-                {c.conflict_type && <Badge label={c.conflict_type} color="var(--muted)" />}
-                <span style={{ marginLeft: 'auto', fontSize: '0.72rem', color: 'var(--faint)', fontFamily: 'var(--mono)' }}>
-                  {c.detected_at ? timeAgo(c.detected_at) : ''}
-                </span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '2px', color: 'var(--teal)', fontFamily: 'var(--mono)', marginBottom: 6 }}>MEMORY A #{c.memory_a_id}</div>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text)', lineHeight: 1.6 }}>{c.memory_a_content ?? '—'}</p>
-                  {c.memory_a_confidence != null && (
-                    <div style={{ marginTop: 8 }}>
-                      <ConfBar value={c.memory_a_confidence} color="var(--teal)" />
-                    </div>
-                  )}
-                </div>
-                <div style={{ padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '2px', color: '#ec4899', fontFamily: 'var(--mono)', marginBottom: 6 }}>MEMORY B #{c.memory_b_id}</div>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text)', lineHeight: 1.6 }}>{c.memory_b_content ?? '—'}</p>
-                  {c.memory_b_confidence != null && (
-                    <div style={{ marginTop: 8 }}>
-                      <ConfBar value={c.memory_b_confidence} color="#ec4899" />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <ConflictCard key={c.id} c={c} onResolved={reload} />
           ))}
         </div>
       )}
