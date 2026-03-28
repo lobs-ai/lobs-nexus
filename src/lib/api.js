@@ -192,6 +192,11 @@ export const api = {
   deleteCard: (id) => req(`/api/learning/cards/${id}`, { method: 'DELETE' }),
   learningStats: (signal) => reqSafe('/api/learning/stats', { signal }, {}),
 
+  // Suggestions (feature requests from home.lobslab.com)
+  suggestions: (signal) => reqSafe('/api/suggestions', { signal }, []),
+  updateSuggestion: (id, body) => req(`/api/suggestions/${id}`, { method: 'PATCH', body }),
+  deleteSuggestion: (id) => req(`/api/suggestions/${id}`, { method: 'DELETE' }),
+
   // Quick Capture (endpoint not yet implemented — graceful stubs)
   capture: (body) => reqSafe('/api/capture', { method: 'POST', body }),
   recentCaptures: (limit, signal) => reqSafe(`/api/capture/recent?limit=${limit || 10}`, { signal }, []),
