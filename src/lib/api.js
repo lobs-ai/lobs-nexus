@@ -230,6 +230,16 @@ export const api = {
   // Structured Memory (memory.db)
   structuredMemoryStats: (signal) => reqSafe('/api/structured-memory/stats', { signal }, {}),
   structuredMemories: (params, signal) => reqSafe(`/api/structured-memory/memories?${new URLSearchParams(params)}`, { signal }, { memories: [], total: 0 }),
+  structuredMemorySearch: (q, options = {}, signal) => {
+    const params = new URLSearchParams({ q });
+    if (options.mode) params.set('mode', options.mode);
+    if (options.limit) params.set('limit', String(options.limit));
+    if (options.types) params.set('types', options.types);
+    if (options.scope) params.set('scope', options.scope);
+    if (options.minConfidence != null) params.set('minConfidence', String(options.minConfidence));
+    if (options.includeSuperseded) params.set('includeSuperseded', 'true');
+    return reqSafe(`/api/structured-memory/search?${params}`, { signal }, { results: [], query: q, mode: 'fast', count: 0 });
+  },
   structuredConflicts: (status, signal) => reqSafe(`/api/structured-memory/conflicts?status=${status || 'open'}`, { signal }, { conflicts: [] }),
   resolveConflict: (id, body) => req(`/api/structured-memory/conflicts/${id}/resolve`, { method: 'POST', body }),
   structuredGcLog: (limit, signal) => reqSafe(`/api/structured-memory/gc-log?limit=${limit || 20}`, { signal }, { entries: [] }),

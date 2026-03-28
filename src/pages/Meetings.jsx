@@ -515,6 +515,98 @@ function ShareButton({ meeting, actionItems }) {
   );
 }
 
+// ── MeetingInsightsTab ─────────────────────────────────────────────────────
+// Renders persisted live-session insights (notes, flags, actions, etc.)
+// and topic pills. Mirrors the ActivityItem + TopicsList style from LiveMeeting.jsx.
+const INSIGHT_ICONS = {
+  note: '📝', action: '✅', flag: '⚠️', context: '🔍', question: '❓',
+  research: '🔬', suggestion: '💡',
+};
+const INSIGHT_COLORS = {
+  note: 'var(--teal)', action: '#60a5fa', flag: '#fbbf24',
+  context: '#a78bfa', question: '#fb923c',
+  research: '#22d3ee', suggestion: '#34d399',
+};
+
+function MeetingInsightsTab({ meeting }) {
+  const insights = (() => {
+    try { return JSON.parse(meeting.insights || '[]'); } catch { return []; }
+  })();
+  const topics = (() => {
+    try { return JSON.parse(meeting.topics || '[]'); } catch { return []; }
+  })();
+
+  if (insights.length === 0 && topics.length === 0) {
+    return <div style={{ color: 'var(--faint)', fontSize: '0.85rem', fontStyle: 'italic' }}>No insights recorded for this meeting.</div>;
+  }
+
+  return (
+    <div>
+      {/* Topics pills */}
+      {topics.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Topics</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {topics.map((topic, i) => {
+              const hue = (i * 47) % 360;
+              const c = `hsl(${hue}, 70%, 65%)`;
+              return (
+                <span key={i} style={{
+                  background: `${c}18`, border: `1px solid ${c}40`,
+                  borderRadius: 12, padding: '3px 10px', color: c,
+                  fontSize: '0.72rem', fontWeight: 600,
+                }}>{topic}</span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Insight items */}
+      {insights.length > 0 && (
+        <div>
+          <div style={{ color: 'var(--muted)', fontSize: '0.72rem', fontWeight: 600, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Insights ({insights.length})</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {insights.map((item, i) => {
+              const color = INSIGHT_COLORS[item.type] || 'var(--muted)';
+              const icon = INSIGHT_ICONS[item.type] || '💬';
+              return (
+                <div key={i} style={{
+                  background: `${color}0d`, border: `1px solid ${color}30`,
+                  borderRadius: 8, padding: '8px 12px',
+                  display: 'flex', flexDirection: 'column', gap: 4,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.85rem' }}>{icon}</span>
+                    <span style={{
+                      color, fontSize: '0.72rem', fontWeight: 700,
+                      textTransform: 'uppercase', letterSpacing: '0.04em',
+                    }}>{item.type}</span>
+                    {item.assignee && (
+                      <span style={{
+                        background: 'rgba(255,255,255,0.08)', borderRadius: 4,
+                        padding: '1px 6px', color: 'var(--faint)', fontSize: '0.7rem',
+                      }}>@{item.assignee}</span>
+                    )}
+                    {item.priority && (
+                      <span style={{
+                        background: item.priority === 'high' ? 'rgba(239,68,68,0.15)' : item.priority === 'medium' ? 'rgba(251,191,36,0.15)' : 'rgba(100,116,139,0.15)',
+                        color: item.priority === 'high' ? '#ef4444' : item.priority === 'medium' ? '#fbbf24' : 'var(--muted)',
+                        borderRadius: 4, padding: '1px 6px', fontSize: '0.7rem', fontWeight: 600,
+                      }}>{item.priority}</span>
+                    )}
+                  </div>
+                  <div style={{ color: 'var(--text)', fontSize: '0.83rem', lineHeight: 1.5 }}>{item.content}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TranscriptItem({ meeting: initialMeeting, onDelete }) {
   const [meeting, setMeeting] = useState(initialMeeting);
   const [expanded, setExpanded] = useState(false);
@@ -783,7 +875,7 @@ function TranscriptItem({ meeting: initialMeeting, onDelete }) {
         <div style={{ borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.15)' }}>
           {/* Tabs + Share */}
           <div style={{ display: 'flex', alignItems: 'center', padding: '8px 16px 0', gap: 4 }}>
-            {['summary', 'transcript'].map(t => (
+            {['summary', 'transcript', ...(meeting.insights ? ['insights'] : [])].map(t => (
               <button key={t} onClick={() => setTab(t)} style={{
                 background: tab === t ? 'rgba(45,212,191,0.15)' : 'transparent',
                 border: tab === t ? '1px solid rgba(45,212,191,0.3)' : '1px solid transparent',
@@ -796,7 +888,9 @@ function TranscriptItem({ meeting: initialMeeting, onDelete }) {
           </div>
 
           <div style={{ padding: 16, maxHeight: 500, overflowY: 'auto' }}>
-            {tab === 'summary' ? (
+            {tab === 'insights' ? (
+              <MeetingInsightsTab meeting={meeting} />
+            ) : tab === 'summary' ? (
               <>
                 {meeting.summary ? (
                   <div style={{

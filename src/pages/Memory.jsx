@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import GlassCard from '../components/GlassCard';
 import Badge from '../components/Badge';
 import Modal from '../components/Modal';
@@ -151,6 +151,301 @@ function MemoryDetail({ mem }) {
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// SearchPane — relevance-ranked search (FTS5 + vector)
+// ---------------------------------------------------------------------------
+
+const MATCH_TYPE_COLORS = {
+  fts:    { bg: 'rgba(45,212,191,0.15)', text: 'var(--teal)',   border: 'rgba(45,212,191,0.35)', label: 'FTS' },
+  vector: { bg: 'rgba(139,92,246,0.15)', text: 'var(--purple)', border: 'rgba(139,92,246,0.35)', label: 'Vector' },
+  hybrid: { bg: 'rgba(59,130,246,0.15)', text: 'var(--blue)',   border: 'rgba(59,130,246,0.35)', label: 'Hybrid' },
+};
+
+function ScoreBar({ score, style: extraStyle }) {
+  const pct = Math.round((score ?? 0) * 100);
+  const color = pct >= 70 ? '#4ade80' : pct >= 40 ? '#f59e0b' : '#ef4444';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, ...extraStyle }}>
+      <div style={{ flex: 1, height: 3, background: 'rgba(255,255,255,0.07)', borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 4, transition: 'width 0.3s' }} />
+      </div>
+      <span style={{ fontSize: '0.68rem', color, fontFamily: 'var(--mono)', minWidth: 30, textAlign: 'right' }}>{pct}%</span>
+    </div>
+  );
+}
+
+const MEMORY_TYPE_OPTS = ['fact', 'decision', 'learning', 'pattern', 'preference'];
+
+function SearchPane() {
+  const [inputVal, setInputVal]         = useState('');
+  const [query, setQuery]               = useState('');
+  const [mode, setMode]                 = useState('fast');
+  const [showFilters, setShowFilters]   = useState(false);
+  const [selectedTypes, setSelectedTypes] = useState([]);
+  const [minConf, setMinConf]           = useState(0.3);
+  const [inclSuperseded, setInclSuperseded] = useState(false);
+  const [results, setResults]           = useState([]);
+  const [searching, setSearching]       = useState(false);
+  const [elapsedMs, setElapsedMs]       = useState(null);
+  const [hasSearched, setHasSearched]   = useState(false);
+  const [selected, setSelected]         = useState(null);
+
+  const abortRef = useRef(null);
+
+  const doSearch = useCallback(async (q, opts) => {
+    if (!q.trim()) {
+      setResults([]);
+      setHasSearched(false);
+      setElapsedMs(null);
+      return;
+    }
+
+    // Abort previous in-flight request
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setSearching(true);
+    setHasSearched(true);
+
+    try {
+      const data = await api.structuredMemorySearch(q, opts, controller.signal);
+      if (controller.signal.aborted) return;
+      setResults(data.results ?? []);
+      setElapsedMs(data.elapsedMs ?? null);
+    } catch {
+      if (!controller.signal.aborted) {
+        setResults([]);
+      }
+    } finally {
+      if (!controller.signal.aborted) setSearching(false);
+    }
+  }, []);
+
+  // Debounce: fire 300ms after typing stops
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setQuery(inputVal);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [inputVal]);
+
+  // Re-search when query or any filter changes
+  useEffect(() => {
+    doSearch(query, {
+      mode,
+      limit: 20,
+      types: selectedTypes.length > 0 ? selectedTypes.join(',') : undefined,
+      minConfidence: minConf,
+      includeSuperseded: inclSuperseded,
+    });
+  }, [query, mode, selectedTypes, minConf, inclSuperseded, doSearch]);
+
+  function toggleType(t) {
+    setSelectedTypes(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+  }
+
+  return (
+    <div>
+      {/* ── Search bar ─────────────────────────────────────────────────────── */}
+      <GlassCard style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
+          {/* Search input */}
+          <div style={{ position: 'relative', flex: 1 }}>
+            <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', width: 18, height: 18, color: 'var(--muted)', pointerEvents: 'none' }}
+              viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="9" cy="9" r="6" /><line x1="15" y1="15" x2="19" y2="19" />
+            </svg>
+            <input
+              className="nx-input"
+              value={inputVal}
+              onChange={e => setInputVal(e.target.value)}
+              placeholder="Search memories… try 'API design decisions' or 'Rafe preferences'"
+              style={{ width: '100%', paddingLeft: 38, paddingTop: 10, paddingBottom: 10, fontSize: '1rem', boxSizing: 'border-box' }}
+              autoFocus
+            />
+          </div>
+
+          {/* Mode toggle */}
+          <div style={{ display: 'flex', gap: 4, background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: 3, border: '1px solid var(--border)', flexShrink: 0 }}>
+            {[{ id: 'fast', label: '⚡ Fast' }, { id: 'full', label: '🔮 Full' }].map(m => (
+              <button key={m.id} onClick={() => setMode(m.id)} style={{
+                padding: '4px 14px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: '0.78rem', fontFamily: 'var(--font)',
+                background: mode === m.id ? 'rgba(255,255,255,0.10)' : 'transparent',
+                color: mode === m.id ? 'var(--text)' : 'var(--muted)',
+                fontWeight: mode === m.id ? 700 : 400,
+                transition: 'all 0.15s',
+                boxShadow: mode === m.id ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
+                whiteSpace: 'nowrap',
+              }}>{m.label}</button>
+            ))}
+          </div>
+
+          {/* Filters toggle */}
+          <button onClick={() => setShowFilters(v => !v)} style={{
+            padding: '6px 14px', borderRadius: 8, border: `1px solid ${showFilters ? 'rgba(45,212,191,0.4)' : 'var(--border)'}`,
+            background: showFilters ? 'rgba(45,212,191,0.08)' : 'transparent',
+            color: showFilters ? 'var(--teal)' : 'var(--muted)',
+            cursor: 'pointer', fontSize: '0.78rem', fontFamily: 'var(--font)', fontWeight: 600,
+            transition: 'all 0.15s', flexShrink: 0,
+          }}>⚙ Filters{selectedTypes.length > 0 ? ` (${selectedTypes.length})` : ''}</button>
+        </div>
+
+        {/* ── Collapsible filter row ────────────────────────────────────────── */}
+        {showFilters && (
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
+            {/* Type chips */}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--muted)', fontFamily: 'var(--mono)', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase' }}>Type</span>
+              {MEMORY_TYPE_OPTS.map(t => {
+                const active = selectedTypes.includes(t);
+                const c = typeColor(t);
+                return (
+                  <button key={t} onClick={() => toggleType(t)} style={{
+                    padding: '3px 11px', borderRadius: 99, border: `1px solid ${active ? c + '66' : 'var(--border)'}`,
+                    background: active ? c + '1a' : 'transparent',
+                    color: active ? c : 'var(--muted)',
+                    cursor: 'pointer', fontSize: '0.75rem', fontFamily: 'var(--font)', fontWeight: active ? 700 : 400,
+                    textTransform: 'capitalize', transition: 'all 0.15s',
+                  }}>{t}</button>
+                );
+              })}
+            </div>
+
+            {/* Confidence slider */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--muted)', fontFamily: 'var(--mono)', fontWeight: 700, letterSpacing: '2px', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Min Conf</span>
+              <input type="range" min={0} max={1} step={0.05} value={minConf}
+                onChange={e => setMinConf(parseFloat(e.target.value))}
+                style={{ width: 100, accentColor: 'var(--teal)', cursor: 'pointer' }} />
+              <span style={{ fontSize: '0.72rem', color: 'var(--teal)', fontFamily: 'var(--mono)', minWidth: 32 }}>{Math.round(minConf * 100)}%</span>
+            </div>
+
+            {/* Superseded toggle */}
+            <label style={{ display: 'flex', gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+              <input type="checkbox" checked={inclSuperseded} onChange={e => setInclSuperseded(e.target.checked)}
+                style={{ accentColor: 'var(--teal)', width: 14, height: 14 }} />
+              <span style={{ fontSize: '0.75rem', color: 'var(--muted)', fontFamily: 'var(--font)' }}>Include superseded</span>
+            </label>
+          </div>
+        )}
+      </GlassCard>
+
+      {/* ── Status bar ─────────────────────────────────────────────────────── */}
+      {hasSearched && (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 14, minHeight: 22 }}>
+          {searching ? (
+            <span style={{ color: 'var(--muted)', fontSize: '0.78rem', fontFamily: 'var(--mono)' }}>Searching…</span>
+          ) : (
+            <>
+              <span style={{ color: 'var(--muted)', fontSize: '0.78rem', fontFamily: 'var(--mono)' }}>
+                <span style={{ color: 'var(--text)', fontWeight: 700 }}>{results.length}</span> result{results.length !== 1 ? 's' : ''}
+                {elapsedMs != null && <> in <span style={{ color: 'var(--teal)' }}>{elapsedMs}ms</span></>}
+              </span>
+              {mode === 'fast' && results.length === 0 && query && (
+                <span style={{ fontSize: '0.72rem', color: 'var(--purple)', fontFamily: 'var(--mono)' }}>💡 Try Full mode for semantic search</span>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ── Results ────────────────────────────────────────────────────────── */}
+      {!hasSearched ? (
+        <GlassCard>
+          <div style={{ padding: '48px 0', textAlign: 'center' }}>
+            <div style={{ fontSize: '2.5rem', marginBottom: 16, opacity: 0.25 }}>🔍</div>
+            <div style={{ color: 'var(--muted)', fontSize: '0.92rem', lineHeight: 1.8 }}>
+              Search your memory base.<br />
+              <span style={{ color: 'var(--faint)', fontSize: '0.82rem' }}>Try <em>"API design decisions"</em>, <em>"Rafe preferences"</em>, or <em>"auth approach"</em></span>
+            </div>
+          </div>
+        </GlassCard>
+      ) : !searching && results.length === 0 ? (
+        <GlassCard>
+          <div style={{ padding: '40px 0', textAlign: 'center' }}>
+            <div style={{ fontSize: '2rem', marginBottom: 12, opacity: 0.25 }}>🫙</div>
+            <div style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+              No memories match <em style={{ color: 'var(--text)' }}>&ldquo;{query}&rdquo;</em>
+            </div>
+            <div style={{ color: 'var(--faint)', fontSize: '0.78rem', marginTop: 8 }}>
+              {mode === 'fast' ? 'Try different keywords, or switch to Full mode for semantic search.' : 'Try different keywords or relax your filters.'}
+            </div>
+          </div>
+        </GlassCard>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {results.map((r, i) => {
+            const mtc = MATCH_TYPE_COLORS[r.matchType] ?? MATCH_TYPE_COLORS.fts;
+            const tc  = typeColor(r.memory_type);
+            return (
+              <GlassCard key={r.id ?? i} onClick={() => setSelected(r)} style={{ cursor: 'pointer' }}>
+                {/* Top row: score bar + badges + time */}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+                  {/* Score bar */}
+                  <div style={{ flex: '0 0 120px' }}>
+                    <ScoreBar score={r.score} />
+                  </div>
+
+                  {/* Match type badge */}
+                  <span style={{
+                    background: mtc.bg, color: mtc.text, border: `1px solid ${mtc.border}`,
+                    padding: '1px 8px', borderRadius: 4, fontSize: '0.68rem', fontWeight: 700,
+                    letterSpacing: '0.04em', whiteSpace: 'nowrap',
+                  }}>{mtc.label}</span>
+
+                  {/* Memory type badge */}
+                  <span style={{
+                    background: tc + '22', color: tc, border: `1px solid ${tc}44`,
+                    padding: '1px 8px', borderRadius: 4, fontSize: '0.68rem', fontWeight: 700,
+                    textTransform: 'capitalize', whiteSpace: 'nowrap',
+                  }}>{r.memory_type}</span>
+
+                  <span style={{ marginLeft: 'auto', fontSize: '0.68rem', color: 'var(--faint)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' }}>
+                    {r.derived_at ? timeAgo(r.derived_at) : (r.created_at ? timeAgo(r.created_at) : '')}
+                  </span>
+                </div>
+
+                {/* Title */}
+                <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text)', marginBottom: 4, lineHeight: 1.4 }}>
+                  {r.title || (r.content ?? '').slice(0, 70) + ((r.content ?? '').length > 70 ? '…' : '')}
+                </div>
+
+                {/* Content snippet */}
+                <p style={{ color: 'var(--muted)', fontSize: '0.82rem', lineHeight: 1.6, margin: '0 0 10px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                  {r.content}
+                </p>
+
+                {/* Footer row */}
+                <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ flex: '0 0 180px' }}>
+                    <ConfBar value={r.confidence} color={tc} />
+                  </div>
+                  {r.evidenceCount > 0 && (
+                    <span style={{ fontSize: '0.7rem', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>{r.evidenceCount} evidence</span>
+                  )}
+                  {r.access_count > 0 && (
+                    <span style={{ fontSize: '0.7rem', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>{r.access_count} accesses</span>
+                  )}
+                </div>
+              </GlassCard>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Detail modal */}
+      <Modal large open={!!selected} onClose={() => setSelected(null)}
+        title={selected ? (selected.title || `Memory #${selected.id}`) : ''}>
+        <MemoryDetail mem={selected ? {
+          ...selected,
+          evidence_count: selected.evidenceCount,
+        } : null} />
+      </Modal>
     </div>
   );
 }
@@ -639,8 +934,9 @@ function FilesTab() {
 
 function TabBar({ tab, setTab }) {
   const tabs = [
+    { id: 'search',     label: 'Search',     icon: '🔍' },
     { id: 'structured', label: 'Structured', icon: '🗄️' },
-    { id: 'files', label: 'Files', icon: '📁' },
+    { id: 'files',      label: 'Files',      icon: '📁' },
   ];
   return (
     <div style={{ display: 'flex', gap: 4, marginBottom: 28, background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 4, border: '1px solid var(--border)', width: 'fit-content' }}>
@@ -666,7 +962,7 @@ function TabBar({ tab, setTab }) {
 // ---------------------------------------------------------------------------
 
 export default function Memory() {
-  const [tab, setTab] = useState('structured');
+  const [tab, setTab] = useState('search');
 
   return (
     <div style={{ position: 'relative', padding: '36px 32px' }}>
@@ -680,6 +976,7 @@ export default function Memory() {
 
         <TabBar tab={tab} setTab={setTab} />
 
+        {tab === 'search' && <SearchPane />}
         {tab === 'structured' && <StructuredMemoryTab />}
         {tab === 'files' && <FilesTab />}
       </div>
