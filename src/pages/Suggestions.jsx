@@ -23,6 +23,11 @@ const STATUS_LABELS = {
   wontdo: "Won't Do",
 };
 
+const TYPE_CONFIG = {
+  feature: { label: '💡 Feature', bg: 'rgba(99, 102, 241, 0.15)', color: '#818cf8' },
+  bug:     { label: '🐛 Bug',     bg: 'rgba(239, 68, 68, 0.15)',  color: '#f87171' },
+};
+
 function SuggestionCard({ item, onRefresh }) {
   const [busy, setBusy] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -42,14 +47,16 @@ function SuggestionCard({ item, onRefresh }) {
   const sendToAgent = async () => {
     setBusy('send');
     try {
+      const typeLabel = item.type === 'bug' ? 'Bug' : 'Suggestion';
+      const titlePrefix = item.project ? `[${typeLabel}: ${item.project}]` : `[${typeLabel}]`;
       await api.createTask({
-        title: `[Suggestion] ${item.title}`,
-        notes: item.description
-          ? `Feature request from lobslab.com:\n\n**${item.title}**\n\n${item.description}`
-          : `Feature request from lobslab.com: ${item.title}`,
+        title: `${titlePrefix} ${item.title}`,
+        notes: item.description || item.title,
         project_id: 'lobs',
         external_source: 'suggestion',
         external_id: item.id,
+        suggestion_project: item.project || null,
+        suggestion_type: item.type || 'feature',
         model_tier: 'standard',
       });
       await api.updateSuggestion(item.id, { status: 'planned' });
@@ -75,6 +82,7 @@ function SuggestionCard({ item, onRefresh }) {
   };
 
   const isPending = item.status === 'pending';
+  const typeInfo = TYPE_CONFIG[item.type] || TYPE_CONFIG.feature;
 
   return (
     <GlassCard>
@@ -89,6 +97,20 @@ function SuggestionCard({ item, onRefresh }) {
             </div>
           )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{
+              fontSize: '0.7rem', padding: '2px 8px', borderRadius: 10, fontWeight: 600,
+              background: typeInfo.bg, color: typeInfo.color,
+            }}>
+              {typeInfo.label}
+            </span>
+            {item.project && (
+              <span style={{
+                fontSize: '0.7rem', padding: '2px 8px', borderRadius: 10, fontWeight: 600,
+                background: 'rgba(52, 211, 153, 0.15)', color: '#34d399',
+              }}>
+                {item.project}
+              </span>
+            )}
             <Badge label={STATUS_LABELS[item.status] || item.status} color={STATUS_COLORS[item.status] || 'var(--muted)'} dot />
             <span style={{ color: 'var(--faint)', fontSize: '0.72rem', fontFamily: 'var(--mono)' }}>
               {timeAgo(item.created_at)}
