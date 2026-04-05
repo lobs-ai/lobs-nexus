@@ -1043,6 +1043,19 @@ def _gateway_get(path: str) -> Any:
 
 
 # ---------------------------------------------------------------------------
+# Agents proxy routes (fetches active subagents from lobs-core gateway)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/agents")
+async def get_active_agents():
+    """Return currently running subagents from lobs-core."""
+    try:
+        return _gateway_get("/api/active-agents")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Gateway error: {e}")
+
+
+# ---------------------------------------------------------------------------
 # Task proxy routes (fetches from PAW gateway, merges local compliance flags)
 # ---------------------------------------------------------------------------
 

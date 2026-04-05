@@ -56,6 +56,7 @@ export const api = {
   taskRuns: (id, signal) => req(`/api/tasks/${id}/runs`, { signal }).then(d => d?.runs || []),
 
   agents: (signal) => req('/api/agents', { signal }),
+  stopAgent: (agentId) => req(`/api/agents/${agentId}/stop`, { method: 'POST' }),
   workerStatus: (signal) => req('/api/worker/status', { signal }),
   workerHistory: async (limit = 50, signal) => {
     const data = await req(`/api/worker/history?limit=${limit}`, { signal });

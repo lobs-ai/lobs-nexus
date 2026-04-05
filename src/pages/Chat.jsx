@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useChatState } from '../hooks/useChatState';
+import SubagentPanel from '../components/SubagentPanel';
 
 // ---------------------------------------------------------------------------
 // Markdown renderer (simple)
@@ -412,6 +413,9 @@ function ToolStep({ toolName, toolInput, result, isError, status, isVisible }) {
                   whiteSpace: 'pre-wrap', wordBreak: 'break-all',
                 }}>{result}</pre>
               </div>
+            )}
+            {toolName === 'Task' && (
+              <SubagentPanel compact={true} />
             )}
           </div>
         )}
