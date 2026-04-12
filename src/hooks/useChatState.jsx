@@ -182,6 +182,10 @@ export function ChatProvider({ children }) {
             return next;
           });
           reloadMessages(sessionKey);
+          // Safety-net: reload again after a delay to catch any DB write that
+          // wasn't committed when the first reload fired (race between SSE
+          // delivery and the per-request listener's DB insert).
+          setTimeout(() => reloadMessages(sessionKey), 1500);
           return;
         }
 
