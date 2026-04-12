@@ -505,6 +505,99 @@ export default function Dashboard() {
           );
         })()}
 
+        {/* ── Overnight Work ─────────────────────────────────────────── */}
+        {(brief?.recentAgentWork?.length > 0 || brief?.recentCommits?.length > 0) && (() => {
+          const agentWork = (brief.recentAgentWork || []).slice(0, 5);
+          const commits = (brief.recentCommits || []).slice(0, 6);
+          const stats = brief.agentStats?.last24h;
+          return (
+            <GlassCard className="fade-in-up-4" style={{ padding: '20px 22px', marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <span className="section-label" style={{ marginBottom: 0 }}>Overnight Work</span>
+                {stats && (
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--green)', fontFamily: 'var(--mono)' }}>
+                      {stats.succeeded}/{stats.total} succeeded
+                    </span>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+                      ${stats.totalCostUsd?.toFixed(2)} spent
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Agent sessions */}
+              {agentWork.length > 0 && (
+                <div style={{ marginBottom: commits.length > 0 ? 16 : 0 }}>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Agent Sessions</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {agentWork.map((w, i) => {
+                      const color = w.succeeded ? 'var(--green)' : 'var(--red)';
+                      const icon = w.succeeded ? '✓' : '✗';
+                      const firstLine = (w.summary || '').split('\n').find(l => l.trim()) || 'Agent session';
+                      const shortSummary = firstLine.replace(/^#+\s*/, '').replace(/\*\*/g, '').slice(0, 80);
+                      return (
+                        <div key={i} style={{
+                          display: 'flex', alignItems: 'flex-start', gap: 10,
+                          padding: '8px 10px', borderRadius: 8,
+                          background: w.succeeded ? 'rgba(52,211,153,0.03)' : 'rgba(248,113,113,0.03)',
+                          border: `1px solid ${w.succeeded ? 'rgba(52,211,153,0.1)' : 'rgba(248,113,113,0.1)'}`,
+                        }}>
+                          <span style={{
+                            width: 18, height: 18, borderRadius: 4, flexShrink: 0,
+                            background: `${color}18`, color,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: '0.55rem', fontWeight: 700, marginTop: 1,
+                          }}>{icon}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {shortSummary}
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+                              <span style={{ fontSize: '0.62rem', color: 'var(--muted)', fontFamily: 'var(--mono)', textTransform: 'capitalize' }}>{w.agentType}</span>
+                              <span style={{ fontSize: '0.62rem', color: 'var(--faint)', fontFamily: 'var(--mono)' }}>{timeAgo(w.startedAt)}</span>
+                              {w.totalCostUsd > 0 && <span style={{ fontSize: '0.62rem', color: 'var(--faint)', fontFamily: 'var(--mono)' }}>${w.totalCostUsd.toFixed(2)}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Recent commits */}
+              {commits.length > 0 && (
+                <div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>Recent Commits</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 6 }}>
+                    {commits.map((c, i) => (
+                      <a key={i} href={c.url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+                        <div style={{
+                          display: 'flex', gap: 8, alignItems: 'flex-start',
+                          padding: '7px 10px', borderRadius: 7,
+                          background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)',
+                          transition: 'border-color 0.15s',
+                        }}>
+                          <span style={{ color: 'var(--teal)', fontSize: '0.7rem', flexShrink: 0, marginTop: 2, fontFamily: 'var(--mono)' }}>→</span>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {c.message}
+                            </div>
+                            <div style={{ fontSize: '0.62rem', color: 'var(--faint)', fontFamily: 'var(--mono)', marginTop: 2 }}>
+                              {c.repo?.replace(/^.*\//, '')} · {timeAgo(c.date)}
+                            </div>
+                          </div>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </GlassCard>
+          );
+        })()}
+
         {/* ── GitHub (only if there's activity) ──────────────────────── */}
         {githubFeed?.events?.length > 0 && (
           <GlassCard className="fade-in-up-4" style={{ padding: '20px 22px', marginBottom: 24 }}>
