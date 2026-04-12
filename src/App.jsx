@@ -27,6 +27,7 @@ import Training from './pages/Training';
 import MyTasks from './pages/MyTasks';
 import IntelSweep from './pages/IntelSweep';
 import ResearchRadar from './pages/ResearchRadar';
+import LiteratureReview from './pages/LiteratureReview';
 import Suggestions from './pages/Suggestions';
 import { ChatProvider } from './hooks/useChatState';
 import { api } from './lib/api';
@@ -92,6 +93,7 @@ export default function App() {
             <Route path="/my-tasks" element={<MyTasks />} />
             <Route path="/intel" element={<IntelSweep />} />
             <Route path="/research-radar" element={<ResearchRadar />} />
+            <Route path="/literature-review" element={<LiteratureReview />} />
             <Route path="/suggestions" element={<Suggestions />} />
           </Route>
         </Routes>
