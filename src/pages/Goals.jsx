@@ -18,7 +18,7 @@ const STATUS_LABEL = {
   active: 'active',
   in_progress: 'in progress',
   inbox: 'inbox',
-  rejected: 'rejected',
+  rejected: 'failed',
   cancelled: 'cancelled',
 };
 
@@ -72,20 +72,122 @@ function TaskBadge({ status, title }) {
   );
 }
 
+// Extract the first meaningful line from session notes (skip markdown headers, blanks)
+function extractSessionHeadline(notes) {
+  if (!notes) return null;
+  const lines = notes.split('\n').map(l => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    // Skip markdown headers and horizontal rules
+    if (line.startsWith('#') || line.startsWith('---') || line.startsWith('===')) continue;
+    // Skip "Done." or "Session complete." boilerplate at the start
+    if (line === 'Done.' || line === 'Session complete.' || line.startsWith('Spawned by')) continue;
+    // Return first substantive line, cleaned of markdown
+    return line.replace(/\*\*/g, '').replace(/^[-•*]\s*/, '').slice(0, 140);
+  }
+  return notes.slice(0, 120);
+}
+
+function SessionRow({ session }) {
+  const [expanded, setExpanded] = useState(false);
+  const isActive = session.isActive;
+  const status = session.status;
+  const color = isActive ? 'var(--blue)' : status === 'completed' ? 'var(--teal)' : status === 'rejected' ? '#ef4444' : 'var(--muted)';
+  const label = isActive ? 'running' : STATUS_LABEL[status] ?? status;
+  const headline = extractSessionHeadline(session.notes);
+  const hasMore = session.notes && session.notes.length > (headline?.length ?? 0) + 10;
+
+  return (
+    <div style={{
+      padding: '10px 0',
+      borderBottom: '1px solid var(--border)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+        <span style={{
+          fontSize: '11px', fontFamily: 'var(--mono)', color,
+          minWidth: '52px', paddingTop: '2px', textTransform: 'uppercase', flexShrink: 0,
+        }}>
+          {isActive ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{
+                display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+                background: 'var(--blue)', animation: 'pulse 1.5s infinite',
+              }} />
+              {label}
+            </span>
+          ) : label}
+        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {isActive ? (
+            <span style={{ fontSize: '13px', color: 'var(--muted)', fontStyle: 'italic' }}>
+              Agent session in progress…
+            </span>
+          ) : headline ? (
+            <div>
+              <span
+                style={{
+                  fontSize: '13px', color: 'var(--text)', lineHeight: '1.4',
+                  cursor: hasMore ? 'pointer' : 'default',
+                }}
+                onClick={() => hasMore && setExpanded(e => !e)}
+              >
+                {headline}
+                {hasMore && !expanded && <span style={{ color: 'var(--muted)', marginLeft: 4 }}>…</span>}
+              </span>
+              {expanded && session.notes && (
+                <pre style={{
+                  marginTop: 8, fontSize: '11px', color: 'var(--muted)',
+                  whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                  background: 'rgba(255,255,255,0.03)', borderRadius: 4,
+                  padding: '8px 10px', lineHeight: '1.5',
+                }}>
+                  {session.notes}
+                </pre>
+              )}
+            </div>
+          ) : (
+            <span style={{ fontSize: '13px', color: 'var(--muted)', fontStyle: 'italic' }}>
+              Session completed (no summary)
+            </span>
+          )}
+        </div>
+        {session.updatedAt && (
+          <span style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0, paddingTop: '2px' }}>
+            {timeAgo(session.updatedAt)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function GoalCard({ goal, onArchive }) {
   const totalTasks = goal.openTaskCount + goal.completedTaskCount;
   const progressPct = totalTasks > 0
     ? Math.round((goal.completedTaskCount / totalTasks) * 100)
     : 0;
+  const hasSessions = goal.recentSessions && goal.recentSessions.length > 0;
+  const hasManualTasks = goal.recentTasks && goal.recentTasks.length > 0;
 
   return (
     <GlassCard style={{ marginBottom: '24px' }}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
         <div style={{ flex: 1 }}>
-          <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text)', marginBottom: '6px', margin: '0 0 6px 0' }}>
-            {goal.title}
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: '6px' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text)', margin: 0 }}>
+              {goal.title}
+            </h2>
+            {goal.sessionActive && (
+              <span style={{
+                fontSize: '10px', fontFamily: 'var(--mono)', color: 'var(--blue)',
+                background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.25)',
+                borderRadius: 4, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.05em',
+                flexShrink: 0,
+              }}>
+                ⚡ running
+              </span>
+            )}
+          </div>
           {goal.description && (
             <p style={{ fontSize: '13px', color: 'var(--muted)', margin: 0, lineHeight: '1.5' }}>
               {goal.description}
@@ -157,11 +259,28 @@ function GoalCard({ goal, onArchive }) {
         </div>
       )}
 
-      {/* Recent tasks */}
-      {goal.recentTasks && goal.recentTasks.length > 0 && (
+      {/* Agent sessions — what the system has actually done */}
+      {hasSessions && (
+        <div style={{ marginBottom: hasManualTasks ? '20px' : 0 }}>
+          <div style={{ fontSize: '11px', fontFamily: 'var(--mono)', color: 'var(--muted)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            AGENT SESSIONS
+            <span style={{ fontSize: '10px', color: 'var(--muted)', fontWeight: 400, textTransform: 'none', fontFamily: 'inherit' }}>
+              — what was built between conversations
+            </span>
+          </div>
+          <div>
+            {goal.recentSessions.map(s => (
+              <SessionRow key={s.id} session={s} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Manual tasks */}
+      {hasManualTasks && (
         <div>
           <div style={{ fontSize: '11px', fontFamily: 'var(--mono)', color: 'var(--muted)', marginBottom: '8px' }}>
-            RECENT TASKS
+            TASKS
           </div>
           <div>
             {goal.recentTasks.map(t => (
@@ -171,9 +290,9 @@ function GoalCard({ goal, onArchive }) {
         </div>
       )}
 
-      {goal.recentTasks && goal.recentTasks.length === 0 && (
+      {!hasSessions && !hasManualTasks && (
         <div style={{ fontSize: '13px', color: 'var(--muted)', fontStyle: 'italic' }}>
-          No tasks yet — goals worker will generate tasks on its next run.
+          No activity yet — goals worker will start a session on its next run (every 30 min).
         </div>
       )}
     </GlassCard>
@@ -196,6 +315,7 @@ export default function Goals() {
   const goals = data?.goals ?? [];
   const totalOpen = goals.reduce((sum, g) => sum + g.openTaskCount, 0);
   const totalCompleted = goals.reduce((sum, g) => sum + g.completedTaskCount, 0);
+  const activeSessions = goals.filter(g => g.sessionActive).length;
   const lastWorked = goals
     .map(g => g.lastWorked)
     .filter(Boolean)
@@ -272,12 +392,25 @@ export default function Goals() {
           <div style={{ fontSize: '13px', color: 'var(--muted)', fontFamily: 'var(--mono)', marginBottom: '6px' }}>COMPLETED</div>
           <div style={{ fontSize: '36px', fontWeight: '600', color: 'var(--teal)' }}>{totalCompleted}</div>
         </GlassCard>
-        <GlassCard>
-          <div style={{ fontSize: '13px', color: 'var(--muted)', fontFamily: 'var(--mono)', marginBottom: '6px' }}>LAST WORKED</div>
-          <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text)' }}>
-            {lastWorked ? timeAgo(lastWorked) : '—'}
-          </div>
-        </GlassCard>
+        {activeSessions > 0 ? (
+          <GlassCard>
+            <div style={{ fontSize: '13px', color: 'var(--muted)', fontFamily: 'var(--mono)', marginBottom: '6px' }}>RUNNING NOW</div>
+            <div style={{ fontSize: '36px', fontWeight: '600', color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              {activeSessions}
+              <span style={{
+                display: 'inline-block', width: 10, height: 10, borderRadius: '50%',
+                background: 'var(--blue)', opacity: 0.8,
+              }} />
+            </div>
+          </GlassCard>
+        ) : (
+          <GlassCard>
+            <div style={{ fontSize: '13px', color: 'var(--muted)', fontFamily: 'var(--mono)', marginBottom: '6px' }}>LAST WORKED</div>
+            <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text)' }}>
+              {lastWorked ? timeAgo(lastWorked) : '—'}
+            </div>
+          </GlassCard>
+        )}
       </div>
 
       {/* Goal cards */}
