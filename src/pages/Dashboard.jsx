@@ -120,6 +120,9 @@ export default function Dashboard() {
   const [githubFeed, setGithubFeed] = useState(null);
   useEffect(() => { api.githubFeed?.(8).then(setGithubFeed).catch(() => {}); }, []);
 
+  const [goalsData, setGoalsData] = useState(null);
+  useEffect(() => { api.goals().then(setGoalsData).catch(() => {}); }, []);
+
   const [serviceHealth, setServiceHealth] = useState(null);
   useEffect(() => { api.serviceHealth?.().then(setServiceHealth).catch(() => {}); }, []);
 
@@ -439,6 +442,68 @@ export default function Dashboard() {
             )}
           </GlassCard>
         </div>
+
+        {/* ── Goals ────────────────────────────────────────────────── */}
+        {goalsData?.goals?.length > 0 && (() => {
+          const activeGoals = goalsData.goals.filter(g => g.status === 'active');
+          const topGoals = [...activeGoals].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0)).slice(0, 4);
+          const totalOpen = activeGoals.reduce((s, g) => s + (g.openTaskCount ?? 0), 0);
+          const lastWorkedTs = activeGoals.map(g => g.lastWorked).filter(Boolean).sort().at(-1);
+          return (
+            <GlassCard className="fade-in-up-4" style={{ padding: '20px 22px', marginBottom: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <span className="section-label" style={{ marginBottom: 0 }}>Goals</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {lastWorkedTs && (
+                    <span style={{ fontSize: '0.68rem', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+                      worked {timeAgo(lastWorkedTs)}
+                    </span>
+                  )}
+                  <Link to="/goals" style={{ fontSize: '0.72rem', color: 'var(--teal)', textDecoration: 'none', fontWeight: 600 }}>All →</Link>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 16, marginBottom: 14, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+                  <span style={{ color: 'var(--text)', fontWeight: 600, fontSize: '0.85rem' }}>{activeGoals.length}</span> active
+                </div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+                  <span style={{ color: 'var(--blue)', fontWeight: 600, fontSize: '0.85rem' }}>{totalOpen}</span> open tasks
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
+                {topGoals.map(g => {
+                  const pct = Math.min(100, Math.max(0, g.priority ?? 0));
+                  const col = pct >= 80 ? '#ef4444' : pct >= 50 ? '#f59e0b' : 'var(--teal)';
+                  return (
+                    <Link key={g.id} to="/goals" style={{ textDecoration: 'none' }}>
+                      <div style={{
+                        padding: '10px 12px', borderRadius: 8,
+                        background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
+                        transition: 'border-color 0.15s',
+                      }}>
+                        <div style={{ fontSize: '0.76rem', color: 'var(--text)', marginBottom: 6, fontWeight: 500, lineHeight: 1.3,
+                          overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                          {g.title}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ flex: 1, height: '3px', background: 'var(--border)', borderRadius: '2px', overflow: 'hidden' }}>
+                            <div style={{ width: `${pct}%`, height: '100%', background: col, borderRadius: '2px' }} />
+                          </div>
+                          <span style={{ fontSize: '0.62rem', color: 'var(--muted)', fontFamily: 'var(--mono)', minWidth: 20 }}>{pct}</span>
+                        </div>
+                        {g.openTaskCount > 0 && (
+                          <div style={{ fontSize: '0.65rem', color: 'var(--muted)', marginTop: 4, fontFamily: 'var(--mono)' }}>
+                            {g.openTaskCount} task{g.openTaskCount !== 1 ? 's' : ''} open
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </GlassCard>
+          );
+        })()}
 
         {/* ── GitHub (only if there's activity) ──────────────────────── */}
         {githubFeed?.events?.length > 0 && (

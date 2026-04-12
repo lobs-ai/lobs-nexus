@@ -170,6 +170,9 @@ export const api = {
 
   // Goals
   goals: (signal) => reqSafe('/api/goals', { signal }, { goals: [] }),
+  createGoal: (body) => req('/api/goals', { method: 'POST', body }),
+  updateGoal: (id, body) => req(`/api/goals/${id}`, { method: 'PATCH', body }),
+  archiveGoal: (id) => req(`/api/goals/${id}`, { method: 'DELETE' }),
 
   // Training Data
   trainingStats: (signal) => reqSafe('/api/training/stats', { signal }, { total: 0, byType: {}, reviewed: 0, pendingReview: 0 }),

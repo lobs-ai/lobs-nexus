@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { usePolling } from '../hooks/usePolling';
 import GlassCard from '../components/GlassCard';
+import Modal from '../components/Modal';
 import { api } from '../lib/api';
 
 const STATUS_COLOR = {
@@ -70,7 +72,7 @@ function TaskBadge({ status, title }) {
   );
 }
 
-function GoalCard({ goal }) {
+function GoalCard({ goal, onArchive }) {
   const totalTasks = goal.openTaskCount + goal.completedTaskCount;
   const progressPct = totalTasks > 0
     ? Math.round((goal.completedTaskCount / totalTasks) * 100)
@@ -90,13 +92,26 @@ function GoalCard({ goal }) {
             </p>
           )}
         </div>
-        <div style={{ marginLeft: '16px', textAlign: 'right', flexShrink: 0 }}>
-          <div style={{ fontSize: '11px', fontFamily: 'var(--mono)', color: 'var(--muted)', marginBottom: '4px' }}>
-            PRIORITY
+        <div style={{ marginLeft: '16px', display: 'flex', alignItems: 'flex-start', gap: 12, flexShrink: 0 }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '11px', fontFamily: 'var(--mono)', color: 'var(--muted)', marginBottom: '4px' }}>
+              PRIORITY
+            </div>
+            <div style={{ fontSize: '20px', fontWeight: '700', color: goal.priority >= 80 ? '#ef4444' : goal.priority >= 50 ? '#f59e0b' : 'var(--teal)' }}>
+              {goal.priority ?? 0}
+            </div>
           </div>
-          <div style={{ fontSize: '20px', fontWeight: '700', color: goal.priority >= 80 ? '#ef4444' : goal.priority >= 50 ? '#f59e0b' : 'var(--teal)' }}>
-            {goal.priority ?? 0}
-          </div>
+          <button
+            onClick={() => onArchive(goal.id)}
+            title="Archive goal"
+            style={{
+              marginTop: 2, background: 'none', border: '1px solid var(--border)',
+              color: 'var(--muted)', borderRadius: 6, padding: '4px 8px',
+              fontSize: '11px', cursor: 'pointer', transition: 'color 0.15s, border-color 0.15s',
+            }}
+          >
+            Archive
+          </button>
         </div>
       </div>
 
@@ -165,11 +180,18 @@ function GoalCard({ goal }) {
   );
 }
 
+const BLANK_FORM = { title: '', description: '', priority: 70, notes: '' };
+
 export default function Goals() {
-  const { data, loading } = usePolling(
+  const { data, loading, reload: refresh } = usePolling(
     (signal) => api.goals(signal),
     30000,
   );
+
+  const [showAdd, setShowAdd] = useState(false);
+  const [form, setForm] = useState(BLANK_FORM);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   const goals = data?.goals ?? [];
   const totalOpen = goals.reduce((sum, g) => sum + g.openTaskCount, 0);
@@ -180,15 +202,60 @@ export default function Goals() {
     .sort()
     .at(-1);
 
+  async function handleCreate() {
+    if (!form.title.trim()) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await api.createGoal({
+        title: form.title.trim(),
+        description: form.description.trim() || undefined,
+        priority: Number(form.priority) || 70,
+        notes: form.notes.trim() || undefined,
+      });
+      setShowAdd(false);
+      setForm(BLANK_FORM);
+      refresh();
+    } catch (e) {
+      setSaveError(e.message || 'Failed to create goal');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleArchive(id) {
+    if (!confirm('Archive this goal? It will no longer receive autonomous work.')) return;
+    try {
+      await api.archiveGoal(id);
+      refresh();
+    } catch (e) {
+      alert('Failed to archive: ' + e.message);
+    }
+  }
+
   return (
     <div style={{ padding: '32px', maxWidth: '960px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: '600', color: 'var(--text)', marginBottom: '8px' }}>
-          Goals
-        </h1>
-        <p style={{ color: 'var(--muted)', fontSize: '15px' }}>
-          Active goals driving autonomous work between conversations
-        </p>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '32px' }}>
+        <div>
+          <h1 style={{ fontSize: '32px', fontWeight: '600', color: 'var(--text)', marginBottom: '8px' }}>
+            Goals
+          </h1>
+          <p style={{ color: 'var(--muted)', fontSize: '15px' }}>
+            Active goals driving autonomous work between conversations
+          </p>
+        </div>
+        <button
+          onClick={() => setShowAdd(true)}
+          style={{
+            marginTop: 6,
+            padding: '10px 18px', borderRadius: 8,
+            background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.3)',
+            color: 'var(--teal)', fontSize: '0.82rem', fontWeight: 600,
+            cursor: 'pointer', transition: 'all 0.2s',
+          }}
+        >
+          + New Goal
+        </button>
       </div>
 
       {/* Summary stats */}
@@ -223,14 +290,96 @@ export default function Goals() {
       {!loading && goals.length === 0 && (
         <GlassCard>
           <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '32px' }}>
-            No active goals. Add goals in the database to get started.
+            <div style={{ fontSize: '32px', marginBottom: 12 }}>🎯</div>
+            <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: 8, color: 'var(--text)' }}>No active goals</div>
+            <div style={{ fontSize: '13px', marginBottom: 20 }}>
+              Goals drive autonomous work between conversations. Create one to get started.
+            </div>
+            <button
+              onClick={() => setShowAdd(true)}
+              style={{
+                padding: '10px 20px', borderRadius: 8,
+                background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.3)',
+                color: 'var(--teal)', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
+              }}
+            >
+              + New Goal
+            </button>
           </div>
         </GlassCard>
       )}
 
       {goals.map(goal => (
-        <GoalCard key={goal.id} goal={goal} />
+        <GoalCard key={goal.id} goal={goal} onArchive={handleArchive} />
       ))}
+
+      {/* Add Goal Modal */}
+      <Modal open={showAdd} onClose={() => { setShowAdd(false); setSaveError(null); setForm(BLANK_FORM); }} title="New Goal">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Title *</label>
+            <input
+              autoFocus
+              data-autofocus="true"
+              className="nx-input"
+              placeholder="What do you want Lobs to work on?"
+              value={form.title}
+              onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+              onKeyDown={e => e.key === 'Enter' && handleCreate()}
+            />
+          </div>
+          <div>
+            <label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Description</label>
+            <textarea
+              className="nx-input"
+              rows={3}
+              placeholder="More detail about what success looks like…"
+              value={form.description}
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+          <div>
+            <label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>
+              Priority: <span style={{ color: form.priority >= 80 ? '#ef4444' : form.priority >= 50 ? '#f59e0b' : 'var(--teal)', fontWeight: 600 }}>{form.priority}</span>
+            </label>
+            <input
+              type="range"
+              min={1} max={100}
+              value={form.priority}
+              onChange={e => setForm(f => ({ ...f, priority: Number(e.target.value) }))}
+              style={{ width: '100%' }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'var(--muted)', fontFamily: 'var(--mono)' }}>
+              <span>low</span><span>medium</span><span>high</span><span>critical</span>
+            </div>
+          </div>
+          <div>
+            <label style={{ color: 'var(--muted)', fontSize: '0.8rem', marginBottom: 6, display: 'block' }}>Notes (optional)</label>
+            <textarea
+              className="nx-input"
+              rows={2}
+              placeholder="Context, constraints, links…"
+              value={form.notes}
+              onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+              style={{ resize: 'vertical' }}
+            />
+          </div>
+          {saveError && (
+            <div style={{ fontSize: '0.8rem', color: '#ef4444', padding: '8px 12px', background: 'rgba(239,68,68,0.08)', borderRadius: 6 }}>
+              {saveError}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <button className="btn-ghost" onClick={() => { setShowAdd(false); setForm(BLANK_FORM); setSaveError(null); }}>
+              Cancel
+            </button>
+            <button className="btn-primary" onClick={handleCreate} disabled={saving || !form.title.trim()}>
+              {saving ? 'Creating…' : 'Create Goal'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
