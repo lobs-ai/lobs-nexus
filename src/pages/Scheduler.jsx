@@ -370,6 +370,16 @@ function OverviewTab({ brief, stats, intelligence, intelligenceLoading }) {
           </GlassCard>
         )}
 
+        {/* Agent work from last 24h */}
+        {brief?.recentAgentWork?.length > 0 && (
+          <AgentWorkCard agentWork={brief.recentAgentWork} agentStats={brief.agentStats} />
+        )}
+
+        {/* Recent commits from GitHub */}
+        {brief?.recentCommits?.length > 0 && (
+          <RecentCommitsCard commits={brief.recentCommits} />
+        )}
+
         {/* Active tasks from brief */}
         {brief?.activeTasks?.length > 0 && (
           <GlassCard>
@@ -1092,6 +1102,114 @@ function RankedTasksCard({ intelligence }) {
             <div style={{ color: "var(--muted)", fontSize: "0.77rem", fontFamily: "var(--mono)" }}>
               score {task.score} · {task.status}
               {task.dueDate ? ` · due ${task.dueDate.slice(0, 10)}` : ""}
+            </div>
+          </div>
+        ))}
+      </div>
+    </GlassCard>
+  );
+}
+
+function AgentWorkCard({ agentWork, agentStats }) {
+  if (!agentWork?.length) return null;
+  const stats = agentStats?.last24h;
+  return (
+    <GlassCard>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <svg width="16" height="16" fill="none" stroke="var(--teal)" strokeWidth="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
+        </svg>
+        <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text)" }}>Agent Work (24h)</div>
+        {stats && (
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+            <Badge label={`${stats.succeeded} ok`} color="var(--green)" />
+            {stats.failed > 0 && <Badge label={`${stats.failed} failed`} color="#f87171" />}
+            {stats.totalCostUsd > 0 && (
+              <span style={{ fontSize: "0.72rem", color: "var(--faint)" }}>
+                ${stats.totalCostUsd.toFixed(3)}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {agentWork.slice(0, 6).map((run) => (
+          <div key={run.id} style={{ padding: "10px 12px", borderRadius: 10, background: "rgba(45,212,191,0.05)", border: "1px solid rgba(45,212,191,0.12)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: "0.7rem", color: "var(--teal)", fontFamily: "var(--mono)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                {run.agentType}
+              </span>
+              <span style={{ fontSize: "0.7rem", color: "var(--faint)", marginLeft: "auto" }}>
+                {new Date(run.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            </div>
+            <div style={{ fontSize: "0.84rem", color: "var(--text)", lineHeight: 1.5 }}>
+              {run.summary.length > 180 ? run.summary.slice(0, 177) + "…" : run.summary}
+            </div>
+            {run.githubCompareUrl && (
+              <a
+                href={run.githubCompareUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{ display: "inline-block", marginTop: 6, fontSize: "0.72rem", color: "var(--teal)", textDecoration: "none", opacity: 0.8 }}
+              >
+                → view diff
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
+    </GlassCard>
+  );
+}
+
+function RecentCommitsCard({ commits }) {
+  if (!commits?.length) return null;
+
+  // Group by repo
+  const byRepo = {};
+  for (const c of commits) {
+    if (!byRepo[c.repo]) byRepo[c.repo] = [];
+    byRepo[c.repo].push(c);
+  }
+
+  return (
+    <GlassCard>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+        <svg width="16" height="16" fill="none" stroke="var(--purple)" strokeWidth="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="4" />
+          <line x1="1.05" y1="12" x2="7" y2="12" />
+          <line x1="17.01" y1="12" x2="22.96" y2="12" />
+        </svg>
+        <div style={{ fontSize: "1rem", fontWeight: 700, color: "var(--text)" }}>Recent Commits (24h)</div>
+        <Badge label={`${commits.length}`} color="var(--purple)" />
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {Object.entries(byRepo).map(([repo, repoCommits]) => (
+          <div key={repo}>
+            <div style={{ fontSize: "0.72rem", color: "var(--purple)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6, fontFamily: "var(--mono)" }}>
+              {repo.split("/")[1] ?? repo}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {repoCommits.slice(0, 4).map((c) => (
+                <div key={c.sha} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                  <a
+                    href={c.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: "0.72rem", color: "var(--purple)", fontFamily: "var(--mono)", flexShrink: 0, opacity: 0.7, textDecoration: "none" }}
+                  >
+                    {c.sha}
+                  </a>
+                  <span style={{ fontSize: "0.83rem", color: "var(--text)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis", flex: 1 }}>
+                    {c.message}
+                  </span>
+                  <span style={{ fontSize: "0.7rem", color: "var(--faint)", flexShrink: 0 }}>
+                    {c.author?.split(" ")[0]}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         ))}

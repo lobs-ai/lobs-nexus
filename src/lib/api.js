@@ -74,8 +74,6 @@ export const api = {
   usageSummary: (window = 'day', signal) => req(`/api/usage/summary?window=${window}`, { signal }),
   usageProjection: (signal) => req(`/api/usage/projection`, { signal }),
 
-  goals: (signal) => reqSafe('/api/goals', { signal }, { goals: [] }),
-
   inbox: (signal) => req('/api/inbox', { signal }),
   inboxItem: (id, signal) => req(`/api/inbox/${id}`, { signal }),
   inboxRead: (id) => req(`/api/inbox/${id}/read`, { method: 'POST' }),
