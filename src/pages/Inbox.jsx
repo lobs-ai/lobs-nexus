@@ -17,6 +17,7 @@ const TYPE_COLORS = {
   suggestion: 'var(--blue)',
   report: 'var(--teal)',
   notice: 'var(--muted)',
+  task: 'var(--purple)',
 };
 
 const STATUS_COLORS = {
@@ -63,6 +64,7 @@ function ItemCard({ item, onRefresh, affordances }) {
             {item.sourceAgent && <Badge label={item.sourceAgent} color="var(--blue)" dot />}
             {item.actionStatus && <Badge label={item.actionStatus} color={STATUS_COLORS[item.actionStatus] || 'var(--muted)'} />}
             {!item.isRead && <Badge label="unread" color="var(--teal)" />}
+            {item._isTask && item.goalId && <Badge label="goal" color="var(--teal)" />}
           </div>
         </div>
         <div style={{ color: 'var(--faint)', fontSize: '0.72rem', fontFamily: 'var(--mono)' }}>{timeAgo(item.modifiedAt)}</div>
